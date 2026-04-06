@@ -1,0 +1,163 @@
+# Setup Guide
+
+Complete setup instructions for the Selective Intelligence System.
+
+---
+
+## Prerequisites
+
+- **Node.js 20+** (check with `node --version`)
+- **npm** (comes with Node.js)
+- **Supabase project** (free tier works)
+- **Telegram Bot** (via @BotFather)
+- **OpenAI API key** (with GPT-4o-mini access)
+- **Gmail or SMTP provider** (for daily digest emails)
+
+---
+
+## Step 1: Clone & Install
+
+```bash
+git clone <your-repo-url>
+cd Jeff_Agent1
+npm install
+```
+
+---
+
+## Step 2: Create Supabase Database
+
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Navigate to **SQL Editor**
+3. Paste the contents of `supabase/schema.sql` and run it
+4. Go to **Settings → API** and copy:
+   - Project URL → `SUPABASE_URL`
+   - `anon` key → `SUPABASE_ANON_KEY`
+   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY`
+
+**Important:** The `service_role` key bypasses RLS and is used by the pipeline. Never expose it client-side.
+
+---
+
+## Step 3: Create Telegram Bot
+
+1. Open Telegram and message [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` and follow prompts
+3. Copy the bot token → `TELEGRAM_BOT_TOKEN`
+4. Send a message to your bot, then visit:
+   ```
+   https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+   ```
+5. Find `"chat":{"id":123456789}` — that's your `TELEGRAM_CHAT_ID`
+
+---
+
+## Step 4: Get OpenAI API Key
+
+1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Create a new key → `OPENAI_API_KEY`
+3. Ensure your account has access to `gpt-4o-mini`
+
+---
+
+## Step 5: Configure Email (Gmail example)
+
+1. Enable 2-factor auth on your Gmail account
+2. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Generate an App Password for "Mail"
+4. Use these settings:
+   ```
+   EMAIL_SMTP_HOST=smtp.gmail.com
+   EMAIL_SMTP_PORT=587
+   EMAIL_SMTP_USER=your-email@gmail.com
+   EMAIL_SMTP_PASS=<app-password>
+   EMAIL_FROM=your-email@gmail.com
+   EMAIL_TO=recipient@gmail.com
+   ```
+
+---
+
+## Step 6: Create `.env` File
+
+Copy `.env.example` to `.env` and fill in all values:
+
+```bash
+cp .env.example .env
+```
+
+### All Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes | — | OpenAI API key |
+| `SUPABASE_URL` | Yes | — | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Yes | — | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Supabase service role key |
+| `TELEGRAM_BOT_TOKEN` | Yes | — | Telegram bot token from BotFather |
+| `TELEGRAM_CHAT_ID` | Yes | — | Your Telegram chat ID |
+| `EMAIL_FROM` | Yes | — | Sender email address |
+| `EMAIL_TO` | Yes | — | Recipient email address |
+| `EMAIL_SMTP_HOST` | Yes | — | SMTP server hostname |
+| `EMAIL_SMTP_PORT` | No | `587` | SMTP port |
+| `EMAIL_SMTP_USER` | Yes | — | SMTP username |
+| `EMAIL_SMTP_PASS` | Yes | — | SMTP password or app password |
+| `MAX_DAILY_AI_CALLS` | No | `5` | Hard ceiling for OpenAI calls/day |
+| `PREFILTER_THRESHOLD` | No | `40` | Minimum score to pass prefilter |
+| `ALERT_COOLDOWN_HOURS` | No | `2` | Hours between Telegram alerts |
+
+---
+
+## Step 7: Test Locally
+
+```bash
+# Run the full pipeline once
+npm start
+
+# Send a test daily digest
+npm run email
+
+# Start the Telegram chat listener
+npm run chat
+
+# Type-check without running
+npm run typecheck
+```
+
+---
+
+## Step 8: Deploy to GitHub Actions
+
+1. Push your code to GitHub
+2. Go to **Settings → Secrets and variables → Actions**
+3. Add each environment variable as a **Repository secret**:
+   - `OPENAI_API_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_ID`
+   - `EMAIL_FROM`
+   - `EMAIL_TO`
+   - `EMAIL_SMTP_HOST`
+   - `EMAIL_SMTP_PORT`
+   - `EMAIL_SMTP_USER`
+   - `EMAIL_SMTP_PASS`
+
+4. The workflows will run automatically:
+   - **Pipeline:** every 5 hours
+   - **Daily digest:** 7am UTC daily
+
+5. To trigger manually: go to **Actions → select workflow → Run workflow**
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| "SUPABASE_URL required" | Check `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` |
+| "AI budget exhausted" | Normal — system limits to 5 calls/day. Resets at midnight UTC. |
+| Email not sending | Verify SMTP credentials. For Gmail, use App Passwords, not your main password. |
+| Telegram bot not responding | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once. |
+| No articles fetched | Some RSS feeds may be down. Check `config/sources.json` for working feeds. |
+| TypeScript errors | Run `npm run typecheck` and fix any reported issues. |

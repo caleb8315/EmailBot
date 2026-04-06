@@ -1,0 +1,11 @@
+{
+    "_comment": "Edit these weights to prioritize categories you care about most. Higher = more prominent in your briefing. Scale: 1-10.",
+    "World & Geopolitics": 6,
+    "Wars & Conflicts": 9,
+    "Economy & Markets": 8,
+    "Stocks": 9,
+    "Crypto": 7,
+    "AI & Technology": 8,
+    "Power & Elite Activity": 6,
+    "Conspiracy / Unverified Signals": 5
+}

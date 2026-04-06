@@ -1,0 +1,13 @@
+feedparser>=6.0.11
+openai>=1.14.0
+python-dateutil>=2.9.0
+rapidfuzz>=3.6.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Optional: better named-entity recognition (falls back to regex without it)
+# pip install spacy && python -m spacy download en_core_web_sm
+# spacy>=3.7.0
+
+# Note: No new paid dependencies added for the OpenClaw integration.
+# breaking_check.py and preferences_updater.py use only the packages above.

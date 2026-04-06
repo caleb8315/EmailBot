@@ -1,0 +1,29 @@
+{
+  "name": "jeff-intelligence-system",
+  "version": "1.0.0",
+  "description": "Autonomous intelligence system — monitors news, filters noise, delivers high-signal alerts",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "email": "ts-node src/send_email.ts --daily",
+    "chat": "ts-node src/chat_handler.ts --listen",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "nodemailer": "^6.9.16",
+    "openai": "^4.77.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "@types/nodemailer": "^6.4.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

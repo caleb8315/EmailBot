@@ -1,0 +1,89 @@
+{
+  "sources": [
+    {
+      "name": "Reuters Top News",
+      "url": "https://feeds.reuters.com/reuters/topNews",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 9
+    },
+    {
+      "name": "AP News",
+      "url": "https://rsshub.app/apnews/topics/apf-topnews",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 9
+    },
+    {
+      "name": "BBC World",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 8
+    },
+    {
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com/feed/",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 7
+    },
+    {
+      "name": "Ars Technica",
+      "url": "https://feeds.arstechnica.com/arstechnica/index",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 8
+    },
+    {
+      "name": "Hacker News Best",
+      "url": "https://hnrss.org/best",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 6
+    },
+    {
+      "name": "NPR News",
+      "url": "https://feeds.npr.org/1001/rss.xml",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 8
+    },
+    {
+      "name": "The Verge",
+      "url": "https://www.theverge.com/rss/index.xml",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 7
+    },
+    {
+      "name": "Bloomberg Markets",
+      "url": "https://feeds.bloomberg.com/markets/news.rss",
+      "type": "rss",
+      "category": "finance",
+      "trust_score": 9
+    },
+    {
+      "name": "Wired",
+      "url": "https://www.wired.com/feed/rss",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 7
+    }
+  ],
+  "trusted_domains": [
+    "reuters.com",
+    "apnews.com",
+    "bbc.co.uk",
+    "bbc.com",
+    "npr.org",
+    "bloomberg.com",
+    "nytimes.com",
+    "washingtonpost.com"
+  ],
+  "blocked_domains": [
+    "buzzfeed.com",
+    "dailymail.co.uk",
+    "infowars.com"
+  ]
+}
