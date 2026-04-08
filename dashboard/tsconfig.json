@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "typeRoots": ["./node_modules/@types"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -14,7 +15,13 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./*"] }
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "openai": ["./node_modules/openai"],
+      "zod": ["./node_modules/zod"],
+      "@supabase/supabase-js": ["./node_modules/@supabase/supabase-js"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
