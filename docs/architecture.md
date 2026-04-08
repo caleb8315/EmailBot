@@ -10,8 +10,8 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
 ┌─────────────────────────────────────────────────────────────────┐
 │                    GITHUB ACTIONS (cron)                        │
 │                                                                 │
-│  pipeline.yml  → every 5 minutes                                │
-│  daily_email.yml → 7:00 UTC — digest (Telegram + optional email)│
+│  pipeline.yml  → hourly — alerts only when high-importance      │
+│  daily_email.yml → 7:00 UTC — morning digest (1× OpenAI insight)│
 └───────┬─────────────────────────────────────┬───────────────────┘
         │                                     │
         ▼                                     ▼

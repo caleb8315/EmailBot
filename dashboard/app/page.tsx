@@ -272,10 +272,7 @@ export default function Page() {
               Run pipeline
             </button>
             <button type="button" onClick={() => dispatch("daily_email.yml")}>
-              Run daily digest
-            </button>
-            <button type="button" onClick={() => dispatch("weekly-briefing.yml")}>
-              Run Python briefing
+              Run morning digest
             </button>
           </div>
           {dispatchMsg && (

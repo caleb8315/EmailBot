@@ -9,9 +9,9 @@ There is **no separate assistant runtime** — only this repo, Supabase, OpenAI,
 | Piece | What it does |
 |--------|----------------|
 | `npm run bot` | Long-polling Telegram bot: `/prefs`, `/boost`, `/mute`, `/alert`, `/keyword`, plus natural phrases like “less crypto, more AI”. |
-| GitHub Action **Intelligence Pipeline** (every 5 min) | Fetches feeds, dedupes, scores with AI, sends **Telegram alerts** for very high importance + credibility. |
-| GitHub Action **Daily Intelligence Digest** (07:00 UTC) | Builds the digest: **Telegram morning briefing** always (if bot token + chat id are set); **email** if SMTP is configured. |
-| `python main.py` (optional) | Deeper multi-source **Python briefing** (HTML/text in `output/`) using `news_intel/` — large internal source list + clustering. |
+| GitHub Action **Intelligence Pipeline** (hourly) | Fetches feeds, dedupes, scores with AI; **Telegram (and optional email)** only for **high-importance** items. |
+| GitHub Action **Morning Intelligence Digest** (07:00 UTC) | One run: **email + Telegram** digest with **a single OpenAI insight** (not blocked by the hourly pipeline’s shared daily budget). |
+| `python main.py` (optional, local) | Deeper **Python** briefing to `output/` — not scheduled in GitHub Actions by default. |
 | **`dashboard/` on Vercel** | Web UI: past digests, errors/events, article list, **Run workflow** buttons, assistant chat. See `dashboard/README.md`. RSS jobs stay on **GitHub Actions**. |
 
 ### Coverage expectations

@@ -37,10 +37,16 @@ async function generateInsight(
   interests: string[]
 ): Promise<string | null> {
   try {
-    const allowed = await canMakeAICall();
-    if (!allowed) {
-      logger.info("No budget for daily insight");
-      return null;
+    const morningDigest =
+      process.env.MORNING_DIGEST_RUN === "true" ||
+      process.argv.includes("--daily");
+
+    if (!morningDigest) {
+      const allowed = await canMakeAICall();
+      if (!allowed) {
+        logger.info("No budget for daily insight");
+        return null;
+      }
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -69,7 +75,11 @@ async function generateInsight(
     const insight = response.choices[0]?.message?.content?.trim() ?? null;
     if (insight) {
       await recordAICall();
-      logger.info("Daily insight generated");
+      logger.info(
+        morningDigest
+          ? "Morning digest insight generated (single AI call)"
+          : "Daily insight generated"
+      );
     }
     return insight;
   } catch (err) {

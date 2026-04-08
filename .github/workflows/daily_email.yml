@@ -1,4 +1,4 @@
-name: Daily Intelligence Digest
+name: Morning Intelligence Digest
 
 on:
   schedule:
@@ -23,8 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Send daily digest email
+      - name: Send morning digest (email + Telegram, one AI insight)
         env:
+          MORNING_DIGEST_RUN: "true"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -48,4 +49,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="⚠️ Daily digest email failed — check GitHub Actions logs"
+            -d text="⚠️ Morning digest failed — check GitHub Actions logs"
