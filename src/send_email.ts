@@ -33,9 +33,11 @@ function createTransport() {
 /** True if we can send digest email (SMTP + from + to). */
 function digestEmailConfigured(): boolean {
   if (!createSmtpTransport()) return false;
-  const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
-  const to = process.env.EMAIL_TO;
-  return Boolean(from?.trim() && to?.trim());
+  const from = (
+    process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER
+  )?.trim();
+  const to = process.env.EMAIL_TO?.trim();
+  return Boolean(from && to);
 }
 
 /** True if digest Telegram is enabled and token + chat id are set. */
@@ -306,8 +308,10 @@ export async function sendDailyDigest(
     const transport = createTransport();
     let emailOk = false;
     if (transport) {
-      const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
-      const to = process.env.EMAIL_TO;
+      const from = (
+        process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER
+      )?.trim();
+      const to = process.env.EMAIL_TO?.trim();
       if (from && to) {
         await transport.sendMail({
           from,
@@ -335,8 +339,20 @@ export async function sendDailyDigest(
       process.env.SEND_DIGEST_TELEGRAM === "0";
     let telegramOk = false;
     if (!skipTg) {
-      const plain = formatDigestPlainText(topForTelegram, usage, insight);
-      telegramOk = await sendDigestTelegram(plain);
+      try {
+        const plain = formatDigestPlainText(topForTelegram, usage, insight);
+        telegramOk = await sendDigestTelegram(plain);
+        if (emailOk && !telegramOk) {
+          logger.warn(
+            "Digest email was sent; Telegram did not send (check token, chat id, or set SEND_DIGEST_TELEGRAM=false to skip). The bot does not need to be 'running' for API delivery."
+          );
+        }
+      } catch (err) {
+        logger.warn("Telegram digest threw (email still counts if it already sent)", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        telegramOk = false;
+      }
     }
 
     if (!emailOk && !telegramOk) {
@@ -387,6 +403,10 @@ export async function sendDailyDigest(
       meta: { article_count: urls.length },
     });
 
+    if (emailOk) {
+      logger.info("Morning digest finished successfully (email is authoritative if present).");
+    }
+
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -406,7 +426,7 @@ if (process.argv.includes("--daily")) {
     .then((ok) => {
       if (!ok) {
         logger.error(
-          "Morning digest failed: no email and no Telegram (check Actions logs + secrets SMTP / TELEGRAM_*)"
+          "Morning digest failed: nothing was delivered. For email, set Actions secrets EMAIL_SMTP_HOST, EMAIL_SMTP_USER, EMAIL_SMTP_PASS, EMAIL_TO (and EMAIL_FROM if needed). Telegram failures do not fail the job if email succeeds."
         );
         process.exit(1);
       }
