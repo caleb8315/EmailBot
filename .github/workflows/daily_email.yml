@@ -46,6 +46,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Debug — check which SMTP vars are present
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          echo "=== SMTP secret diagnostic ==="
+          [ -n "${SMTP_HOST:-}" ]      && echo "SMTP_HOST: SET" || echo "SMTP_HOST: MISSING"
+          [ -n "${SMTP_PORT:-}" ]      && echo "SMTP_PORT: SET" || echo "SMTP_PORT: MISSING (will default to 587)"
+          [ -n "${SMTP_USER:-}" ]      && echo "SMTP_USER: SET" || echo "SMTP_USER: MISSING"
+          [ -n "${SMTP_PASS:-}" ]      && echo "SMTP_PASS: SET" || echo "SMTP_PASS: MISSING"
+          [ -n "${EMAIL_SMTP_HOST:-}" ] && echo "EMAIL_SMTP_HOST: SET" || echo "EMAIL_SMTP_HOST: MISSING"
+          [ -n "${EMAIL_SMTP_USER:-}" ] && echo "EMAIL_SMTP_USER: SET" || echo "EMAIL_SMTP_USER: MISSING"
+          [ -n "${EMAIL_SMTP_PASS:-}" ] && echo "EMAIL_SMTP_PASS: SET" || echo "EMAIL_SMTP_PASS: MISSING"
+          [ -n "${EMAIL_FROM:-}" ]     && echo "EMAIL_FROM: SET" || echo "EMAIL_FROM: MISSING (falls back to SMTP_USER)"
+          [ -n "${EMAIL_TO:-}" ]       && echo "EMAIL_TO: SET" || echo "EMAIL_TO: MISSING ← REQUIRED"
+          echo "=== end diagnostic ==="
+
       - name: Send morning digest (email + Telegram, one AI insight)
         env:
           MORNING_DIGEST_RUN: "true"
