@@ -18,9 +18,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
-          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
-          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST || secrets.SMTP_HOST }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER || secrets.SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS || secrets.SMTP_PASS }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
@@ -32,7 +32,7 @@ jobs:
             smtp_ok=1
           fi
           if [ "$tg_ok" -eq 0 ] && [ "$smtp_ok" -eq 0 ]; then
-            echo "::error::No digest delivery: GitHub did not receive SMTP or Telegram secrets. In the repo: Settings → Secrets and variables → Actions → add repository secrets (not only Environments unless the job sets \`environment:\`). Names: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, and/or EMAIL_SMTP_HOST, EMAIL_SMTP_USER, EMAIL_SMTP_PASS, EMAIL_TO (+ EMAIL_FROM optional)."
+            echo "::error::No digest delivery: add repository secrets for SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS, EMAIL_TO) and/or Telegram (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)."
             exit 1
           fi
           echo "Preflight OK (telegram=$tg_ok smtp=$smtp_ok)"
@@ -57,6 +57,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
