@@ -16,8 +16,8 @@ Usage:
   python main.py --dry-run            # fetch + normalize only, no AI, no email
   python main.py --no-email           # full pipeline, skip email delivery
   python main.py --category "Crypto"  # filter to one section
-  python main.py --output-json        # output structured JSON (for OpenClaw)
-  python main.py --preferences-file path/to/prefs.json  # OpenClaw prefs override
+  python main.py --output-json        # structured JSON briefing file
+  python main.py --preferences-file data/user_preferences.json  # merge overlay before run
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def setup_logging(verbose: bool = False) -> None:
 
 
 def _build_json_output(clusters, source_count: int) -> str:
-    """Build structured JSON output for OpenClaw consumption."""
+    """Build structured JSON output (automation / archival)."""
     from news_intel.config import SECTION_ORDER
 
     now = datetime.now(timezone.utc)
@@ -191,15 +191,15 @@ def run_pipeline(
     logger.info("═══ PHASE 3: Verification ═══")
     clusters = verify(articles)
 
-    # ── 6. Sync preferences from OpenClaw if provided ─────────────────
+    # ── 6. Merge user overlay file into data/preferences.json if provided ─
     if preferences_file:
-        logger.info("═══ PHASE 3a: Syncing OpenClaw Preferences ═══")
+        logger.info("═══ PHASE 3a: Syncing user preference overlay ═══")
         try:
-            from preferences_updater import sync_from_openclaw
-            sync_from_openclaw(preferences_file)
+            from preferences_updater import sync_from_user_file
+            sync_from_user_file(preferences_file)
             logger.info("Preferences synced from %s", preferences_file)
         except Exception as exc:
-            logger.warning("Could not sync OpenClaw preferences: %s", exc)
+            logger.warning("Could not sync user preferences: %s", exc)
 
     # ── 6. Prioritize by user preferences ───────────────────────────────
     logger.info("═══ PHASE 3b: Priority Scoring ═══")
@@ -239,7 +239,7 @@ def run_pipeline(
     except Exception as exc:
         logger.warning("Intelligence layer failed (falling back to original): %s", exc)
 
-    # ── 11. JSON output path (for OpenClaw) ─────────────────────────────
+    # ── 11. JSON output path ──────────────────────────────────────────────
     if output_json:
         logger.info("═══ PHASE 5: JSON Output ═══")
         json_content = _build_json_output(clusters, source_count=len(sources))
@@ -309,13 +309,13 @@ def main() -> None:
     parser.add_argument(
         "--output-json",
         action="store_true",
-        help="Output structured JSON instead of HTML (for OpenClaw integration)",
+        help="Output structured JSON instead of HTML",
     )
     parser.add_argument(
         "--preferences-file",
         type=str,
         default=None,
-        help="Path to OpenClaw user_preferences.json to sync before running",
+        help="Path to user_preferences.json to merge before running",
     )
     parser.add_argument(
         "--verbose", "-v",

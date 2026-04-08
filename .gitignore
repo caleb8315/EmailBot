@@ -16,6 +16,9 @@ node_modules/
 # TypeScript build output
 dist/
 
+# Next.js dashboard
+dashboard/.next/
+
 # Output (generated each run)
 output/
 
@@ -36,5 +39,5 @@ data/intelligence_cache/
 # Python venv
 venv/
 
-# OpenClaw runtime (user-specific preferences synced from memory)
+# Local preference overlay (optional; Telegram bot uses Supabase briefing_overlay when configured)
 data/user_preferences.json

@@ -34,6 +34,13 @@ jobs:
           MAX_DAILY_AI_CALLS: '5'
           PREFILTER_THRESHOLD: '40'
           ALERT_COOLDOWN_HOURS: '2'
+          ALERT_EMAIL_IMPORTANT: ${{ secrets.ALERT_EMAIL_IMPORTANT }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: npx ts-node src/index.ts
 
       - name: Notify on failure

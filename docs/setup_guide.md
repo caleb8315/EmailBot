@@ -11,7 +11,7 @@ Complete setup instructions for the Selective Intelligence System.
 - **Supabase project** (free tier works)
 - **Telegram Bot** (via @BotFather)
 - **OpenAI API key** (with GPT-4o-mini access)
-- **Gmail or SMTP provider** (for daily digest emails)
+- **Gmail or SMTP provider** (optional — only if you want email in addition to Telegram)
 
 ---
 
@@ -29,7 +29,8 @@ npm install
 
 1. Go to [supabase.com](https://supabase.com) and create a new project
 2. Navigate to **SQL Editor**
-3. Paste the contents of `supabase/schema.sql` and run it
+3. Paste the contents of `supabase/schema.sql` and run it  
+   - If this database was created **before** the `briefing_overlay` column existed, also run `supabase/migrations/20260408120000_briefing_overlay.sql` once.
 4. Go to **Settings → API** and copy:
    - Project URL → `SUPABASE_URL`
    - `anon` key → `SUPABASE_ANON_KEY`
@@ -60,7 +61,11 @@ npm install
 
 ---
 
-## Step 5: Configure Email (Gmail example)
+## Step 5: Configure Email (optional)
+
+The **morning briefing** is sent to **Telegram** when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set. SMTP is only needed if you also want the HTML email.
+
+### Gmail example
 
 1. Enable 2-factor auth on your Gmail account
 2. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
@@ -94,13 +99,15 @@ cp .env.example .env
 | `SUPABASE_ANON_KEY` | Yes | — | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Supabase service role key |
 | `TELEGRAM_BOT_TOKEN` | Yes | — | Telegram bot token from BotFather |
-| `TELEGRAM_CHAT_ID` | Yes | — | Your Telegram chat ID |
-| `EMAIL_FROM` | Yes | — | Sender email address |
-| `EMAIL_TO` | Yes | — | Recipient email address |
-| `EMAIL_SMTP_HOST` | Yes | — | SMTP server hostname |
+| `TELEGRAM_CHAT_ID` | Yes | — | Your Telegram chat ID (pipeline + digest target) |
+| `TELEGRAM_ALLOWED_CHAT_IDS` | No | — | Comma-separated chat ids allowed to talk to the bot |
+| `SEND_DIGEST_TELEGRAM` | No | on | Set `false` to skip Telegram morning text (email-only) |
+| `EMAIL_FROM` | For email | — | Sender email address |
+| `EMAIL_TO` | For email | — | Recipient email address |
+| `EMAIL_SMTP_HOST` | For email | — | SMTP server hostname |
 | `EMAIL_SMTP_PORT` | No | `587` | SMTP port |
-| `EMAIL_SMTP_USER` | Yes | — | SMTP username |
-| `EMAIL_SMTP_PASS` | Yes | — | SMTP password or app password |
+| `EMAIL_SMTP_USER` | For email | — | SMTP username |
+| `EMAIL_SMTP_PASS` | For email | — | SMTP password or app password |
 | `MAX_DAILY_AI_CALLS` | No | `5` | Hard ceiling for OpenAI calls/day |
 | `PREFILTER_THRESHOLD` | No | `40` | Minimum score to pass prefilter |
 | `ALERT_COOLDOWN_HOURS` | No | `2` | Hours between Telegram alerts |
@@ -113,7 +120,10 @@ cp .env.example .env
 # Run the full pipeline once
 npm start
 
-# Send a test daily digest
+# Telegram bot (preferences, /help, etc.)
+npm run bot
+
+# Morning-style digest (Telegram + optional email)
 npm run email
 
 # Start the Telegram chat listener

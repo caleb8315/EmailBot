@@ -1,246 +1,187 @@
 import https from "https";
-import http from "http";
-import OpenAI from "openai";
 import { createLogger } from "./logger";
 import {
   getPreferences,
   updatePreferences,
-  getLastAlertedArticle,
+  patchBriefingOverlay,
 } from "./memory";
-import {
-  canMakeAICall,
-  recordAICall,
-  getDailyUsageReport,
-} from "./usage_limiter";
-import { ParsedIntentSchema } from "./types";
-import type { ChatIntent, ParsedIntent, UserPreferences } from "./types";
+import { getDailyUsageReport } from "./usage_limiter";
+import { runBriefingAssistant } from "./ai_conversation";
+import type { UserPreferences } from "./types";
+import { BRIEFING_SECTIONS } from "./types";
+import { matchBriefingSection } from "./briefing_helpers";
 
 const logger = createLogger("chat_handler");
 
-// ── Intent Parsing (regex first, then AI fallback) ──
-
-const INTENT_PATTERNS: Array<{ pattern: RegExp; intent: ChatIntent }> = [
-  { pattern: /^help$/i, intent: "help" },
-  { pattern: /^status$/i, intent: "status" },
-  { pattern: /^why\b/i, intent: "why" },
-  { pattern: /\b(analyze|deeper|detail)\b/i, intent: "deeper" },
-  {
-    pattern: /\b(focus|prioritize|more)\b.*\b(on|about)\b/i,
-    intent: "focus",
-  },
-  { pattern: /\b(ignore|stop|hide|block|mute)\b/i, intent: "ignore" },
-];
-
-function extractTopic(message: string): string {
-  const cleaned = message
-    .replace(
-      /\b(focus|prioritize|more|on|about|ignore|stop|hide|block|mute)\b/gi,
-      ""
-    )
-    .trim();
-  return cleaned || "general";
-}
-
-function parseIntentWithRegex(message: string): ParsedIntent | null {
-  const trimmed = message.trim();
-  for (const { pattern, intent } of INTENT_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return {
-        intent,
-        topic: extractTopic(trimmed),
-        confidence: 0.9,
-      };
-    }
+function isAllowedChat(chatId: number): boolean {
+  const multi = process.env.TELEGRAM_ALLOWED_CHAT_IDS?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (multi && multi.length > 0) {
+    return multi.includes(String(chatId));
   }
-  return null;
-}
-
-async function parseIntentWithAI(
-  message: string
-): Promise<ParsedIntent | null> {
-  try {
-    const allowed = await canMakeAICall();
-    if (!allowed) {
-      logger.info("No AI budget for intent parsing");
-      return null;
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return null;
-
-    const openai = new OpenAI({ apiKey });
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            'Parse the user\'s message and return JSON: { "intent": string, "topic": string, "confidence": number }. Intents: focus | ignore | why | deeper | status | help | unknown.',
-        },
-        { role: "user", content: message },
-      ],
-      temperature: 0.1,
-      max_tokens: 100,
-    });
-
-    const raw = response.choices[0]?.message?.content?.trim();
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    const validated = ParsedIntentSchema.parse(parsed);
-
-    await recordAICall();
-    logger.info("Intent parsed via AI", { intent: validated.intent });
-    return validated;
-  } catch (err) {
-    logger.error("AI intent parsing failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
+  const single = process.env.TELEGRAM_CHAT_ID?.trim();
+  if (single) {
+    return String(chatId) === single;
   }
+  return true;
 }
 
-// ── Intent Handlers ──
+// ── Slash commands (deterministic shortcuts) ───────────────────
 
-async function handleFocus(
+async function handleSlashCommand(
   userId: string,
-  topic: string
-): Promise<string> {
-  try {
-    const prefs = await getPreferences(userId);
-    const interests = [...new Set([...prefs.interests, topic])];
-    await updatePreferences(userId, { interests });
-    return `Got it — I'll prioritize "${topic}" news going forward.`;
-  } catch (err) {
-    logger.error("handleFocus failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return "Sorry, I couldn't update your preferences right now.";
-  }
-}
+  chatId: number,
+  text: string
+): Promise<string | null> {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("/")) return null;
 
-async function handleIgnore(
-  userId: string,
-  topic: string
-): Promise<string> {
-  try {
-    const prefs = await getPreferences(userId);
-    const dislikes = [...new Set([...prefs.dislikes, topic])];
-    await updatePreferences(userId, { dislikes });
-    return `Got it — I'll filter out "${topic}" from your feed.`;
-  } catch (err) {
-    logger.error("handleIgnore failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return "Sorry, I couldn't update your preferences right now.";
+  if (!isAllowedChat(chatId)) {
+    return "This bot is restricted to your configured chat.";
   }
-}
 
-async function handleWhy(): Promise<string> {
-  try {
-    const article = await getLastAlertedArticle();
-    if (!article) {
-      return "No recent alerts to explain.";
+  const body = trimmed.slice(1).trim();
+  const [cmd0, ...rest] = body.split(/\s+/);
+  const cmd = cmd0.toLowerCase();
+  const arg = rest.join(" ").trim();
+
+  switch (cmd) {
+    case "start":
+      return [
+        "Welcome — I'm your AI briefing assistant.",
+        "",
+        "Ask me anything about recent stories (including what showed up in your digest), or say things like “focus more on Taiwan” or “why does story 3 matter?”.",
+        "",
+        "I use one shared AI budget with the news pipeline — /status shows what's left.",
+        "/help lists slash shortcuts.",
+      ].join("\n");
+    case "help":
+      return handleHelp();
+    case "prefs":
+      return formatPrefsSummary(await getPreferences(userId));
+    case "status": {
+      const report = await getDailyUsageReport();
+      return [
+        "AI budget (shared: chat + pipeline + digest insight)",
+        "",
+        `${report.callsUsed}/${report.maxCalls} used today`,
+        `${report.callsRemaining} remaining`,
+        `Date (UTC): ${report.date}`,
+      ].join("\n");
     }
-    const lines = [
-      `📰 *${article.title}*`,
-      "",
-      article.summary ?? "No summary available.",
-      "",
-      `Importance: ${article.importance_score ?? "n/a"}/10`,
-      `Credibility: ${article.credibility_score ?? "n/a"}/10`,
-    ];
-    return lines.join("\n");
-  } catch (err) {
-    logger.error("handleWhy failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return "Sorry, I couldn't fetch the article details.";
+    case "boost": {
+      const cat = matchBriefingSection(arg);
+      if (!cat) {
+        return `Give a section name, e.g. /boost AI   Sections: ${BRIEFING_SECTIONS.join(", ")}`;
+      }
+      await patchBriefingOverlay(userId, (prev) => {
+        const boost = new Set(prev.boost_categories ?? []);
+        boost.add(cat);
+        const ign = new Set(prev.ignore_categories ?? []);
+        ign.delete(cat);
+        return {
+          ...prev,
+          boost_categories: [...boost],
+          ignore_categories: [...ign],
+        };
+      });
+      return `Boosted "${cat}" for briefing priority.`;
+    }
+    case "mute":
+    case "ignoresection": {
+      const cat = matchBriefingSection(arg);
+      if (!cat) {
+        return `Which section? e.g. /mute Crypto`;
+      }
+      await patchBriefingOverlay(userId, (prev) => {
+        const ign = new Set(prev.ignore_categories ?? []);
+        ign.add(cat);
+        const boost = new Set(prev.boost_categories ?? []);
+        boost.delete(cat);
+        return {
+          ...prev,
+          ignore_categories: [...ign],
+          boost_categories: [...boost],
+        };
+      });
+      return `Muted "${cat}" in the Python briefing ranking (weight min).`;
+    }
+    case "alert": {
+      const n = parseInt(arg, 10);
+      if (Number.isNaN(n) || n < 1 || n > 10) {
+        return "Usage: /alert 7  (1 = only extreme, 10 = more alerts)";
+      }
+      await updatePreferences(userId, { alert_sensitivity: n });
+      return `Alert sensitivity set to ${n}/10.`;
+    }
+    case "keyword": {
+      const parts = arg.split(/\s+/).filter(Boolean);
+      const op = parts[0]?.toLowerCase();
+      const word = parts.slice(1).join(" ").trim();
+      if (!word || (op !== "add" && op !== "remove")) {
+        return "Usage: /keyword add tariff   or   /keyword remove bitcoin";
+      }
+      if (op === "add") {
+        await patchBriefingOverlay(userId, (prev) => {
+          const k = new Set(prev.tier1_keywords ?? []);
+          k.add(word.toLowerCase());
+          return { ...prev, tier1_keywords: [...k] };
+        });
+        return `Added breaking keyword: ${word}`;
+      }
+      await patchBriefingOverlay(userId, (prev) => ({
+        ...prev,
+        tier1_keywords: (prev.tier1_keywords ?? []).filter(
+          (x) => x.toLowerCase() !== word.toLowerCase()
+        ),
+      }));
+      return `Removed keyword: ${word}`;
+    }
+    default:
+      return `Unknown command /${cmd}. Send /help.`;
   }
 }
 
-async function handleStatus(): Promise<string> {
-  try {
-    const report = await getDailyUsageReport();
-    return [
-      "📊 *System Status*",
-      "",
-      `AI Budget: ${report.callsUsed}/${report.maxCalls} calls used`,
-      `Remaining: ${report.callsRemaining} calls`,
-      `Date: ${report.date}`,
-    ].join("\n");
-  } catch (err) {
-    logger.error("handleStatus failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return "Sorry, I couldn't fetch the status right now.";
-  }
+function formatPrefsSummary(p: UserPreferences): string {
+  const o = p.briefing_overlay ?? {};
+  return [
+    "Your preferences",
+    "",
+    `Alert sensitivity: ${p.alert_sensitivity}/10`,
+    `Interest boost (pipeline): ${p.interests.join(", ") || "—"}`,
+    `Filtered topics: ${p.dislikes.join(", ") || "—"}`,
+    "",
+    "Briefing sections (Python digest)",
+    `  Boosted: ${(o.boost_categories ?? []).join(", ") || "—"}`,
+    `  Muted: ${(o.ignore_categories ?? []).join(", ") || "—"}`,
+    `  Breaking keywords: ${(o.tier1_keywords ?? []).join(", ") || "defaults"}`,
+  ].join("\n");
 }
 
 function handleHelp(): string {
   return [
-    "🤖 *Available Commands*",
+    "Slash shortcuts",
     "",
-    '• "focus on AI startups" — prioritize a topic',
-    '• "ignore crypto" — filter out a topic',
-    '• "why" — explain the last alert',
-    '• "deeper" — re-analyze with more detail (uses AI budget)',
-    '• "status" — see today\'s AI budget usage',
-    '• "help" — show this message',
+    "/prefs — saved settings",
+    "/status — AI budget today",
+    "/boost <section> — briefing emphasis",
+    "/mute <section>",
+    "/alert <1-10>",
+    "/keyword add/remove <word>",
+    "",
+    "Everything else goes to the AI assistant:",
+    "• Discuss any numbered story from your recent digest list",
+    "• “What should I watch from story 2?”",
+    "• “Focus more on semiconductors” / “less celebrity news”",
   ].join("\n");
 }
 
-async function handleDeeper(userId: string): Promise<string> {
-  try {
-    const allowed = await canMakeAICall();
-    if (!allowed) {
-      return "No AI budget remaining today for deeper analysis.";
-    }
-
-    const article = await getLastAlertedArticle();
-    if (!article) {
-      return "No recent article to analyze deeper.";
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return "OpenAI not configured.";
-
-    const prefs = await getPreferences(userId);
-    const openai = new OpenAI({ apiKey });
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Provide a detailed 3-4 sentence analysis of this article. Focus on implications, context, and what to watch for next.",
-        },
-        {
-          role: "user",
-          content: `Title: ${article.title}\nSource: ${article.source}\nSummary: ${article.summary ?? "N/A"}\n\nUser interests: ${prefs.interests.join(", ") || "general"}`,
-        },
-      ],
-      temperature: 0.4,
-      max_tokens: 300,
-    });
-
-    await recordAICall();
-    const analysis = response.choices[0]?.message?.content?.trim();
-    return analysis
-      ? `🔍 *Deep Analysis*\n\n${analysis}`
-      : "Could not generate deeper analysis.";
-  } catch (err) {
-    logger.error("handleDeeper failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return "Sorry, the deeper analysis failed.";
-  }
-}
-
-// ── Main Message Router ──
+// ── Main router ─────────────────────────────────────────────────
 
 export async function handleMessage(
   userId: string,
+  chatId: number,
   message: string
 ): Promise<string> {
   try {
@@ -249,41 +190,25 @@ export async function handleMessage(
       message: message.slice(0, 100),
     });
 
-    let parsed = parseIntentWithRegex(message);
-
-    if (!parsed) {
-      parsed = await parseIntentWithAI(message);
+    const slashReply = await handleSlashCommand(userId, chatId, message);
+    if (slashReply !== null) {
+      return slashReply;
     }
 
-    if (!parsed || parsed.intent === "unknown") {
-      return handleHelp();
+    if (!isAllowedChat(chatId)) {
+      return "This bot is restricted to your configured chat.";
     }
 
-    switch (parsed.intent) {
-      case "focus":
-        return handleFocus(userId, parsed.topic);
-      case "ignore":
-        return handleIgnore(userId, parsed.topic);
-      case "why":
-        return handleWhy();
-      case "deeper":
-        return handleDeeper(userId);
-      case "status":
-        return handleStatus();
-      case "help":
-        return handleHelp();
-      default:
-        return handleHelp();
-    }
+    return await runBriefingAssistant(userId, message);
   } catch (err) {
     logger.error("handleMessage failed", {
       error: err instanceof Error ? err.message : String(err),
     });
-    return "Sorry, something went wrong. Try again or type 'help'.";
+    return "Sorry, something went wrong. Try /help.";
   }
 }
 
-// ── Telegram Webhook Listener (CLI entry point) ──
+// ── Telegram long-polling (CLI) ─────────────────────────────────
 
 function sendTelegramReply(
   token: string,
@@ -294,21 +219,21 @@ function sendTelegramReply(
     const payload = JSON.stringify({
       chat_id: chatId,
       text,
-      parse_mode: "",
     });
 
-    const options = {
-      hostname: "api.telegram.org",
-      path: `/bot${token}/sendMessage`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload),
+    const req = https.request(
+      {
+        hostname: "api.telegram.org",
+        path: `/bot${token}/sendMessage`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
       },
-    };
-
-    const req = https.request(options, () => resolve());
-    req.on("error", (err) => {
+      () => resolve()
+    );
+    req.on("error", (err: Error) => {
       logger.error("Reply send failed", { error: err.message });
       resolve();
     });
@@ -323,18 +248,23 @@ if (process.argv.includes("--listen")) {
     logger.error("TELEGRAM_BOT_TOKEN required for --listen mode");
     process.exit(1);
   }
+  const botToken = token;
 
   let lastUpdateId = 0;
 
   async function pollUpdates(): Promise<void> {
     try {
-      const url = `https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`;
+      const url = `https://api.telegram.org/bot${botToken}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`;
       const response = await fetch(url);
       const data = (await response.json()) as {
         ok: boolean;
         result: Array<{
           update_id: number;
-          message?: { chat: { id: number }; from?: { id: number }; text?: string };
+          message?: {
+            chat: { id: number };
+            from?: { id: number };
+            text?: string;
+          };
         }>;
       };
 
@@ -342,11 +272,12 @@ if (process.argv.includes("--listen")) {
         for (const update of data.result) {
           lastUpdateId = update.update_id;
           const msg = update.message;
-          if (msg?.text) {
-            const userId = String(msg.from?.id ?? msg.chat.id);
-            const reply = await handleMessage(userId, msg.text);
-            await sendTelegramReply(token!, msg.chat.id, reply);
-          }
+          if (!msg) continue;
+          const text = msg.text;
+          if (!text) continue;
+          const userId = String(msg.from?.id ?? msg.chat.id);
+          const reply = await handleMessage(userId, msg.chat.id, text);
+          await sendTelegramReply(botToken, msg.chat.id, reply);
         }
       }
     } catch (err) {
@@ -356,7 +287,7 @@ if (process.argv.includes("--listen")) {
     }
   }
 
-  logger.info("Starting Telegram polling");
+  logger.info("Telegram bot polling (Ctrl+C to stop)");
   const poll = async () => {
     while (true) {
       await pollUpdates();

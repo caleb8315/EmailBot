@@ -1,6 +1,13 @@
 {
   "sources": [
     {
+      "name": "Google News — Top stories",
+      "url": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 7
+    },
+    {
       "name": "Reuters Top News",
       "url": "https://feeds.reuters.com/reuters/topNews",
       "type": "rss",
@@ -8,7 +15,7 @@
       "trust_score": 9
     },
     {
-      "name": "AP News",
+      "name": "AP News (RSSHub)",
       "url": "https://rsshub.app/apnews/topics/apf-topnews",
       "type": "rss",
       "category": "world",
@@ -20,6 +27,55 @@
       "type": "rss",
       "category": "world",
       "trust_score": 8
+    },
+    {
+      "name": "NPR News",
+      "url": "https://feeds.npr.org/1001/rss.xml",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 8
+    },
+    {
+      "name": "The Guardian World",
+      "url": "https://www.theguardian.com/world/rss",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 8
+    },
+    {
+      "name": "Reddit — r/worldnews",
+      "url": "https://www.reddit.com/r/worldnews/.rss",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 5
+    },
+    {
+      "name": "Reddit — r/technology",
+      "url": "https://www.reddit.com/r/technology/.rss",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 5
+    },
+    {
+      "name": "Reddit — r/news",
+      "url": "https://www.reddit.com/r/news/.rss",
+      "type": "rss",
+      "category": "world",
+      "trust_score": 5
+    },
+    {
+      "name": "Hacker News — front page",
+      "url": "https://hnrss.org/frontpage",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 6
+    },
+    {
+      "name": "Hacker News Best",
+      "url": "https://hnrss.org/best",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 6
     },
     {
       "name": "TechCrunch",
@@ -36,22 +92,15 @@
       "trust_score": 8
     },
     {
-      "name": "Hacker News Best",
-      "url": "https://hnrss.org/best",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 6
-    },
-    {
-      "name": "NPR News",
-      "url": "https://feeds.npr.org/1001/rss.xml",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 8
-    },
-    {
       "name": "The Verge",
       "url": "https://www.theverge.com/rss/index.xml",
+      "type": "rss",
+      "category": "tech",
+      "trust_score": 7
+    },
+    {
+      "name": "Wired",
+      "url": "https://www.wired.com/feed/rss",
       "type": "rss",
       "category": "tech",
       "trust_score": 7
@@ -64,10 +113,17 @@
       "trust_score": 9
     },
     {
-      "name": "Wired",
-      "url": "https://www.wired.com/feed/rss",
+      "name": "Financial Times",
+      "url": "https://www.ft.com/?format=rss",
       "type": "rss",
-      "category": "tech",
+      "category": "finance",
+      "trust_score": 9
+    },
+    {
+      "name": "CoinDesk",
+      "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+      "type": "rss",
+      "category": "finance",
       "trust_score": 7
     }
   ],
@@ -79,7 +135,9 @@
     "npr.org",
     "bloomberg.com",
     "nytimes.com",
-    "washingtonpost.com"
+    "washingtonpost.com",
+    "theguardian.com",
+    "ft.com"
   ],
   "blocked_domains": [
     "buzzfeed.com",

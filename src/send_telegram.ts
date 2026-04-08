@@ -1,6 +1,7 @@
 import https from "https";
 import { createLogger } from "./logger";
-import { getLastAlertTime, markAlerted } from "./memory";
+import { getLastAlertTime, markAlerted, logSystemEvent } from "./memory";
+import { createSmtpTransport } from "./smtp";
 import { shouldAlert } from "./scoring";
 import type { ArticleHistory } from "./types";
 
@@ -47,6 +48,58 @@ function formatAlertMessage(article: ArticleHistory): string {
 
 function escapeMarkdown(text: string): string {
   return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, "\\$1");
+}
+
+function alertPlainText(article: ArticleHistory): string {
+  const lines = [
+    "IMPORTANT — Intelligence alert",
+    "",
+    article.title,
+    "",
+    article.summary ?? "",
+    "",
+    `Importance: ${article.importance_score ?? "n/a"}/10`,
+    `Credibility: ${article.credibility_score ?? "n/a"}/10`,
+    "",
+    article.url,
+    `Source: ${article.source}`,
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+async function sendImportantAlertEmail(article: ArticleHistory): Promise<void> {
+  const flag = process.env.ALERT_EMAIL_IMPORTANT;
+  if (flag !== "true" && flag !== "1") return;
+
+  const transport = createSmtpTransport();
+  const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
+  const to = process.env.EMAIL_TO;
+  if (!transport || !from || !to) {
+    logger.warn("ALERT_EMAIL_IMPORTANT set but SMTP or EMAIL_TO missing");
+    return;
+  }
+
+  try {
+    await transport.sendMail({
+      from,
+      to,
+      subject: `🚨 Intel alert: ${article.title.slice(0, 80)}${article.title.length > 80 ? "…" : ""}`,
+      text: alertPlainText(article),
+    });
+    logger.info("Important alert email sent", {
+      title: article.title.slice(0, 50),
+    });
+    await logSystemEvent({
+      level: "info",
+      source: "alert",
+      message: "Important alert email sent",
+      meta: { url: article.url },
+    });
+  } catch (err) {
+    logger.error("Important alert email failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 function sendTelegramMessage(
@@ -160,6 +213,7 @@ export async function sendAlertIfNeeded(
     if (sent) {
       await markAlerted(article.url);
       logger.info("Alert sent", { title: article.title.slice(0, 60) });
+      await sendImportantAlertEmail(article);
     }
 
     return sent;

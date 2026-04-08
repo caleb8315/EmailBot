@@ -1,8 +1,16 @@
-import nodemailer from "nodemailer";
 import OpenAI from "openai";
 import { createLogger } from "./logger";
-import { getRecentArticles, getSources, markEmailed } from "./memory";
+import {
+  getRecentArticles,
+  getSources,
+  markEmailed,
+  getPreferences,
+  saveDigestArchive,
+  logSystemEvent,
+} from "./memory";
+import { createSmtpTransport } from "./smtp";
 import { getTopArticles, extractEmergingTopics } from "./scoring";
+import { formatDigestPlainText, sendDigestTelegram } from "./telegram_digest";
 import {
   getDailyUsageReport,
   canMakeAICall,
@@ -14,23 +22,12 @@ const logger = createLogger("send_email");
 
 // ── Transporter ──
 
-function createTransport(): nodemailer.Transporter | null {
-  const host = process.env.EMAIL_SMTP_HOST;
-  const port = parseInt(process.env.EMAIL_SMTP_PORT ?? "587", 10);
-  const user = process.env.EMAIL_SMTP_USER;
-  const pass = process.env.EMAIL_SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    logger.warn("Email SMTP not configured — digest will be skipped");
-    return null;
+function createTransport() {
+  const t = createSmtpTransport();
+  if (!t) {
+    logger.warn("Email SMTP not configured — digest email channel skipped");
   }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
+  return t;
 }
 
 // ── AI Insight ──
@@ -224,13 +221,25 @@ export async function sendDailyDigest(
   try {
     logger.info("Building daily digest");
 
+    const userId = process.env.TELEGRAM_CHAT_ID ?? "default";
+    let effectiveInterests = interests;
+    if (effectiveInterests.length === 0) {
+      try {
+        const prefs = await getPreferences(userId);
+        effectiveInterests = prefs.interests;
+      } catch {
+        /* use [] */
+      }
+    }
+
     const [recentArticles, sources, usage] = await Promise.all([
       getRecentArticles(24),
       getSources(),
       getDailyUsageReport(),
     ]);
 
-    const topArticles = getTopArticles(recentArticles, 3);
+    const topForEmail = getTopArticles(recentArticles, 3);
+    const topForTelegram = getTopArticles(recentArticles, 6);
     const topics = extractEmergingTopics(recentArticles);
     const bestSource =
       sources.length > 0
@@ -239,46 +248,112 @@ export async function sendDailyDigest(
           )
         : null;
 
-    const insight = await generateInsight(recentArticles, interests);
+    const insight = await generateInsight(
+      recentArticles,
+      effectiveInterests
+    );
 
     const html = buildHtml(
-      topArticles,
+      topForEmail,
       topics,
       usage,
       insight,
       bestSource
     );
-    const text = buildPlainText(topArticles, usage, insight);
+    const text = buildPlainText(topForEmail, usage, insight);
 
     const transport = createTransport();
-    if (!transport) {
-      logger.warn("No email transport — digest not sent");
+    let emailOk = false;
+    if (transport) {
+      const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
+      const to = process.env.EMAIL_TO;
+      if (from && to) {
+        await transport.sendMail({
+          from,
+          to,
+          subject: `📡 Intelligence Digest — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          html,
+          text,
+        });
+        const emailedUrls = topForEmail.map((a) => a.url);
+        await markEmailed(emailedUrls);
+        logger.info("Daily digest email sent", {
+          to,
+          articles: topForEmail.length,
+        });
+        emailOk = true;
+      } else {
+        logger.warn("EMAIL_FROM or EMAIL_TO missing — skipping email");
+      }
+    } else {
+      logger.warn("No email SMTP — skipping email channel");
+    }
+
+    const skipTg =
+      process.env.SEND_DIGEST_TELEGRAM === "false" ||
+      process.env.SEND_DIGEST_TELEGRAM === "0";
+    let telegramOk = false;
+    if (!skipTg) {
+      const plain = formatDigestPlainText(topForTelegram, usage, insight);
+      telegramOk = await sendDigestTelegram(plain);
+    }
+
+    if (!emailOk && !telegramOk) {
+      logger.error("Digest had no delivery channel (configure SMTP and/or Telegram)");
+      await logSystemEvent({
+        level: "error",
+        source: "digest",
+        message: "Daily digest had no delivery channel",
+      });
       return false;
     }
 
-    const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
-    const to = process.env.EMAIL_TO;
-    if (!from || !to) {
-      logger.error("EMAIL_FROM or EMAIL_TO missing");
-      return false;
-    }
+    const channels: string[] = [];
+    if (emailOk) channels.push("email");
+    if (telegramOk) channels.push("telegram");
 
-    await transport.sendMail({
-      from,
-      to,
-      subject: `📡 Intelligence Digest — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-      html,
-      text,
+    const urls = [
+      ...new Set([
+        ...topForEmail.map((a) => a.url),
+        ...topForTelegram.map((a) => a.url),
+      ]),
+    ];
+
+    const combinedPlain = [
+      formatDigestPlainText(topForTelegram, usage, insight),
+      emailOk ? "\n---\n(HTML email also sent to inbox.)" : "",
+    ].join("");
+
+    await saveDigestArchive({
+      channels,
+      subject: emailOk
+        ? `Intelligence Digest — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        : `Intelligence Digest (Telegram) — ${new Date().toISOString().slice(0, 10)}`,
+      html_body: emailOk ? html : null,
+      plain_text: combinedPlain.slice(0, 120_000),
+      article_urls: urls,
+      meta: {
+        email_ok: emailOk,
+        telegram_ok: telegramOk,
+        insight_present: Boolean(insight),
+      },
     });
 
-    const emailedUrls = topArticles.map((a) => a.url);
-    await markEmailed(emailedUrls);
+    await logSystemEvent({
+      level: "info",
+      source: "digest",
+      message: `Digest delivered via ${channels.join(" + ")}`,
+      meta: { article_count: urls.length },
+    });
 
-    logger.info("Daily digest sent", { to, articles: topArticles.length });
     return true;
   } catch (err) {
-    logger.error("Daily digest failed", {
-      error: err instanceof Error ? err.message : String(err),
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error("Daily digest failed", { error: msg });
+    await logSystemEvent({
+      level: "error",
+      source: "digest",
+      message: `Daily digest failed: ${msg}`,
     });
     return false;
   }

@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
-Lightweight breaking-news checker for OpenClaw heartbeat integration.
+Lightweight breaking-news checker (cron / heartbeat).
 
 Fetches RSS feeds, filters to last 2 hours, scores stories by cross-source
 corroboration and tier-1 keyword matching. Exits fast (< 30s target) with
 no AI calls unless a genuine breaking threshold is met.
 
+Merges tier1_keywords / ignore_categories from:
+  --preferences-file, data/user_preferences.json, and Supabase briefing_overlay (if env set).
+
 Output: JSON to stdout
   { "has_breaking": bool, "stories": [...], "checked_at": "...", "activation_count": N }
 
 Usage:
-  python breaking_check.py                          # normal check
-  python breaking_check.py --threshold 3            # custom source threshold
-  python breaking_check.py --preferences-file path  # load user keyword overrides
+  python breaking_check.py
+  python breaking_check.py --threshold 3
+  python breaking_check.py --preferences-file data/user_preferences.json
 """
 
 from __future__ import annotations
@@ -25,7 +28,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from dotenv import load_dotenv
 
@@ -33,8 +36,72 @@ load_dotenv()
 
 from news_intel.config import SOURCES, Source
 from news_intel.rss_fetcher import fetch_all, RawArticle
+from news_intel.remote_prefs import fetch_briefing_overlay
 
 logger = logging.getLogger(__name__)
+
+DATA_DIR = Path(__file__).parent / "data"
+
+
+def _dedupe_str_list(items: List[str]) -> List[str]:
+    seen: Set[str] = set()
+    out: List[str] = []
+    for x in items:
+        k = x.strip().lower()
+        if k and k not in seen:
+            seen.add(k)
+            out.append(x.strip().lower())
+    return out
+
+
+def _load_merged_overlay(cli_prefs_path: Optional[str]) -> Dict[str, Any]:
+    merged: Dict[str, Any] = {}
+    paths: List[Path] = []
+    if cli_prefs_path:
+        paths.append(Path(cli_prefs_path))
+    default_fp = DATA_DIR / "user_preferences.json"
+    if default_fp.exists() and default_fp not in paths:
+        paths.append(default_fp)
+
+    for p in paths:
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            for key in (
+                "tier1_keywords",
+                "ignore_categories",
+                "ignore_sources",
+            ):
+                if key in data and data[key]:
+                    merged[key] = merged.get(key, []) + list(data[key])
+        except Exception as exc:
+            logger.warning("Could not read %s: %s", p, exc)
+
+    remote = fetch_briefing_overlay()
+    for key in ("tier1_keywords", "ignore_categories", "ignore_sources"):
+        if remote.get(key):
+            merged[key] = merged.get(key, []) + list(remote[key])
+
+    pref_json = DATA_DIR / "preferences.json"
+    if pref_json.exists():
+        try:
+            p = json.loads(pref_json.read_text(encoding="utf-8"))
+            legacy = p.get("_bot_tier1_keywords") or p.get(
+                "_openclaw_tier1_keywords", []
+            )
+            if legacy:
+                merged["tier1_keywords"] = merged.get("tier1_keywords", []) + list(
+                    legacy
+                )
+        except Exception:
+            pass
+
+    if merged.get("tier1_keywords"):
+        merged["tier1_keywords"] = _dedupe_str_list(merged["tier1_keywords"])
+    if merged.get("ignore_categories"):
+        merged["ignore_categories"] = _dedupe_str_list(
+            [str(x) for x in merged["ignore_categories"]]
+        )
+    return merged
 
 ACTIVATION_FILE = Path("/tmp/news_intel_daily_activations.txt")
 MAX_ACTIVATIONS_PER_DAY = 5
@@ -185,15 +252,11 @@ def run_breaking_check(
             "elapsed_seconds": round(time.monotonic() - t0, 1),
         }
 
-    extra_keywords: List[str] = []
-    ignore_categories: List[str] = []
-    if preferences_file:
-        try:
-            prefs = json.loads(Path(preferences_file).read_text())
-            extra_keywords = prefs.get("tier1_keywords", [])
-            ignore_categories = prefs.get("ignore_categories", [])
-        except Exception as exc:
-            logger.warning("Could not load preferences file: %s", exc)
+    overlay = _load_merged_overlay(preferences_file)
+    extra_keywords: List[str] = list(overlay.get("tier1_keywords", []))
+    ignore_categories: List[str] = [
+        str(x) for x in overlay.get("ignore_categories", [])
+    ]
 
     raw_articles = fetch_all(SOURCES)
 

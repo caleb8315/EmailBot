@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 """
-Preference updater for OpenClaw memory integration.
+Preference updater — merges a bot/user overlay JSON into data/preferences.json.
 
-Reads OpenClaw memory exports (user_preferences.json) and syncs them
-into the pipeline's data/preferences.json, updating category weights,
-ignore lists, and tier-1 keyword overrides.
-
-Can also be called directly with --set flags for CLI-based updates.
+The Telegram bot stores the same shape in Supabase (briefing_overlay). For the
+Python briefing on a VM, you can keep data/user_preferences.json in sync, or
+rely on Supabase (see news_intel.remote_prefs).
 
 Usage:
-  # Sync from OpenClaw memory export
-  python preferences_updater.py --from-openclaw /path/to/user_preferences.json
+  python preferences_updater.py --from-file data/user_preferences.json
 
-  # Direct CLI updates
   python preferences_updater.py --boost "AI & Technology" --ignore "Crypto"
-  python preferences_updater.py --add-keyword "tariff" --remove-keyword "bitcoin"
+  python preferences_updater.py --add-keyword "tariff"
   python preferences_updater.py --set-weight "Stocks=10"
 """
 
@@ -46,7 +42,7 @@ DEFAULT_PREFS: Dict[str, Any] = {
     "Conspiracy / Unverified Signals": 5,
 }
 
-OPENCLAW_PREFS_TEMPLATE: Dict[str, Any] = {
+USER_PREFS_TEMPLATE: Dict[str, Any] = {
     "ignore_categories": [],
     "boost_categories": [],
     "ignore_sources": [],
@@ -73,39 +69,39 @@ def save_pipeline_prefs(prefs: Dict[str, Any]) -> None:
     logger.info("Saved pipeline preferences to %s", PIPELINE_PREFS)
 
 
-def load_openclaw_prefs(path: str) -> Dict[str, Any]:
-    """Load the OpenClaw-managed user_preferences.json."""
+def load_user_prefs_file(path: str) -> Dict[str, Any]:
+    """Load user_preferences.json (bot overlay)."""
     try:
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except Exception as exc:
-        logger.error("Failed to load OpenClaw prefs from %s: %s", path, exc)
+        logger.error("Failed to load user prefs from %s: %s", path, exc)
         return {}
 
 
-def create_openclaw_prefs_template(path: str) -> None:
-    """Create a blank OpenClaw preferences file if it doesn't exist."""
+def create_user_prefs_template(path: str) -> None:
+    """Create a blank user_preferences.json if missing."""
     p = Path(path)
     if p.exists():
-        logger.info("OpenClaw prefs already exist at %s", path)
+        logger.info("User prefs already exist at %s", path)
         return
     p.parent.mkdir(parents=True, exist_ok=True)
-    template = deepcopy(OPENCLAW_PREFS_TEMPLATE)
+    template = deepcopy(USER_PREFS_TEMPLATE)
     template["updated_at"] = datetime.now(timezone.utc).isoformat()
     p.write_text(json.dumps(template, indent=2) + "\n", encoding="utf-8")
-    logger.info("Created OpenClaw prefs template at %s", path)
+    logger.info("Created user prefs template at %s", path)
 
 
-def sync_from_openclaw(openclaw_path: str) -> Dict[str, Any]:
+def sync_from_user_file(user_prefs_path: str) -> Dict[str, Any]:
     """
-    Merge OpenClaw memory-managed preferences into pipeline preferences.
+    Merge user overlay into pipeline preferences.json.
 
     Strategy:
     - boost_categories: increase weight by +2 (capped at 10)
     - ignore_categories: decrease weight to 1
     - category_weights: direct overrides (takes precedence)
-    - tier1_keywords / ignore_sources: stored in a separate section
+    - tier1_keywords / ignore_sources: stored in pipeline JSON under _bot_*
     """
-    oc = load_openclaw_prefs(openclaw_path)
+    oc = load_user_prefs_file(user_prefs_path)
     if not oc:
         return load_pipeline_prefs()
 
@@ -126,9 +122,9 @@ def sync_from_openclaw(openclaw_path: str) -> Dict[str, Any]:
             prefs[cat] = max(1, min(10, int(weight)))
             logger.info("Set category weight: %s = %s", cat, prefs[cat])
 
-    prefs["_openclaw_tier1_keywords"] = oc.get("tier1_keywords", [])
-    prefs["_openclaw_ignore_sources"] = oc.get("ignore_sources", [])
-    prefs["_openclaw_synced_at"] = datetime.now(timezone.utc).isoformat()
+    prefs["_bot_tier1_keywords"] = oc.get("tier1_keywords", [])
+    prefs["_bot_ignore_sources"] = oc.get("ignore_sources", [])
+    prefs["_bot_synced_at"] = datetime.now(timezone.utc).isoformat()
 
     save_pipeline_prefs(prefs)
     return prefs
@@ -202,12 +198,16 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Update news pipeline preferences")
     parser.add_argument(
+        "--from-file", type=str, dest="from_file",
+        help="Sync from user_preferences.json (bot overlay)",
+    )
+    parser.add_argument(
         "--from-openclaw", type=str,
-        help="Sync preferences from an OpenClaw memory export file",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--create-template", type=str,
-        help="Create a blank OpenClaw preferences template at the given path",
+        help="Create a blank user_preferences.json template at the given path",
     )
     parser.add_argument(
         "--feedback", type=str,
@@ -241,11 +241,12 @@ def main() -> None:
         return
 
     if args.create_template:
-        create_openclaw_prefs_template(args.create_template)
+        create_user_prefs_template(args.create_template)
         return
 
-    if args.from_openclaw:
-        result = sync_from_openclaw(args.from_openclaw)
+    legacy_path = args.from_openclaw or args.from_file
+    if legacy_path:
+        result = sync_from_user_file(legacy_path)
         print(json.dumps(result, indent=2))
         return
 
@@ -274,10 +275,10 @@ def main() -> None:
                 prefs[cat.strip()] = max(1, min(10, int(val)))
 
     for kw in args.add_keyword:
-        existing = prefs.get("_openclaw_tier1_keywords", [])
+        existing = prefs.get("_bot_tier1_keywords", []) or prefs.get("_openclaw_tier1_keywords", [])
         if kw.lower() not in [k.lower() for k in existing]:
             existing.append(kw.lower())
-            prefs["_openclaw_tier1_keywords"] = existing
+            prefs["_bot_tier1_keywords"] = existing
 
     save_pipeline_prefs(prefs)
     print(json.dumps(prefs, indent=2))

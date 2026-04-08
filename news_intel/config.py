@@ -328,6 +328,23 @@ SOURCES: List[Source] = [
            CAT_ALT, 3, "independent",
            reliability=0.2, signal_type="narrative", region="global",
            topics=("surveillance", "geopolitics"), update_frequency="low", role="contrarian"),
+
+    # ── Social / aggregate (lower tier — fast-moving discussion, verify elsewhere) ─
+    Source("Reddit — r/worldnews",
+           "https://www.reddit.com/r/worldnews/.rss",
+           CAT_WORLD, 3, "independent",
+           reliability=0.45, signal_type="breaking", region="global",
+           topics=("geopolitics",), update_frequency="high", role="signal"),
+    Source("Reddit — r/news",
+           "https://www.reddit.com/r/news/.rss",
+           CAT_WORLD, 3, "independent",
+           reliability=0.45, signal_type="breaking", region="US",
+           topics=("geopolitics",), update_frequency="high", role="signal"),
+    Source("Google News — Top stories",
+           "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+           CAT_WORLD, 2, "center",
+           reliability=0.55, signal_type="breaking", region="global",
+           topics=("geopolitics",), update_frequency="high", role="signal"),
 ]
 
 

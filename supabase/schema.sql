@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   alert_sensitivity INTEGER NOT NULL DEFAULT 5 CHECK (alert_sensitivity >= 1 AND alert_sensitivity <= 10),
   trusted_sources TEXT[] NOT NULL DEFAULT '{}',
   blocked_sources TEXT[] NOT NULL DEFAULT '{}',
+  briefing_overlay JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -61,6 +62,33 @@ CREATE TABLE IF NOT EXISTS source_registry (
 
 CREATE INDEX IF NOT EXISTS idx_source_registry_url ON source_registry (url);
 
+-- Archived digests (email + Telegram) for dashboard history
+CREATE TABLE IF NOT EXISTS digest_archive (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  channels     TEXT[] NOT NULL DEFAULT '{}',
+  subject      TEXT,
+  html_body    TEXT,
+  plain_text   TEXT NOT NULL DEFAULT '',
+  article_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  meta         JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_digest_archive_created ON digest_archive (created_at DESC);
+
+-- Errors and status events
+CREATE TABLE IF NOT EXISTS system_events (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  level      TEXT NOT NULL DEFAULT 'info',
+  source     TEXT NOT NULL DEFAULT 'app',
+  message    TEXT NOT NULL,
+  meta       JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_events_created ON system_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_events_level ON system_events (level);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
@@ -69,6 +97,8 @@ ALTER TABLE usage_tracking ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE article_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE source_registry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE digest_archive ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
 
 -- Service role can do everything (used by the pipeline)
 CREATE POLICY "service_all_usage_tracking" ON usage_tracking

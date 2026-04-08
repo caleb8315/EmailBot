@@ -39,6 +39,30 @@ export interface UsageTracking {
   created_at: string;
 }
 
+/** Synced to Supabase; drives Python briefing + breaking keywords when present */
+export interface BriefingOverlay {
+  boost_categories?: string[];
+  ignore_categories?: string[];
+  category_weights?: Record<string, number>;
+  tier1_keywords?: string[];
+  ignore_sources?: string[];
+  last_briefing_feedback?: string;
+  updated_at?: string;
+}
+
+export const BRIEFING_SECTIONS = [
+  "World & Geopolitics",
+  "Wars & Conflicts",
+  "Economy & Markets",
+  "Stocks",
+  "Crypto",
+  "AI & Technology",
+  "Power & Elite Activity",
+  "Conspiracy / Unverified Signals",
+] as const;
+
+export type BriefingSection = (typeof BRIEFING_SECTIONS)[number];
+
 export interface UserPreferences {
   id: string;
   user_id: string;
@@ -47,6 +71,7 @@ export interface UserPreferences {
   alert_sensitivity: number;
   trusted_sources: string[];
   blocked_sources: string[];
+  briefing_overlay: BriefingOverlay | null;
   updated_at: string;
 }
 

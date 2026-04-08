@@ -1,0 +1,276 @@
+:root {
+  --bg: #0c1222;
+  --panel: #151d2e;
+  --border: #2a3548;
+  --text: #e8edf5;
+  --muted: #8b9bb4;
+  --accent: #3b82f6;
+  --good: #22c55e;
+  --bad: #ef4444;
+  --warn: #eab308;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+}
+
+.layout {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.secret-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.secret-bar input {
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  min-width: 200px;
+}
+
+.secret-bar button {
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 340px;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  max-height: min(78vh, 900px);
+  overflow: auto;
+}
+
+.panel h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.card time {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #1e293b;
+  margin-right: 0.25rem;
+}
+
+.tag.email {
+  background: #1e3a5f;
+}
+.tag.telegram {
+  background: #134e4a;
+}
+.tag.error {
+  background: #450a0a;
+  color: #fecaca;
+}
+.tag.warn {
+  background: #422006;
+  color: #fef08a;
+}
+.tag.info {
+  background: #172554;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.btn-row button {
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #1e293b;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-row button:hover {
+  border-color: var(--accent);
+}
+
+.run-line {
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.run-line a {
+  font-size: 0.75rem;
+}
+
+.status-completed {
+  color: var(--good);
+}
+.status-failure {
+  color: var(--bad);
+}
+.status-in_progress {
+  color: var(--warn);
+}
+
+.chat-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+.chat-messages {
+  height: min(52vh, 520px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: #0f172a;
+  font-size: 0.85rem;
+}
+
+.msg {
+  margin-bottom: 0.65rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg.user {
+  color: #93c5fd;
+}
+
+.msg.bot {
+  color: var(--text);
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.chat-input-row textarea {
+  flex: 1;
+  min-height: 56px;
+  resize: vertical;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.chat-input-row button {
+  align-self: flex-end;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.html-preview {
+  max-height: 200px;
+  overflow: auto;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  padding: 0.35rem;
+  margin-top: 0.35rem;
+  background: #0f172a;
+}

@@ -4,6 +4,7 @@ import type {
   UserPreferences,
   ArticleHistory,
   SourceRegistry,
+  BriefingOverlay,
 } from "./types";
 
 const logger = createLogger("memory");
@@ -30,6 +31,7 @@ const DEFAULT_PREFERENCES: Omit<UserPreferences, "id" | "updated_at"> = {
   alert_sensitivity: 5,
   trusted_sources: [],
   blocked_sources: [],
+  briefing_overlay: {},
 };
 
 export async function getPreferences(
@@ -48,7 +50,9 @@ export async function getPreferences(
       throw error;
     }
 
-    if (data) return data as UserPreferences;
+    if (data) {
+      return normalizeUserPreferences(data as UserPreferences);
+    }
 
     const { data: inserted, error: insertErr } = await sb
       .from("user_preferences")
@@ -64,7 +68,7 @@ export async function getPreferences(
     }
 
     logger.info("Created default preferences", { userId });
-    return inserted as UserPreferences;
+    return normalizeUserPreferences(inserted as UserPreferences);
   } catch (err) {
     logger.error("getPreferences failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -78,6 +82,16 @@ export async function getPreferences(
   }
 }
 
+function normalizeUserPreferences(row: UserPreferences): UserPreferences {
+  return {
+    ...row,
+    briefing_overlay:
+      row.briefing_overlay && typeof row.briefing_overlay === "object"
+        ? row.briefing_overlay
+        : {},
+  };
+}
+
 export async function updatePreferences(
   userId: string,
   patch: Partial<
@@ -88,6 +102,7 @@ export async function updatePreferences(
       | "alert_sensitivity"
       | "trusted_sources"
       | "blocked_sources"
+      | "briefing_overlay"
     >
   >
 ): Promise<void> {
@@ -109,6 +124,17 @@ export async function updatePreferences(
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+export async function patchBriefingOverlay(
+  userId: string,
+  mutator: (prev: BriefingOverlay) => BriefingOverlay
+): Promise<void> {
+  const prefs = await getPreferences(userId);
+  const prev = prefs.briefing_overlay ?? {};
+  const next = mutator(prev);
+  next.updated_at = new Date().toISOString();
+  await updatePreferences(userId, { briefing_overlay: next });
 }
 
 // ── Article History ──
@@ -320,5 +346,70 @@ export async function getLastAlertedArticle(): Promise<ArticleHistory | null> {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
+  }
+}
+
+// ── Dashboard: digest archive + system events ─────────────────────
+
+export interface DigestArchiveRow {
+  id: string;
+  created_at: string;
+  channels: string[];
+  subject: string | null;
+  html_body: string | null;
+  plain_text: string;
+  article_urls: unknown;
+  meta: Record<string, unknown>;
+}
+
+export async function saveDigestArchive(row: {
+  channels: string[];
+  subject: string | null;
+  html_body: string | null;
+  plain_text: string;
+  article_urls: string[];
+  meta?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const sb = getClient();
+    const { error } = await sb.from("digest_archive").insert({
+      channels: row.channels,
+      subject: row.subject,
+      html_body: row.html_body,
+      plain_text: row.plain_text,
+      article_urls: row.article_urls,
+      meta: row.meta ?? {},
+    });
+    if (error) {
+      logger.error("saveDigestArchive failed", { error: error.message });
+    }
+  } catch (err) {
+    logger.error("saveDigestArchive failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+export async function logSystemEvent(entry: {
+  level: "info" | "warn" | "error";
+  source: string;
+  message: string;
+  meta?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const sb = getClient();
+    const { error } = await sb.from("system_events").insert({
+      level: entry.level,
+      source: entry.source,
+      message: entry.message.slice(0, 8000),
+      meta: entry.meta ?? {},
+    });
+    if (error) {
+      logger.error("logSystemEvent failed", { error: error.message });
+    }
+  } catch (err) {
+    logger.error("logSystemEvent failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }

@@ -9,5 +9,4 @@ python-dotenv>=1.0.0
 # pip install spacy && python -m spacy download en_core_web_sm
 # spacy>=3.7.0
 
-# Note: No new paid dependencies added for the OpenClaw integration.
-# breaking_check.py and preferences_updater.py use only the packages above.
+# breaking_check.py, preferences_updater.py, and news_intel.remote_prefs use the packages above.

@@ -8,7 +8,9 @@
     "start": "ts-node src/index.ts",
     "email": "ts-node src/send_email.ts --daily",
     "chat": "ts-node src/chat_handler.ts --listen",
-    "typecheck": "tsc --noEmit"
+    "bot": "ts-node src/chat_handler.ts --listen",
+    "typecheck": "tsc --noEmit",
+    "test:telegram": "node --env-file=.env ./node_modules/ts-node/dist/bin.js src/test_telegram.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

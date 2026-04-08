@@ -1,4 +1,5 @@
 import { createLogger } from "./logger";
+import { logSystemEvent } from "./memory";
 import { getPreferences, getRecentArticles } from "./memory";
 import { fetchAllSources, getSourcesConfig } from "./fetch_sources";
 import { prefilterArticles } from "./prefilter";
@@ -57,6 +58,7 @@ async function runPipeline(): Promise<void> {
       alert_sensitivity: 5,
       trusted_sources: [],
       blocked_sources: [],
+      briefing_overlay: {},
       updated_at: new Date().toISOString(),
     };
   }
@@ -182,8 +184,12 @@ runPipeline()
     process.exit(0);
   })
   .catch(async (err) => {
-    logger.error("Pipeline crashed", {
-      error: err instanceof Error ? err.message : String(err),
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error("Pipeline crashed", { error: msg });
+    await logSystemEvent({
+      level: "error",
+      source: "pipeline",
+      message: `Pipeline crashed: ${msg}`,
     });
     try {
       await sendPlainMessage("⚠️ Pipeline failed — check logs");
