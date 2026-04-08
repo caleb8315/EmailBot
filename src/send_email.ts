@@ -373,7 +373,12 @@ export async function sendDailyDigest(
 if (process.argv.includes("--daily")) {
   sendDailyDigest()
     .then((ok) => {
-      if (!ok) logger.warn("Digest completed with issues");
+      if (!ok) {
+        logger.error(
+          "Morning digest failed: no email and no Telegram (check Actions logs + secrets SMTP / TELEGRAM_*)"
+        );
+        process.exit(1);
+      }
       process.exit(0);
     })
     .catch((err) => {

@@ -49,12 +49,14 @@ export function formatDigestPlainText(
 }
 
 export async function sendDigestTelegram(plainText: string): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatIdRaw = process.env.TELEGRAM_CHAT_ID?.trim();
+  if (!token || !chatIdRaw) {
     logger.warn("Telegram not configured — skipping digest message");
     return false;
   }
+
+  const chatId = /^-?\d+$/.test(chatIdRaw) ? Number(chatIdRaw) : chatIdRaw;
 
   const payload = JSON.stringify({
     chat_id: chatId,
@@ -72,7 +74,10 @@ export async function sendDigestTelegram(plainText: string): Promise<boolean> {
     );
     const body = (await res.json()) as { ok?: boolean; description?: string };
     if (!body.ok) {
-      logger.error("Telegram digest failed", { description: body.description });
+      logger.error("Telegram digest failed", {
+        description: body.description,
+        hint: "Use your numeric user id from getUpdates; for groups start the bot in the group first",
+      });
       return false;
     }
     logger.info("Morning briefing sent to Telegram");
