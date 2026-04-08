@@ -138,28 +138,30 @@ export async function processArticles(
     toProcess: toProcess.length,
   });
 
+  const useAI =
+    process.env.PIPELINE_AI_SCORING === "true" ||
+    process.env.PIPELINE_AI_SCORING === "1";
+
   for (const article of toProcess) {
     try {
-      const budgetAvailable = await canMakeAICall();
+      let analysis: ArticleAnalysis | null = null;
 
-      if (!budgetAvailable) {
-        logger.info("AI budget exhausted — storing without analysis", {
-          title: article.title.slice(0, 60),
-        });
-        const row = buildArticleHistoryRow(article, null);
-        await saveArticle(row);
-        result.processed.push({ ...row, id: "" });
-        result.skippedBudget++;
-        continue;
-      }
-
-      const analysis = await analyzeWithAI(article, prefs);
-
-      if (analysis) {
-        await recordAICall();
-        result.aiCallsMade++;
-      } else {
-        result.skippedError++;
+      if (useAI) {
+        const budgetAvailable = await canMakeAICall();
+        if (!budgetAvailable) {
+          logger.info("AI budget exhausted — storing without analysis", {
+            title: article.title.slice(0, 60),
+          });
+          result.skippedBudget++;
+        } else {
+          analysis = await analyzeWithAI(article, prefs);
+          if (analysis) {
+            await recordAICall();
+            result.aiCallsMade++;
+          } else {
+            result.skippedError++;
+          }
+        }
       }
 
       const row = buildArticleHistoryRow(article, analysis);
