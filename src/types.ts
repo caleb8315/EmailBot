@@ -8,12 +8,16 @@ export interface RawArticle {
   content: string;
   publishedAt: string;
   wordCount: number;
+  sourceTrustScore?: number;
 }
 
 // ── After prefilter scoring ──
 export interface FilteredArticle extends RawArticle {
   prefilterScore: number;
   passedPrefilter: boolean;
+  heuristicImportance: number;
+  heuristicCredibility: number;
+  corroborationCount: number;
 }
 
 // ── AI analysis response (validated via Zod) ──

@@ -86,24 +86,33 @@ async function analyzeWithAI(
   }
 }
 
+function buildHeuristicSummary(article: FilteredArticle): string {
+  const text = article.content.trim();
+  if (!text) return article.title;
+  const firstSentences = text.match(/^.{1,260}[.!?]/)?.[0];
+  if (firstSentences) return firstSentences;
+  return text.length > 260 ? text.slice(0, 257) + "…" : text;
+}
+
 function buildArticleHistoryRow(
   article: FilteredArticle,
   analysis: ArticleAnalysis | null
 ): Omit<ArticleHistory, "id"> {
+  const useHeuristic = analysis === null;
   return {
     url: article.url,
     title: article.title,
     source: article.source,
-    summary: analysis?.summary ?? null,
-    importance_score: analysis?.importance_score ?? null,
-    credibility_score: analysis?.credibility_score ?? null,
+    summary: analysis?.summary ?? (useHeuristic ? buildHeuristicSummary(article) : null),
+    importance_score: analysis?.importance_score ?? (useHeuristic ? article.heuristicImportance : null),
+    credibility_score: analysis?.credibility_score ?? (useHeuristic ? article.heuristicCredibility : null),
     relevance_score: analysis?.relevance_score ?? null,
     ai_processed: analysis !== null,
     user_feedback: null,
     alerted: false,
     emailed: false,
     fetched_at: new Date().toISOString(),
-    processed_at: analysis ? new Date().toISOString() : null,
+    processed_at: new Date().toISOString(),
   };
 }
 

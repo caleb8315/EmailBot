@@ -9,7 +9,7 @@ export interface ScoredArticle extends ArticleHistory {
 
 /**
  * Weighted composite: importance (40%), relevance (35%), credibility (25%).
- * Falls back to a heuristic score when AI scores are absent.
+ * When relevance is absent (heuristic-only mode), uses importance (55%) + credibility (45%).
  */
 function computeComposite(article: ArticleHistory): number {
   if (
@@ -21,6 +21,13 @@ function computeComposite(article: ArticleHistory): number {
       article.importance_score * 0.4 +
       article.relevance_score * 0.35 +
       article.credibility_score * 0.25
+    );
+  }
+
+  if (article.importance_score !== null && article.credibility_score !== null) {
+    return (
+      article.importance_score * 0.55 +
+      article.credibility_score * 0.45
     );
   }
 
@@ -56,9 +63,9 @@ export function getTopArticles(
 
 export function shouldAlert(article: ArticleHistory): boolean {
   const meetsImportance =
-    article.importance_score !== null && article.importance_score >= 9;
+    article.importance_score !== null && article.importance_score >= 8;
   const meetsCredibility =
-    article.credibility_score !== null && article.credibility_score >= 7;
+    article.credibility_score !== null && article.credibility_score >= 6;
   return meetsImportance && meetsCredibility;
 }
 
@@ -68,7 +75,7 @@ export function extractEmergingTopics(
   const topicCounts = new Map<string, number>();
 
   for (const article of articles) {
-    if (!article.ai_processed || !article.summary) continue;
+    if (!article.summary) continue;
 
     const words = article.summary
       .toLowerCase()

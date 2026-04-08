@@ -70,14 +70,18 @@ export async function fetchAllSources(): Promise<RawArticle[]> {
   const config = sourcesConfig as SourcesConfig;
   const allArticles: RawArticle[] = [];
 
-  const feedPromises = config.sources
-    .filter((s) => s.type === "rss")
-    .map((s) => fetchSingleFeed(s.name, s.url));
+  const rssFeeds = config.sources.filter((s) => s.type === "rss");
+  const feedPromises = rssFeeds.map((s) => fetchSingleFeed(s.name, s.url));
 
   const results = await Promise.allSettled(feedPromises);
 
-  for (const result of results) {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
     if (result.status === "fulfilled") {
+      const trust = rssFeeds[i].trust_score;
+      for (const article of result.value) {
+        article.sourceTrustScore = trust;
+      }
       allArticles.push(...result.value);
     }
   }

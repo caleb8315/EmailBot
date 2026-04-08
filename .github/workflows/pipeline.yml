@@ -35,6 +35,10 @@ jobs:
           PREFILTER_THRESHOLD: '40'
           ALERT_COOLDOWN_HOURS: '2'
           ALERT_EMAIL_IMPORTANT: ${{ secrets.ALERT_EMAIL_IMPORTANT }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
