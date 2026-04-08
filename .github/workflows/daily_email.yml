@@ -14,28 +14,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Preflight — at least one delivery channel (secrets)
+      - name: Preflight — SMTP secrets check
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST || secrets.SMTP_HOST }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER || secrets.SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS || secrets.SMTP_PASS }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
           set -e
-          tg_ok=0
-          [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] && tg_ok=1
-          smtp_ok=0
-          if [ -n "${EMAIL_SMTP_HOST:-}" ] && [ -n "${EMAIL_SMTP_USER:-}" ] && [ -n "${EMAIL_SMTP_PASS:-}" ] && [ -n "${EMAIL_TO:-}" ]; then
-            smtp_ok=1
-          fi
-          if [ "$tg_ok" -eq 0 ] && [ "$smtp_ok" -eq 0 ]; then
-            echo "::error::No digest delivery: add repository secrets for SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS, EMAIL_TO) and/or Telegram (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)."
+          if [ -z "${EMAIL_SMTP_HOST:-}" ] || [ -z "${EMAIL_SMTP_USER:-}" ] || [ -z "${EMAIL_SMTP_PASS:-}" ] || [ -z "${EMAIL_TO:-}" ]; then
+            echo "::error::Email delivery not configured: add repository secrets SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_TO."
             exit 1
           fi
-          echo "Preflight OK (telegram=$tg_ok smtp=$smtp_ok)"
+          echo "Preflight OK — SMTP configured"
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -46,39 +37,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Debug — check which SMTP vars are present
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
-          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
-          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
-          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: |
-          echo "=== SMTP secret diagnostic ==="
-          [ -n "${SMTP_HOST:-}" ]      && echo "SMTP_HOST: SET" || echo "SMTP_HOST: MISSING"
-          [ -n "${SMTP_PORT:-}" ]      && echo "SMTP_PORT: SET" || echo "SMTP_PORT: MISSING (will default to 587)"
-          [ -n "${SMTP_USER:-}" ]      && echo "SMTP_USER: SET" || echo "SMTP_USER: MISSING"
-          [ -n "${SMTP_PASS:-}" ]      && echo "SMTP_PASS: SET" || echo "SMTP_PASS: MISSING"
-          [ -n "${EMAIL_SMTP_HOST:-}" ] && echo "EMAIL_SMTP_HOST: SET" || echo "EMAIL_SMTP_HOST: MISSING"
-          [ -n "${EMAIL_SMTP_USER:-}" ] && echo "EMAIL_SMTP_USER: SET" || echo "EMAIL_SMTP_USER: MISSING"
-          [ -n "${EMAIL_SMTP_PASS:-}" ] && echo "EMAIL_SMTP_PASS: SET" || echo "EMAIL_SMTP_PASS: MISSING"
-          [ -n "${EMAIL_FROM:-}" ]     && echo "EMAIL_FROM: SET" || echo "EMAIL_FROM: MISSING (falls back to SMTP_USER)"
-          [ -n "${EMAIL_TO:-}" ]       && echo "EMAIL_TO: SET" || echo "EMAIL_TO: MISSING ← REQUIRED"
-          echo "=== end diagnostic ==="
-
-      - name: Send morning digest (email + Telegram, one AI insight)
+      - name: Send morning digest (email only)
         env:
           MORNING_DIGEST_RUN: "true"
+          SEND_DIGEST_TELEGRAM: "false"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
