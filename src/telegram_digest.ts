@@ -56,10 +56,9 @@ export async function sendDigestTelegram(plainText: string): Promise<boolean> {
     return false;
   }
 
-  const chatId = /^-?\d+$/.test(chatIdRaw) ? Number(chatIdRaw) : chatIdRaw;
-
+  // String chat_id avoids JS Number precision loss on large Telegram ids.
   const payload = JSON.stringify({
-    chat_id: chatId,
+    chat_id: chatIdRaw,
     text: plainText,
   });
 

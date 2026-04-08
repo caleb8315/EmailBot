@@ -30,6 +30,25 @@ function createTransport() {
   return t;
 }
 
+/** True if we can send digest email (SMTP + from + to). */
+function digestEmailConfigured(): boolean {
+  if (!createSmtpTransport()) return false;
+  const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER;
+  const to = process.env.EMAIL_TO;
+  return Boolean(from?.trim() && to?.trim());
+}
+
+/** True if digest Telegram is enabled and token + chat id are set. */
+function digestTelegramConfigured(): boolean {
+  const skipTg =
+    process.env.SEND_DIGEST_TELEGRAM === "false" ||
+    process.env.SEND_DIGEST_TELEGRAM === "0";
+  if (skipTg) return false;
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
+  return Boolean(token && chatId);
+}
+
 // ── AI Insight ──
 
 async function generateInsight(
@@ -230,6 +249,18 @@ export async function sendDailyDigest(
 ): Promise<boolean> {
   try {
     logger.info("Building daily digest");
+
+    if (!digestEmailConfigured() && !digestTelegramConfigured()) {
+      logger.error(
+        "No digest delivery configured: GitHub Actions needs repository secrets for SMTP (EMAIL_SMTP_HOST, EMAIL_SMTP_USER, EMAIL_SMTP_PASS, EMAIL_TO, EMAIL_FROM optional) and/or Telegram (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). If you use Environment secrets, add `environment: …` to the workflow job."
+      );
+      await logSystemEvent({
+        level: "error",
+        source: "digest",
+        message: "Daily digest skipped: no SMTP or Telegram secrets in runner env",
+      });
+      return false;
+    }
 
     const userId = process.env.TELEGRAM_CHAT_ID ?? "default";
     let effectiveInterests = interests;

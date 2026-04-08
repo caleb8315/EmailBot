@@ -14,6 +14,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Preflight — at least one delivery channel (secrets)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          set -e
+          tg_ok=0
+          [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] && tg_ok=1
+          smtp_ok=0
+          if [ -n "${EMAIL_SMTP_HOST:-}" ] && [ -n "${EMAIL_SMTP_USER:-}" ] && [ -n "${EMAIL_SMTP_PASS:-}" ] && [ -n "${EMAIL_TO:-}" ]; then
+            smtp_ok=1
+          fi
+          if [ "$tg_ok" -eq 0 ] && [ "$smtp_ok" -eq 0 ]; then
+            echo "::error::No digest delivery: GitHub did not receive SMTP or Telegram secrets. In the repo: Settings → Secrets and variables → Actions → add repository secrets (not only Environments unless the job sets \`environment:\`). Names: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, and/or EMAIL_SMTP_HOST, EMAIL_SMTP_USER, EMAIL_SMTP_PASS, EMAIL_TO (+ EMAIL_FROM optional)."
+            exit 1
+          fi
+          echo "Preflight OK (telegram=$tg_ok smtp=$smtp_ok)"
+
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -47,6 +70,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "Skipping Telegram notify (TELEGRAM_BOT_TOKEN empty — same reason digest could not send)."
+            exit 0
+          fi
+          curl -s -S -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="⚠️ Morning digest failed — check GitHub Actions logs"
