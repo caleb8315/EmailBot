@@ -34,9 +34,9 @@ function createTransport() {
 function digestEmailConfigured(): boolean {
   if (!createSmtpTransport()) return false;
   const from = (
-    process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER ?? process.env.SMTP_USER
-  )?.trim();
-  const to = process.env.EMAIL_TO?.trim();
+    process.env.EMAIL_FROM || process.env.EMAIL_SMTP_USER || process.env.SMTP_USER || ""
+  ).trim();
+  const to = (process.env.EMAIL_TO || "").trim();
   return Boolean(from && to);
 }
 
@@ -309,9 +309,9 @@ export async function sendDailyDigest(
     let emailOk = false;
     if (transport) {
       const from = (
-        process.env.EMAIL_FROM ?? process.env.EMAIL_SMTP_USER ?? process.env.SMTP_USER
-      )?.trim();
-      const to = process.env.EMAIL_TO?.trim();
+        process.env.EMAIL_FROM || process.env.EMAIL_SMTP_USER || process.env.SMTP_USER || ""
+      ).trim();
+      const to = (process.env.EMAIL_TO || "").trim();
       if (from && to) {
         await transport.sendMail({
           from,
