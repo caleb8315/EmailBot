@@ -1,6 +1,6 @@
 {
   "12b476702ca3": {
-    "headline": "Bitcoin Price Briefly Tops $70,000 as Donald Trump\u2019s Iran Signals Rattle Markets",
+    "headline": "Shares Of Infrastructure Developer Erupt On Gulf Energy Reconstruction Prospects",
     "category": "World & Geopolitics",
     "appearances": [
       {
@@ -43,6 +43,13 @@
         "headline": "Trump gives Iran until Tuesday night to open Strait of Hormuz, WSJ reports - Reuters",
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 6,
+        "category": "World & Geopolitics"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "How Trump's deadline delays and threats escalated leading up to 2-week ceasefire with Iran - AP News",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 8,
         "category": "World & Geopolitics"
       }
     ]
@@ -213,7 +220,7 @@
     ]
   },
   "5cb40884cd6c": {
-    "headline": "Phillips 66 forecasts up to $1B in derivatives losses as oil prices rise",
+    "headline": "Dow Jones Futures Spike 1,300 Points, Oil Prices Dive On Trump-Iran Ceasefire; What To Do Now",
     "category": "Economy & Markets",
     "appearances": [
       {
@@ -228,6 +235,13 @@
         "headline": "Phillips 66 forecasts up to $1B in derivatives losses as oil prices rise",
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
+        "category": "Stocks"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Dow Jones Futures Spike 1,300 Points, Oil Prices Dive On Trump-Iran Ceasefire; What To Do Now",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
         "category": "Stocks"
       }
     ]
@@ -486,7 +500,7 @@
     ]
   },
   "620f6f0163d9": {
-    "headline": "North Korea Keeping Iran At Arm's Length, Hoping To Improve Ties With Trump",
+    "headline": "House Democrat says he has filed articles of impeachment against Trump",
     "category": "AI & Technology",
     "appearances": [
       {
@@ -516,6 +530,13 @@
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "Economy & Markets"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "House Democrat says he has filed articles of impeachment against Trump",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Power & Elite Activity"
       }
     ]
   },
@@ -540,7 +561,7 @@
     ]
   },
   "c4c234267272": {
-    "headline": "AI is changing how small online sellers decide what to make",
+    "headline": "Xbox\u2019s new era needs games like Forza Horizon 6",
     "category": "AI & Technology",
     "appearances": [
       {
@@ -556,6 +577,13 @@
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "Economy & Markets"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "NYT revives Adam Back theory in latest bid to identify Bitcoin creator",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "Crypto"
       }
     ]
   },
@@ -811,7 +839,7 @@
     ]
   },
   "169eb2c192a9": {
-    "headline": "Microsoft is the worst performing Mag 7 stock this year. Goldman believes that's about to change",
+    "headline": "Roth Capital downgrades these six energy stocks after U.S.-Iran war ceasefire",
     "category": "Wars & Conflicts",
     "appearances": [
       {
@@ -838,6 +866,13 @@
       {
         "date": "2026-04-07",
         "headline": "Microsoft is the worst performing Mag 7 stock this year. Goldman believes that's about to change",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
+        "category": "Stocks"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Roth Capital downgrades these six energy stocks after U.S.-Iran war ceasefire",
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 2,
         "category": "Stocks"
@@ -891,7 +926,7 @@
     ]
   },
   "a4a0e6341362": {
-    "headline": "\u2018The president loves you\u2019: US\u2019 Vance visits Hungary to boost Orban re-election bid",
+    "headline": "EU to \u2018convey concerns\u2019 to US about Vance\u2019s Hungary intervention \u2013 Europe live",
     "category": "World & Geopolitics",
     "appearances": [
       {
@@ -914,6 +949,13 @@
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 3,
         "category": "World & Geopolitics"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Hungary's Orban plays on energy price fears in re-election bid",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 4,
+        "category": "World & Geopolitics"
       }
     ]
   },
@@ -931,7 +973,7 @@
     ]
   },
   "910e0b3da4eb": {
-    "headline": "Israel hits Iran with waves of attacks and says it killed top Hezbollah commander",
+    "headline": "Watch Live: Hegseth Declares 'Victory' As Fragile Iran Ceasefire Hailed Internationally",
     "category": "Wars & Conflicts",
     "appearances": [
       {
@@ -939,6 +981,13 @@
         "headline": "Israel hits Iran with waves of attacks and says it killed top Hezbollah commander",
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
+        "category": "Wars & Conflicts"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Israel hits Lebanon with massive wave of airstrikes amid ceasefire uncertainty",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
         "category": "Wars & Conflicts"
       }
     ]
@@ -1187,7 +1236,7 @@
     ]
   },
   "e267b573f61c": {
-    "headline": "McConnell joins Democrats to defend US NATO membership",
+    "headline": "Senate Democrats Might Not Have November In The Bag",
     "category": "Power & Elite Activity",
     "appearances": [
       {
@@ -1195,6 +1244,13 @@
         "headline": "McConnell joins Democrats to defend US NATO membership",
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 2,
+        "category": "Power & Elite Activity"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Trump is deeply unpopular\u00a0\u2014\u00a0yet voters still loathe Democrats",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
         "category": "Power & Elite Activity"
       }
     ]
@@ -1306,7 +1362,7 @@
     ]
   },
   "21034e54fa21": {
-    "headline": "Middle East crisis live: Iran warns of \u2018devastating\u2019 retaliation after Trump\u2019s expletive-laden threats over strait of Hormuz",
+    "headline": "Middle East crisis live: Iran to hand over enriched uranium or US will \u2018take it out\u2019, Hegseth claims",
     "category": "Wars & Conflicts",
     "appearances": [
       {
@@ -1321,6 +1377,13 @@
         "headline": "Middle East crisis live: Iran warns of \u2018devastating\u2019 retaliation after Trump\u2019s expletive-laden threats over strait of Hormuz",
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
+        "category": "Wars & Conflicts"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Middle East crisis live: Iran to hand over enriched uranium or US will \u2018take it out\u2019, Hegseth claims",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
         "category": "Wars & Conflicts"
       }
     ]
@@ -1662,7 +1725,7 @@
     ]
   },
   "dba90f671111": {
-    "headline": "Solana Foundation looks to beef up DeFi security as attacks continue",
+    "headline": "Hegseth claims \u2018historic and overwhelming victory\u2019 after Iran ceasefire",
     "category": "Conspiracy / Unverified Signals",
     "appearances": [
       {
@@ -1678,6 +1741,13 @@
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 3,
         "category": "Crypto"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Gulf countries report attacks despite Iran ceasefire",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 4,
+        "category": "World & Geopolitics"
       }
     ]
   },
@@ -1734,7 +1804,7 @@
     ]
   },
   "be079e99a348": {
-    "headline": "Second US Air Force plane crashed in Persian Gulf region, New York Times reports - Reuters",
+    "headline": "Tractive\u2019s new dog and cat trackers provide more health insights for your pets",
     "category": "World & Geopolitics",
     "appearances": [
       {
@@ -1743,6 +1813,13 @@
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 2,
         "category": "World & Geopolitics"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Tractive\u2019s new dog and cat trackers provide more health insights for your pets",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "AI & Technology"
       }
     ]
   },
@@ -1931,7 +2008,7 @@
     ]
   },
   "cb45c20ddf2a": {
-    "headline": "Pentagon cancels Tuesday press briefing with Caine, Hegseth",
+    "headline": "Republican Clay Fuller wins Georgia US House runoff in MAGA stronghold - Reuters",
     "category": "Crypto",
     "appearances": [
       {
@@ -1954,6 +2031,13 @@
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 3,
         "category": "World & Geopolitics"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Republican Clay Fuller wins Georgia US House runoff in MAGA stronghold - Reuters",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "Power & Elite Activity"
       }
     ]
   },
@@ -1971,7 +2055,7 @@
     ]
   },
   "a0dc7b854e7d": {
-    "headline": "Really, you made this without AI? Prove it",
+    "headline": "Wobbly Stock Market Rally Creates This Tightrope Balancing Act",
     "category": "AI & Technology",
     "appearances": [
       {
@@ -1980,6 +2064,13 @@
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "AI & Technology"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Wobbly Stock Market Rally Creates This Tightrope Balancing Act",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
+        "category": "Stocks"
       }
     ]
   },
@@ -2267,6 +2358,13 @@
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "Conspiracy / Unverified Signals"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Hedges Report: Ground War With Iran?",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Conspiracy / Unverified Signals"
       }
     ]
   },
@@ -2454,7 +2552,7 @@
     ]
   },
   "e99506fe6535": {
-    "headline": "Gen Z supersavers help propel IRA contributions to record highs",
+    "headline": "Saudi Arabia\u2019s vital East-West oil pipeline attacked",
     "category": "Economy & Markets",
     "appearances": [
       {
@@ -2470,6 +2568,13 @@
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "Conspiracy / Unverified Signals"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "Saudi Arabia\u2019s vital East-West oil pipeline attacked",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Economy & Markets"
       }
     ]
   },
@@ -2526,7 +2631,7 @@
     ]
   },
   "d382b2f4ccef": {
-    "headline": "North Korean workers have been infiltrating DeFi for 7 years: Researcher",
+    "headline": "\u2018There are no winners\u2019: US and Iran enter into fragile truce",
     "category": "Crypto",
     "appearances": [
       {
@@ -2535,6 +2640,13 @@
         "label": "\ud83d\udfe2 VERIFIED",
         "source_count": 3,
         "category": "Crypto"
+      },
+      {
+        "date": "2026-04-08",
+        "headline": "\u2018There are no winners\u2019: US and Iran enter into fragile truce",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Economy & Markets"
       }
     ]
   },
@@ -3065,6 +3177,188 @@
       {
         "date": "2026-04-07",
         "headline": "Today Is \"Bridge Day\"",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Conspiracy / Unverified Signals"
+      }
+    ]
+  },
+  "ff966339e0bf": {
+    "headline": "Middle East war means 'all roads' lead to higher prices, slower growth, IMF chief says - Reuters",
+    "category": "World & Geopolitics",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Middle East war means 'all roads' lead to higher prices, slower growth, IMF chief says - Reuters",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 6,
+        "category": "World & Geopolitics"
+      }
+    ]
+  },
+  "00d3fac8b758": {
+    "headline": "Japan\u2019s \u2018imperialist forces\u2019 divided Taiwan from mainland, KMT\u2019s Cheng Li-wun says",
+    "category": "World & Geopolitics",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Japan\u2019s \u2018imperialist forces\u2019 divided Taiwan from mainland, KMT\u2019s Cheng Li-wun says",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "World & Geopolitics"
+      }
+    ]
+  },
+  "cf8ee8ac843a": {
+    "headline": "Billionaire Gina Rinehart says \u2018I don\u2019t understand\u2019 arrest of Ben Roberts-Smith over alleged war crimes",
+    "category": "Wars & Conflicts",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Billionaire Gina Rinehart says \u2018I don\u2019t understand\u2019 arrest of Ben Roberts-Smith over alleged war crimes",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
+        "category": "Wars & Conflicts"
+      }
+    ]
+  },
+  "7b0356c9262a": {
+    "headline": "Iran demands crypto fees for ships passing Hormuz during ceasefire",
+    "category": "Economy & Markets",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Iran demands crypto fees for ships passing Hormuz during ceasefire",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "Economy & Markets"
+      }
+    ]
+  },
+  "d8a9b852c326": {
+    "headline": "Palo Alto, CrowdStrike Stocks Pop After Anthropic Announces Partnerships - Barron's",
+    "category": "Stocks",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Palo Alto, CrowdStrike Stocks Pop After Anthropic Announces Partnerships - Barron's",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "Stocks"
+      }
+    ]
+  },
+  "238456bb8a94": {
+    "headline": "South Korea draft bill puts stablecoins, RWAs under finance laws: Report",
+    "category": "Crypto",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "South Korea draft bill puts stablecoins, RWAs under finance laws: Report",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 4,
+        "category": "Crypto"
+      }
+    ]
+  },
+  "be1aec510f66": {
+    "headline": "Bitcoin Price Slides Below $68,000 as Trump, Iran Tensions Rattle Markets",
+    "category": "Crypto",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Bitcoin Price Slides Below $68,000 as Trump, Iran Tensions Rattle Markets",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 4,
+        "category": "Crypto"
+      }
+    ]
+  },
+  "ba1c01601d8c": {
+    "headline": "White House study finds limited risk to banks from stablecoin yields amid regulatory debate",
+    "category": "Crypto",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "White House study finds limited risk to banks from stablecoin yields amid regulatory debate",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "Crypto"
+      }
+    ]
+  },
+  "35a3ac676ce3": {
+    "headline": "US prosecutors reject Tornado Cash co-founder\u2019s argument for dismissal",
+    "category": "Crypto",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "US prosecutors reject Tornado Cash co-founder\u2019s argument for dismissal",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 3,
+        "category": "Crypto"
+      }
+    ]
+  },
+  "d0d73691ff34": {
+    "headline": "Ikea\u2019s New Lineup of Smart Home Gear Is Quietly Changing the Game",
+    "category": "AI & Technology",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Ikea\u2019s New Lineup of Smart Home Gear Is Quietly Changing the Game",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "AI & Technology"
+      }
+    ]
+  },
+  "ad41eb05d11d": {
+    "headline": "The only USB-C AA battery I\u2019d buy for myself is the Zepath 3600",
+    "category": "AI & Technology",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "The only USB-C AA battery I\u2019d buy for myself is the Zepath 3600",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "AI & Technology"
+      }
+    ]
+  },
+  "124d38ee4c26": {
+    "headline": "The Download: water threats in Iran and AI\u2019s impact on what entrepreneurs make",
+    "category": "AI & Technology",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "The Download: water threats in Iran and AI\u2019s impact on what entrepreneurs make",
+        "label": "\ud83d\udd34 UNVERIFIED",
+        "source_count": 1,
+        "category": "AI & Technology"
+      }
+    ]
+  },
+  "fde242b8509a": {
+    "headline": "Democrats expand majority on Wisconsin Supreme Court with Taylor victory",
+    "category": "Power & Elite Activity",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Democrats expand majority on Wisconsin Supreme Court with Taylor victory",
+        "label": "\ud83d\udfe2 VERIFIED",
+        "source_count": 2,
+        "category": "Power & Elite Activity"
+      }
+    ]
+  },
+  "d5a39d9b3cec": {
+    "headline": "Evidence Points To Ukraine Being Behind TurkStream Attempted Sabotage (To No One's Surprise)",
+    "category": "Conspiracy / Unverified Signals",
+    "appearances": [
+      {
+        "date": "2026-04-08",
+        "headline": "Evidence Points To Ukraine Being Behind TurkStream Attempted Sabotage (To No One's Surprise)",
         "label": "\ud83d\udd34 UNVERIFIED",
         "source_count": 1,
         "category": "Conspiracy / Unverified Signals"
