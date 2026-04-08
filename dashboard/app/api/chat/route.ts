@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
-import { requireDashboardSecret } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { runBriefingAssistant } from "../../../../src/ai_conversation";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const auth = requireDashboardSecret(req);
+  const auth = requireAuth(req);
   if (auth) return auth;
+
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY not configured on server" },
+      { status: 503 }
+    );
+  }
+
+  if (!process.env.SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    return NextResponse.json(
+      { error: "Supabase credentials not configured on server" },
+      { status: 503 }
+    );
+  }
 
   try {
     const body = (await req.json()) as { message?: string };

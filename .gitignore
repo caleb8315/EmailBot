@@ -41,3 +41,4 @@ venv/
 
 # Local preference overlay (optional; Telegram bot uses Supabase briefing_overlay when configured)
 data/user_preferences.json
+.env.local
