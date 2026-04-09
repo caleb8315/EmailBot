@@ -231,22 +231,28 @@ export default function Page() {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <div style={{
-            width: 32, height: 32, borderRadius: 8,
+            width: 34, height: 34, borderRadius: 10,
             background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontWeight: 800, fontSize: "0.85rem", color: "white",
-            boxShadow: "0 2px 8px rgba(139,92,246,0.25)",
+            fontWeight: 800, fontSize: "0.9rem", color: "white",
+            boxShadow: "0 4px 12px rgba(139,92,246,0.35)",
+            letterSpacing: "-0.02em",
           }}>J</div>
           <h1>Jeff Intelligence</h1>
         </div>
         <div className="header-actions">
           <button className="btn-icon" onClick={refreshData} title="Refresh">
-            &#x21bb;
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1.5 8a6.5 6.5 0 0 1 11.3-4.4M14.5 8a6.5 6.5 0 0 1-11.3 4.4" />
+              <path d="M13.5 2v3h-3M2.5 14v-3h3" />
+            </svg>
           </button>
           <button className="btn-icon" onClick={handleSignOut} title="Sign out">
-            &#x2192;
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M11 11l3-3-3-3M6 8h8" />
+            </svg>
           </button>
         </div>
       </header>
@@ -319,11 +325,13 @@ export default function Page() {
 
             {/* Actions */}
             <div className="btn-row">
-              <button className="btn btn-secondary" onClick={() => dispatch("pipeline.yml")}>
-                Run pipeline
+              <button className="btn btn-primary" onClick={() => dispatch("pipeline.yml")}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 14 8 5 13" /></svg>
+                Run Pipeline
               </button>
               <button className="btn btn-secondary" onClick={() => dispatch("daily_email.yml")}>
-                Run morning digest
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1" /><path d="M2 4l6 5 6-5" /></svg>
+                Morning Digest
               </button>
             </div>
             {dispatchMsg && <p className="muted" style={{ marginBottom: "1rem" }}>{dispatchMsg}</p>}
@@ -569,7 +577,7 @@ export default function Page() {
                 onClick={sendChat}
                 disabled={chatBusy || !input.trim()}
               >
-                Send
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 1.5l-6 13-2.5-5.5L.5 6.5z" /><path d="M14.5 1.5L6 9" /></svg>
               </button>
             </div>
           </div>
