@@ -5,7 +5,7 @@ import type { UsageReport } from "./types";
 const logger = createLogger("usage_limiter");
 
 const MAX_DAILY_AI_CALLS = parseInt(
-  process.env.MAX_DAILY_AI_CALLS ?? "10",
+  process.env.MAX_DAILY_AI_CALLS ?? "30",
   10
 );
 

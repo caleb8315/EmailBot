@@ -56,7 +56,7 @@ jobs:
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
-          MAX_DAILY_AI_CALLS: '10'
+          MAX_DAILY_AI_CALLS: '30'
         run: npx ts-node src/send_email.ts --daily
 
       - name: Notify on failure
