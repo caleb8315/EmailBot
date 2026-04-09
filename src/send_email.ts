@@ -32,6 +32,7 @@ interface KeySignal {
   source_count: number;
   tags: string[];
   summary: string;
+  why_it_matters: string;
 }
 
 interface BriefingData {
@@ -134,21 +135,33 @@ async function generateBriefing(
 
   const systemPrompt = `You are an elite intelligence analyst producing a comprehensive daily briefing for a reader interested in: ${interestsStr}.
 
-Given today's ${articleData.length} articles from ${sourceNames.length} sources, produce a structured intelligence briefing as JSON.
+Given today's ${articleData.length} articles from ${sourceNames.length} sources, produce a structured intelligence briefing as JSON. The reader wants to UNDERSTAND what is happening and WHY it matters — not just see headlines.
 
 Available sections for categorization: ${sections}
 
 Rules:
-- "one_sentence" must capture THE single most important development today in one punchy sentence
-- "key_signals" should be the 8-12 most important stories, ranked. For each: assign a category from the sections list, estimate how many distinct sources covered this story (source_count), assign importance (HIGH/MEDIUM/LOW), trend direction, and 2-3 keyword tags
-- "market_intelligence" should have a strategic 2-3 sentence analysis, 2-3 specific implications, and 2-3 risk scenarios
-- "contrarian_watch" should identify 2-3 dominant narratives and what happens if they're wrong
-- "blindspots" should list 2-4 important topics with NO or minimal coverage today
-- "power_nodes" should track 8-10 key entities (countries, companies, people) mentioned, with importance level and mention count
-- "opportunities" should suggest 2-3 actionable insights
-- "section_articles" should group the top stories into their sections. For each article: determine verification level (VERIFIED = 2+ credible sources agree, DEVELOPING = limited confirmation, UNVERIFIED = single/alt source), provide a status label (e.g. "NEW", "ESCALATING", "DE-ESCALATING", "ONGOING"), a relative time label, 2-3 bullet points of key facts, and list related source names
+- "one_sentence": THE single most important development today in one punchy sentence that captures both the event and its significance
+- "key_signals": the 8-12 most important stories, ranked. For EACH story include:
+  - title, url, source, category (from sections list), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords)
+  - "summary": 2-3 sentence explanation of what happened. Be specific with names, numbers, and facts — not vague.
+  - "why_it_matters": 1-2 sentences explaining the strategic significance. Connect it to bigger trends, explain second-order effects, or why the reader should care. This is the most important field — make it sharp and insightful.
+- "market_intelligence":
+  - "analysis": 4-5 sentence strategic assessment connecting the dots across today's top stories. Identify themes, correlations between events, and what the overall picture suggests. Be specific — reference actual events and data points.
+  - "implications": 3-4 specific, actionable implications (not generic platitudes like "markets may be volatile"). Each should reference a concrete scenario.
+  - "risk_scenarios": 3-4 specific downside scenarios with clear trigger conditions (e.g. "If X happens, then Y because Z")
+- "contrarian_watch": array of 2-3 objects with "narrative" (the dominant consensus view) and "risk_if_wrong" (specific consequences if the consensus is wrong). Be provocative and specific.
+- "blindspots": 2-4 important topics or regions with NO or minimal coverage today that the reader should be aware of
+- "power_nodes": 8-10 key entities (countries, companies, leaders) with importance, mentions count, and a brief "context" explaining their role today
+- "opportunities": 2-3 actionable insights — specific enough that someone could act on them (reference sectors, assets, or strategies)
+- "section_articles": group the top 15-20 stories into their sections. For each article:
+  - verification: VERIFIED (2+ credible sources), DEVELOPING (limited confirmation), UNVERIFIED (single/alt source)
+  - status label: NEW, ESCALATING, DE-ESCALATING, ONGOING
+  - time_label: relative time
+  - "bullets": 3-4 bullet points that tell the full story — include key facts, context, and what to watch next. The reader should understand the story from bullets alone without clicking through.
+  - related_sources: list of source names covering this story
 
-Return ONLY valid JSON matching this structure. Be specific and analytical, not generic.`;
+Write like a senior analyst briefing a decision-maker. Be specific, analytical, and connect the dots. Avoid filler language.
+Return ONLY valid JSON.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -159,7 +172,7 @@ Return ONLY valid JSON matching this structure. Be specific and analytical, not 
         { role: "user", content: JSON.stringify(articleData) },
       ],
       temperature: 0.4,
-      max_tokens: 4000,
+      max_tokens: 8000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -280,9 +293,15 @@ function buildBriefingHtml(
             `<span style="display:inline-block;background:rgba(129,140,248,0.15);color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-right:4px">${esc(t)}</span>`
         )
         .join("");
+      const summaryBlock = s.summary
+        ? `<div style="margin-top:8px;font-size:13px;color:#c7d2fe;line-height:1.55">${esc(s.summary)}</div>`
+        : "";
+      const wimBlock = s.why_it_matters
+        ? `<div style="margin-top:6px;font-size:12px;color:#818cf8;line-height:1.5;padding-left:12px;border-left:2px solid rgba(129,140,248,0.3)"><strong>Why it matters:</strong> ${esc(s.why_it_matters)}</div>`
+        : "";
       return `
       <tr>
-        <td style="padding:16px 20px;border-bottom:1px solid rgba(165,180,252,0.08)">
+        <td style="padding:18px 20px;border-bottom:1px solid rgba(165,180,252,0.08)">
           <table style="width:100%;border-collapse:collapse"><tr>
             <td style="width:28px;vertical-align:top;padding-right:10px">
               <span style="font-size:18px;line-height:1">${trendIcon(s.trend)}</span>
@@ -292,6 +311,8 @@ function buildBriefingHtml(
               <div style="margin-top:5px;font-size:11px;color:#7c7f9a">
                 ${esc(s.category)} · ${s.source_count} source${s.source_count !== 1 ? "s" : ""} · ${tags}
               </div>
+              ${summaryBlock}
+              ${wimBlock}
             </td>
             <td style="width:70px;vertical-align:top;text-align:right;white-space:nowrap;padding-left:8px">
               ${importanceBadge(s.importance)}
@@ -572,6 +593,8 @@ function buildPlainText(
     for (const s of briefing.key_signals || []) {
       lines.push(`  ${trendIcon(s.trend)} ${s.title} [${s.importance}]`);
       lines.push(`     ${s.category} · ${s.source_count} sources`);
+      if (s.summary) lines.push(`     ${s.summary}`);
+      if (s.why_it_matters) lines.push(`     → Why it matters: ${s.why_it_matters}`);
       lines.push(`     ${s.url}`, "");
     }
 
