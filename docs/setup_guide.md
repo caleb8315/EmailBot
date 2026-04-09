@@ -108,7 +108,7 @@ cp .env.example .env
 | `EMAIL_SMTP_PORT` | No | `587` | SMTP port |
 | `EMAIL_SMTP_USER` | For email | — | SMTP username |
 | `EMAIL_SMTP_PASS` | For email | — | SMTP password or app password |
-| `MAX_DAILY_AI_CALLS` | No | `5` | Hard ceiling for OpenAI calls/day |
+| `MAX_DAILY_AI_CALLS` | No | `10` | Hard ceiling for OpenAI calls/day |
 | `PREFILTER_THRESHOLD` | No | `40` | Minimum score to pass prefilter |
 | `ALERT_COOLDOWN_HOURS` | No | `2` | Hours between Telegram alerts |
 
@@ -166,7 +166,7 @@ npm run typecheck
 | Issue | Fix |
 |-------|-----|
 | "SUPABASE_URL required" | Check `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` |
-| "AI budget exhausted" | Normal — system limits to 5 calls/day. Resets at midnight UTC. |
+| "AI budget exhausted" | Normal — system limits to 10 calls/day. Resets at midnight UTC. |
 | Email not sending | Verify SMTP credentials. For Gmail, use App Passwords, not your main password. |
 | Telegram bot not responding | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once. |
 | No articles fetched | Some RSS feeds may be down. Check `config/sources.json` for working feeds. |
