@@ -298,7 +298,7 @@ def format_briefing_html(
 
         <!-- HEADER -->
         <tr><td style="
-          background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);
+          background:#1e1b4b;
           border-radius:16px 16px 0 0;
           padding:36px 32px 28px 32px;
           text-align:center;
@@ -311,13 +311,13 @@ def format_briefing_html(
               {date_display} &nbsp;&middot;&nbsp; {time_display}
             </div>
             <div style="margin-top:16px;">
-              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
+              <span style="display:inline-block;background:#2d2a5e;border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
                 {source_count} sources
               </span>
-              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
+              <span style="display:inline-block;background:#2d2a5e;border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
                 {len(clusters)} stories
               </span>
-              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
+              <span style="display:inline-block;background:#2d2a5e;border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
                 {active_sections} sections
               </span>
             </div>

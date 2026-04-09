@@ -424,25 +424,25 @@ function buildBriefingHtml(
 <div style="max-width:680px;margin:0 auto;overflow:hidden">
 
   <!-- Header -->
-  <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#4338ca 100%);color:#ffffff;padding:36px 28px 32px 28px">
+  <div style="background:#1e1b4b;color:#ffffff;padding:36px 28px 32px 28px">
     <div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Jeff Intelligence System</div>
     <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;line-height:1.2">Daily Intelligence Briefing</div>
     <div style="font-size:13px;color:#c7d2fe;margin-top:8px">${dateStr} · ${timeStr}</div>
-    <div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;color:#e0e7ff">
+    <div style="margin-top:10px;display:inline-block;background:#2d2a5e;padding:6px 14px;border-radius:20px;font-size:12px;color:#e0e7ff">
       ${sourceCount} sources · ${storyCount} stories · ${sectionCount} sections
     </div>
     <div style="margin-top:16px;font-size:11px;line-height:2">
-      <span style="display:inline-block;background:rgba(16,185,129,0.2);color:#6ee7b7;padding:3px 12px;border-radius:12px;margin-right:6px">✓ VERIFIED</span>
-      <span style="display:inline-block;background:rgba(245,158,11,0.2);color:#fcd34d;padding:3px 12px;border-radius:12px;margin-right:6px">◐ DEVELOPING</span>
-      <span style="display:inline-block;background:rgba(239,68,68,0.2);color:#fca5a5;padding:3px 12px;border-radius:12px">! UNVERIFIED</span>
+      <span style="display:inline-block;background:#0f2b1d;color:#6ee7b7;padding:3px 12px;border-radius:12px;margin-right:6px">✓ VERIFIED</span>
+      <span style="display:inline-block;background:#2d1f04;color:#fcd34d;padding:3px 12px;border-radius:12px;margin-right:6px">◐ DEVELOPING</span>
+      <span style="display:inline-block;background:#2d0f0f;color:#fca5a5;padding:3px 12px;border-radius:12px">! UNVERIFIED</span>
     </div>
   </div>
 
   <!-- One Sentence -->
-  <div style="background:linear-gradient(180deg,#312e81 0%,#0d1117 100%);padding:0 28px 28px 28px">
-    <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(165,180,252,0.15);border-radius:14px;padding:20px 22px">
+  <div style="background:#161b22;padding:24px 28px 28px 28px">
+    <div style="background:#1c2128;border:1px solid #30363d;border-radius:14px;padding:20px 22px">
       <div style="font-size:11px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">⚡ TODAY IN ONE SENTENCE</div>
-      <div style="font-size:16px;color:#ffffff;line-height:1.6;font-weight:500">${esc(briefing.one_sentence)}</div>
+      <div style="font-size:16px;color:#ffffff;line-height:1.6;font-weight:600">${esc(briefing.one_sentence)}</div>
     </div>
   </div>
 
@@ -458,7 +458,7 @@ function buildBriefingHtml(
     </div>
 
     <!-- Market Intelligence -->
-    <div style="background:linear-gradient(135deg,#161b22 0%,#1c2128 100%);border:1px solid #30363d;border-radius:16px;padding:24px;margin-bottom:24px">
+    <div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:24px;margin-bottom:24px">
       <div style="font-size:13px;font-weight:800;color:#a5b4fc;margin-bottom:14px;letter-spacing:1px">📊  MARKET INTELLIGENCE</div>
       <div style="font-size:14px;color:#c9d1d9;line-height:1.7;margin-bottom:16px">${esc(briefing.market_intelligence?.analysis || "")}</div>
       ${implications ? `<div style="font-weight:700;font-size:11px;color:#a5b4fc;margin-bottom:8px;letter-spacing:0.5px">IMPLICATIONS</div><ul style="margin:0 0 16px 16px;padding:0">${implications}</ul>` : ""}
@@ -514,10 +514,10 @@ function buildBriefingHtml(
   </div>
 
   <!-- Footer -->
-  <div style="background:linear-gradient(135deg,#1e1b4b 0%,#0f0e1a 100%);padding:28px;text-align:center">
-    <div style="font-size:11px;font-weight:700;color:#6366f1;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
-    <div style="font-size:11px;color:#a5b4fc;margin-top:6px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
-    <div style="margin-top:12px;height:3px;width:60px;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:2px;display:inline-block"></div>
+  <div style="background:#0d1117;border-top:1px solid #30363d;padding:28px;text-align:center">
+    <div style="font-size:11px;font-weight:700;color:#818cf8;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
+    <div style="font-size:11px;color:#8b949e;margin-top:6px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
+    <div style="margin-top:12px;height:3px;width:60px;background:#6366f1;border-radius:2px;display:inline-block"></div>
   </div>
 
 </div>
@@ -553,7 +553,7 @@ function buildFallbackHtml(
 </head>
 <body style="margin:0;padding:0;background:#0d1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e6edf3">
 <div style="max-width:680px;margin:0 auto;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#4338ca 100%);color:#fff;padding:36px 28px">
+  <div style="background:#1e1b4b;color:#fff;padding:36px 28px">
     <div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Jeff Intelligence System</div>
     <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px">Intelligence Digest</div>
     <div style="font-size:13px;color:#c7d2fe;margin-top:6px">${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>

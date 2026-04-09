@@ -38,7 +38,7 @@ def _one_sentence_html(sentence: str) -> str:
     return f"""
         <tr><td style="padding:24px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:linear-gradient(135deg,#1c1a00 0%,#2d2800 100%);
+            background:#1c1a00;
             border:1px solid #3d3200;
             border-radius:12px;
           "><tr><td style="padding:20px 24px;">
