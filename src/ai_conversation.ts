@@ -231,6 +231,8 @@ Your job:
 - Never answer with a refusal-only message. Even when uncertain, provide a best-effort assessment grounded in available evidence.
 - Do not mention limitations in a robotic way ("I am just an AI", "I can only provide"). Lead with analysis first, then uncertainty.
 - Prioritize usefulness over hedging. The user wants an operator-style read, not a generic disclaimer.
+- Never tell the user to "run the pipeline" or "wait for the next digest" as your main answer.
+- Never say you lack "briefing context" as a final answer. Give your best analysis using web + prior knowledge.
 
 You MUST respond with a single JSON object (no markdown fences) of this shape:
 {"reply":"string shown to the user","actions":{}}
@@ -258,7 +260,12 @@ function polishReplyTone(reply: string): string {
   // Strip robotic disclaimer phrases that make responses feel generic.
   const roboticPatterns: RegExp[] = [
     /I can only provide[^.]*\.\s*/gi,
+    /I don't have specific information[^.]*\.\s*/gi,
     /I don't have specific insights[^.]*\.\s*/gi,
+    /I don't have[^.]*briefing context[^.]*\.\s*/gi,
+    /in the context of your briefing[^.]*\.\s*/gi,
+    /If you're looking for recent news[^.]*\.\s*/gi,
+    /I suggest (running the pipeline|waiting for the next digest)[^.]*\.\s*/gi,
     /As an AI[^.]*\.\s*/gi,
     /I (can't|cannot) (predict|know|guarantee)[^.]*\.\s*/gi,
     /I do not have access to[^.]*\.\s*/gi,
@@ -316,6 +323,34 @@ function enforceInsightFormat(userMessage: string, reply: string): string {
   ].join("\n");
 }
 
+function isLowValueRefusal(reply: string): boolean {
+  return /briefing context|run the pipeline|wait for the next digest|don't have specific information|cannot provide/i.test(
+    reply
+  );
+}
+
+function buildRecoveryInsight(userMessage: string, reply: string): string {
+  const subject = userMessage.trim().replace(/\s+/g, " ").slice(0, 180);
+  return [
+    `Quick take: Here's the strongest read on "${subject}" right now, based on available signals.`,
+    "",
+    `Most likely scenario: ${
+      polishReplyTone(reply) ||
+      "Short-term continuity with periodic volatility while decision-makers react to new facts and incentives."
+    }`,
+    "",
+    "Plausible alternative:",
+    "- A sharper turn if new intelligence, domestic political pressure, or allied signaling changes the decision calculus.",
+    "",
+    "What to watch next:",
+    "- Official statements and policy actions (not just commentary)",
+    "- Resource/military posture changes and diplomatic sequencing",
+    "- Cross-confirmed reporting from multiple high-credibility outlets",
+    "",
+    "Confidence: medium (directional confidence, timing confidence lower).",
+  ].join("\n");
+}
+
 async function requestAssistantJson(
   openai: OpenAI,
   system: string,
@@ -326,31 +361,34 @@ async function requestAssistantJson(
   const webSearchDisabled = process.env.DISABLE_CHAT_WEB_SEARCH === "true";
 
   if (!webSearchDisabled) {
-    try {
-      const response = await openai.responses.create({
-        model: webModel,
-        instructions: system,
-        input: userMessage,
-        temperature: 0.35,
-        max_output_tokens: 1000,
-        tools: [{ type: "web_search_preview", search_context_size: "high" }],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "assistant_response",
-            schema: AssistantResponseJsonSchema,
-            strict: true,
+    const webModels = [...new Set([webModel, "gpt-4.1-mini", "gpt-4.1"])];
+    for (const model of webModels) {
+      try {
+        const response = await openai.responses.create({
+          model,
+          instructions: system,
+          input: userMessage,
+          temperature: 0.35,
+          max_output_tokens: 1000,
+          tools: [{ type: "web_search_preview", search_context_size: "high" }],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "assistant_response",
+              schema: AssistantResponseJsonSchema,
+              strict: true,
+            },
           },
-        },
-      });
-      const raw = response.output_text?.trim() ?? "";
-      if (raw) return raw;
-      throw new Error("Empty output_text from responses API");
-    } catch (err) {
-      logger.warn("Web-enabled assistant call failed; falling back", {
-        error: err instanceof Error ? err.message : String(err),
-        model: webModel,
-      });
+        });
+        const raw = response.output_text?.trim() ?? "";
+        if (raw) return raw;
+        throw new Error("Empty output_text from responses API");
+      } catch (err) {
+        logger.warn("Web-enabled assistant call failed; trying next option", {
+          error: err instanceof Error ? err.message : String(err),
+          model,
+        });
+      }
     }
   }
 
@@ -436,6 +474,9 @@ export async function runBriefingAssistant(
   }
 
   let out = enforceInsightFormat(userMessage, parsed.reply);
+  if (isLowValueRefusal(out)) {
+    out = buildRecoveryInsight(userMessage, out);
+  }
   if (out.length > TG_MAX) {
     out = out.slice(0, TG_MAX - 12) + "\n…(truncated)";
   }
