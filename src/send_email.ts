@@ -165,7 +165,22 @@ Return ONLY valid JSON matching this structure. Be specific and analytical, not 
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
 
-    const parsed = JSON.parse(content) as BriefingData;
+    const raw = JSON.parse(content);
+    const toArray = (v: unknown): any[] => (Array.isArray(v) ? v : []);
+    const parsed: BriefingData = {
+      one_sentence: typeof raw.one_sentence === "string" ? raw.one_sentence : "",
+      key_signals: toArray(raw.key_signals),
+      market_intelligence: {
+        analysis: typeof raw.market_intelligence?.analysis === "string" ? raw.market_intelligence.analysis : "",
+        implications: toArray(raw.market_intelligence?.implications),
+        risk_scenarios: toArray(raw.market_intelligence?.risk_scenarios),
+      },
+      contrarian_watch: toArray(raw.contrarian_watch),
+      blindspots: toArray(raw.blindspots),
+      power_nodes: toArray(raw.power_nodes),
+      opportunities: toArray(raw.opportunities),
+      section_articles: typeof raw.section_articles === "object" && raw.section_articles !== null ? raw.section_articles : {},
+    };
     await recordAICall();
     logger.info(`AI briefing generated via ${DIGEST_MODEL}`);
     return parsed;
