@@ -207,9 +207,10 @@ Return ONLY valid JSON.`;
 
 // ── HTML Builder ──
 
-function esc(text: string | undefined | null): string {
-  if (!text) return "";
-  return text
+function esc(text: unknown): string {
+  if (text === null || text === undefined) return "";
+  const s = typeof text === "string" ? text : JSON.stringify(text);
+  return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
