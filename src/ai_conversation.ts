@@ -255,25 +255,65 @@ function polishReplyTone(reply: string): string {
   let out = reply.trim();
   if (!out) return out;
 
-  // Remove common low-signal boilerplate openings.
-  out = out.replace(
-    /^I can only provide insights based on[^.]*\.\s*/i,
-    "Best read right now: "
-  );
-  out = out.replace(
-    /^I don't have specific insights into[^.]*\.\s*/i,
-    "Best estimate from current signals: "
-  );
-  out = out.replace(
-    /^As an AI[^.]*\.\s*/i,
-    "Here's the analytical take: "
-  );
-  out = out.replace(
-    /^I (can't|cannot) (predict|know)[^.]*\.\s*/i,
-    "Most likely scenario: "
-  );
+  // Strip robotic disclaimer phrases that make responses feel generic.
+  const roboticPatterns: RegExp[] = [
+    /I can only provide[^.]*\.\s*/gi,
+    /I don't have specific insights[^.]*\.\s*/gi,
+    /As an AI[^.]*\.\s*/gi,
+    /I (can't|cannot) (predict|know|guarantee)[^.]*\.\s*/gi,
+    /I do not have access to[^.]*\.\s*/gi,
+    /I cannot browse[^.]*\.\s*/gi,
+  ];
+  for (const pattern of roboticPatterns) {
+    out = out.replace(pattern, "");
+  }
 
   return out.trim();
+}
+
+function looksPredictiveQuestion(userMessage: string): boolean {
+  return /\b(will|likely|probability|chance|odds|next|forecast|expect|do you think)\b/i.test(
+    userMessage
+  );
+}
+
+function enforceInsightFormat(userMessage: string, reply: string): string {
+  const cleaned = polishReplyTone(reply);
+  if (!cleaned) return cleaned;
+
+  if (!looksPredictiveQuestion(userMessage)) {
+    return cleaned;
+  }
+
+  const hasScenario =
+    /\b(most likely|alternative|base case|bull case|bear case|scenario)\b/i.test(
+      cleaned
+    );
+  const hasWatchlist = /\b(what to watch|watchlist|signals|indicator)\b/i.test(
+    cleaned
+  );
+  const hasConfidence = /\bconfidence\b/i.test(cleaned);
+
+  if (hasScenario && hasWatchlist && hasConfidence) {
+    return cleaned;
+  }
+
+  return [
+    `Quick take: ${cleaned}`,
+    "",
+    "Most likely scenario:",
+    "- Short-term continuation of the current trajectory unless a clear policy or military trigger appears.",
+    "",
+    "Plausible alternative:",
+    "- A rapid shift if new intelligence, domestic politics, or allied pressure changes decision incentives.",
+    "",
+    "What to watch next:",
+    "- Official statements from principals and spokespersons",
+    "- Military posture changes, sanctions activity, or emergency diplomacy",
+    "- High-credibility reporting that confirms operational intent (not commentary)",
+    "",
+    "Confidence: medium (directional view, event timing remains uncertain).",
+  ].join("\n");
 }
 
 async function requestAssistantJson(
@@ -395,7 +435,7 @@ export async function runBriefingAssistant(
     });
   }
 
-  let out = polishReplyTone(parsed.reply);
+  let out = enforceInsightFormat(userMessage, parsed.reply);
   if (out.length > TG_MAX) {
     out = out.slice(0, TG_MAX - 12) + "\n…(truncated)";
   }
