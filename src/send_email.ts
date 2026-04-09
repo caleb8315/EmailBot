@@ -285,61 +285,57 @@ function buildBriefingHtml(
   const storyCount = allArticles.length;
   const sectionCount = Object.keys(briefing.section_articles || {}).length;
 
+  // ── Helpers ──
+  const importanceColor = (level: string) =>
+    level === "HIGH" ? "#ff6b6b" : level === "MEDIUM" ? "#fbbf24" : "#34d399";
+  const sectionDiv = (emoji: string, title: string) =>
+    `<div style="font-size:13px;font-weight:800;color:#a5b4fc;letter-spacing:1.2px;margin-top:28px;margin-bottom:14px;padding-top:20px;border-top:1px solid #30363d">${emoji} ${title}</div>`;
+
   // ── Key Signals ──
   const signalRows = (briefing.key_signals || [])
     .map((s) => {
       const tags = (s.tags || [])
         .map(
           (t) =>
-            `<span style="display:inline-block;background:#1e2030;color:#818cf8;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-right:4px">${esc(t)}</span>`
+            `<span style="display:inline-block;background:rgba(99,102,241,0.15);color:#818cf8;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;margin-right:3px">${esc(t)}</span>`
         )
         .join("");
-      const summaryBlock = s.summary
-        ? `<div style="margin-top:8px;font-size:13px;color:#c9d1d9;line-height:1.55">${esc(s.summary)}</div>`
+      const summaryLine = s.summary
+        ? `<div style="margin-top:6px;font-size:13px;color:#c9d1d9;line-height:1.5">${esc(s.summary)}</div>`
         : "";
-      const wimBlock = s.why_it_matters
-        ? `<div style="margin-top:6px;font-size:12px;color:#a5b4fc;line-height:1.5;padding-left:12px;border-left:2px solid #4338ca"><strong>Why it matters:</strong> ${esc(s.why_it_matters)}</div>`
+      const wimLine = s.why_it_matters
+        ? `<div style="margin-top:5px;font-size:12px;color:#a5b4fc;line-height:1.45;padding-left:10px;border-left:2px solid #4338ca">Why it matters: ${esc(s.why_it_matters)}</div>`
         : "";
       return `
-      <tr>
-        <td style="padding:18px 20px;border-bottom:1px solid #30363d">
-          <table style="width:100%;border-collapse:collapse"><tr>
-            <td style="width:28px;vertical-align:top;padding-right:10px">
-              <span style="font-size:18px;line-height:1">${trendIcon(s.trend)}</span>
-            </td>
-            <td style="vertical-align:top">
-              <a href="${esc(s.url)}" style="color:#e6edf3;font-weight:700;text-decoration:none;font-size:14px;line-height:1.4">${esc(s.title)}</a>
-              <div style="margin-top:5px;font-size:11px;color:#8b949e">
-                ${esc(s.category)} · ${s.source_count} source${s.source_count !== 1 ? "s" : ""} · ${tags}
-              </div>
-              ${summaryBlock}
-              ${wimBlock}
-            </td>
-            <td style="width:70px;vertical-align:top;text-align:right;white-space:nowrap;padding-left:8px">
-              ${importanceBadge(s.importance)}
-            </td>
-          </tr></table>
-        </td>
-      </tr>`;
+      <div style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #21262d">
+        <table style="width:100%;border-collapse:collapse"><tr>
+          <td style="width:22px;vertical-align:top;padding-right:6px;font-size:13px">➡️</td>
+          <td style="vertical-align:top">
+            <a href="${esc(s.url)}" style="color:#e6edf3;font-weight:700;text-decoration:none;font-size:14px;line-height:1.35">${esc(s.title)}</a>
+            <div style="margin-top:3px;font-size:11px;color:#8b949e">${esc(s.category)} · ${s.source_count} source${s.source_count !== 1 ? "s" : ""} · ${tags}</div>
+            ${summaryLine}
+            ${wimLine}
+          </td>
+          <td style="width:55px;vertical-align:top;text-align:right;padding-left:8px">
+            <span style="font-size:11px;font-weight:800;color:${importanceColor(s.importance)};letter-spacing:0.5px">${esc(s.importance)}</span>
+          </td>
+        </tr></table>
+      </div>`;
     })
     .join("");
 
   // ── Market Intelligence ──
   const implications = (briefing.market_intelligence?.implications || [])
-    .map((i) => `<li style="margin-bottom:8px;color:#c9d1d9;font-size:13px;line-height:1.5">${esc(i)}</li>`)
+    .map((i) => `<div style="margin-bottom:6px;color:#c9d1d9;font-size:13px;line-height:1.55;padding-left:14px">${esc(i)}</div>`)
     .join("");
   const risks = (briefing.market_intelligence?.risk_scenarios || [])
-    .map((r) => `<li style="margin-bottom:8px;color:#f85149;font-size:13px;line-height:1.5">${esc(r)}</li>`)
+    .map((r) => `<div style="margin-bottom:6px;color:#c9d1d9;font-size:13px;line-height:1.55;padding-left:14px">${esc(r)}</div>`)
     .join("");
 
   // ── Contrarian Watch ──
   const contrarian = (briefing.contrarian_watch || [])
     .map(
-      (c) => `
-      <div style="padding:14px 18px;background:#1c1a00;border:1px solid #3d3200;border-radius:10px;margin-bottom:10px">
-        <div style="font-size:13px;color:#d29922;font-weight:600">🔄 ${esc(c.narrative)}</div>
-        <div style="font-size:12px;color:#e3b341;margin-top:6px;padding-left:24px">↳ If wrong → ${esc(c.risk_if_wrong)}</div>
-      </div>`
+      (c) => `<div style="margin-bottom:8px;color:#c9d1d9;font-size:13px;line-height:1.55;padding-left:14px">• <span style="color:#fbbf24;font-weight:600">${esc(c.narrative)}</span> — ${esc(c.risk_if_wrong)}</div>`
     )
     .join("");
 
@@ -347,7 +343,7 @@ function buildBriefingHtml(
   const blindspots = (briefing.blindspots || [])
     .map(
       (b) =>
-        `<div style="padding:10px 16px;background:#1c0f0f;border-left:3px solid #f85149;border-radius:0 8px 8px 0;margin-bottom:8px;font-size:13px;color:#f85149">${esc(b)}</div>`
+        `<div style="margin-bottom:6px;color:#c9d1d9;font-size:13px;line-height:1.55;padding-left:14px">• ${esc(b)}</div>`
     )
     .join("");
 
@@ -356,10 +352,10 @@ function buildBriefingHtml(
     .map(
       (p) => `
       <tr>
-        <td style="padding:10px 16px;border-bottom:1px solid #30363d;font-weight:700;font-size:13px;color:#e6edf3">${esc(p.entity)}</td>
-        <td style="padding:10px 16px;border-bottom:1px solid #30363d;text-align:center">${importanceBadge(p.importance)}</td>
-        <td style="padding:10px 16px;border-bottom:1px solid #30363d;text-align:center;font-size:13px;font-weight:700;color:#818cf8">${p.mentions}</td>
-        <td style="padding:10px 16px;border-bottom:1px solid #30363d;font-size:12px;color:#8b949e">${esc(p.context)}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #21262d;font-weight:700;font-size:12px;color:#e6edf3">${esc(p.entity)}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #21262d;text-align:center;font-size:11px;font-weight:700;color:${importanceColor(p.importance)}">${esc(p.importance)}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #21262d;text-align:center;font-size:12px;color:#818cf8;font-weight:700">${p.mentions}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e">${esc(p.context)}</td>
       </tr>`
     )
     .join("");
@@ -368,7 +364,7 @@ function buildBriefingHtml(
   const opportunities = (briefing.opportunities || [])
     .map(
       (o) =>
-        `<li style="margin-bottom:10px;color:#3fb950;font-size:13px;line-height:1.5">${esc(o)}</li>`
+        `<div style="margin-bottom:6px;color:#34d399;font-size:13px;line-height:1.55;padding-left:14px">• ${esc(o)}</div>`
     )
     .join("");
 
@@ -376,40 +372,40 @@ function buildBriefingHtml(
   const sectionBlocks = Object.entries(briefing.section_articles || {})
     .map(([sectionName, articles]) => {
       if (!articles || articles.length === 0) return "";
-
       const articleCards = articles
         .map((a) => {
           const bullets = (a.bullets || [])
             .map(
               (b) =>
-                `<li style="margin-bottom:5px;color:#c9d1d9;font-size:13px;line-height:1.6">${esc(b)}</li>`
+                `<div style="margin-bottom:4px;color:#c9d1d9;font-size:12px;line-height:1.55;padding-left:14px">• ${esc(b)}</div>`
             )
             .join("");
           const relatedSources = (a.related_sources || [])
-            .map((s) => `<span style="color:#818cf8">${esc(s)}</span>`)
+            .map((rs) => `<span style="color:#818cf8">${esc(rs)}</span>`)
             .join(`<span style="color:#6e7681"> · </span>`);
-
+          const vBadge = a.verification === "VERIFIED"
+            ? '<span style="color:#6ee7b7;font-size:10px;font-weight:700">✓ VERIFIED</span>'
+            : a.verification === "DEVELOPING"
+            ? '<span style="color:#fcd34d;font-size:10px;font-weight:700">◐ DEVELOPING</span>'
+            : '<span style="color:#fca5a5;font-size:10px;font-weight:700">! UNVERIFIED</span>';
+          const statusBadge = a.status
+            ? `<span style="color:#818cf8;font-size:10px;font-weight:600;margin-left:8px">${esc(a.status)}</span>`
+            : "";
+          const timeBadge = a.time_label
+            ? `<span style="color:#8b949e;font-size:10px;margin-left:8px">🕐 ${esc(a.time_label)}</span>`
+            : "";
           return `
-          <div style="padding:16px 20px;background:#161b22;border:1px solid #30363d;border-radius:12px;margin-bottom:12px">
-            <a href="${esc(a.url)}" style="color:#e6edf3;font-weight:700;text-decoration:none;font-size:14px;line-height:1.4;display:block;margin-bottom:8px">${esc(a.title)}</a>
-            <div style="margin-bottom:10px">
-              ${verificationBadge(a.verification)}
-              ${a.status ? `<span style="display:inline-block;background:#1e2030;color:#818cf8;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;margin-left:6px">${esc(a.status)}</span>` : ""}
-              ${a.time_label ? `<span style="font-size:11px;color:#8b949e;margin-left:8px">🕐 ${esc(a.time_label)}</span>` : ""}
-            </div>
-            <ul style="margin:0 0 10px 16px;padding:0">${bullets}</ul>
-            ${relatedSources ? `<div style="font-size:11px;color:#6e7681;padding-top:8px;border-top:1px solid #30363d">Read more: ${relatedSources}</div>` : ""}
+          <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #21262d">
+            <a href="${esc(a.url)}" style="color:#e6edf3;font-weight:700;text-decoration:none;font-size:13px;line-height:1.4">${esc(a.title)}</a>
+            <div style="margin-top:4px;margin-bottom:8px">${vBadge}${statusBadge}${timeBadge}</div>
+            ${bullets}
+            ${relatedSources ? `<div style="font-size:10px;color:#6e7681;margin-top:8px">Sources: ${relatedSources}</div>` : ""}
           </div>`;
         })
         .join("");
-
       return `
-      <div style="margin-bottom:28px">
-        <div style="font-size:15px;font-weight:800;color:#e6edf3;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #4338ca">
-          ${sectionIcon(sectionName)}  ${esc(sectionName.toUpperCase())}
-        </div>
-        ${articleCards}
-      </div>`;
+      ${sectionDiv(sectionIcon(sectionName), sectionName.toUpperCase())}
+      ${articleCards}`;
     })
     .join("");
 
@@ -418,106 +414,60 @@ function buildBriefingHtml(
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="supported-color-schemes" content="dark">
 </head>
 <body style="margin:0;padding:0;background:#0d1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e6edf3">
-<div style="max-width:680px;margin:0 auto;overflow:hidden">
+<div style="max-width:640px;margin:0 auto;padding:36px 28px">
 
-  <!-- Header -->
-  <div style="background:#1e1b4b;color:#ffffff;padding:36px 28px 32px 28px">
-    <div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Jeff Intelligence System</div>
-    <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;line-height:1.2">Daily Intelligence Briefing</div>
-    <div style="font-size:13px;color:#c7d2fe;margin-top:8px">${dateStr} · ${timeStr}</div>
-    <div style="margin-top:10px;display:inline-block;background:#2d2a5e;padding:6px 14px;border-radius:20px;font-size:12px;color:#e0e7ff">
-      ${sourceCount} sources · ${storyCount} stories · ${sectionCount} sections
-    </div>
-    <div style="margin-top:16px;font-size:11px;line-height:2">
-      <span style="display:inline-block;background:#0f2b1d;color:#6ee7b7;padding:3px 12px;border-radius:12px;margin-right:6px">✓ VERIFIED</span>
-      <span style="display:inline-block;background:#2d1f04;color:#fcd34d;padding:3px 12px;border-radius:12px;margin-right:6px">◐ DEVELOPING</span>
-      <span style="display:inline-block;background:#2d0f0f;color:#fca5a5;padding:3px 12px;border-radius:12px">! UNVERIFIED</span>
+  <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #30363d">
+    <div style="font-size:24px;font-weight:800;color:#e6edf3;letter-spacing:-0.5px">Daily Intelligence Briefing</div>
+    <div style="font-size:13px;color:#8b949e;margin-top:6px">${dateStr} · ${timeStr}</div>
+    <div style="font-size:12px;color:#8b949e;margin-top:2px">${sourceCount} sources · ${storyCount} stories · ${sectionCount} sections</div>
+    <div style="margin-top:14px;font-size:11px;line-height:2">
+      <span style="color:#6ee7b7;margin-right:10px">✓ VERIFIED</span>
+      <span style="color:#fcd34d;margin-right:10px">◐ DEVELOPING</span>
+      <span style="color:#fca5a5">! UNVERIFIED</span>
     </div>
   </div>
 
-  <!-- One Sentence -->
-  <div style="background:#161b22;padding:24px 28px 28px 28px">
-    <div style="background:#1c2128;border:1px solid #30363d;border-radius:14px;padding:20px 22px">
-      <div style="font-size:11px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">⚡ TODAY IN ONE SENTENCE</div>
-      <div style="font-size:16px;color:#ffffff;line-height:1.6;font-weight:600">${esc(briefing.one_sentence)}</div>
-    </div>
+  <div style="padding:20px 0">
+    <div style="font-size:12px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">⚡ TODAY IN ONE SENTENCE</div>
+    <div style="font-size:15px;color:#e6edf3;line-height:1.65;font-weight:600">${esc(briefing.one_sentence)}</div>
   </div>
 
-  <!-- Main Content -->
-  <div style="background:#0d1117;padding:28px">
+  ${sectionDiv("🧠", "KEY SIGNALS")}
+  ${signalRows || '<div style="color:#6e7681;font-size:13px">No signals detected</div>'}
 
-    <!-- Key Signals -->
-    <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #30363d">
-      <div style="font-size:13px;font-weight:800;color:#e6edf3;margin-bottom:16px;letter-spacing:1px">🧠  KEY SIGNALS</div>
-      <table style="width:100%;border-collapse:collapse">
-        <tbody>${signalRows || '<tr><td style="padding:16px;text-align:center;color:#6e7681">No signals detected</td></tr>'}</tbody>
-      </table>
-    </div>
+  ${sectionDiv("📊", "MARKET INTELLIGENCE")}
+  <div style="font-size:13px;color:#c9d1d9;line-height:1.7;margin-bottom:14px">${esc(briefing.market_intelligence?.analysis || "")}</div>
+  ${implications ? `<div style="font-weight:700;font-size:11px;color:#a5b4fc;margin-bottom:8px;letter-spacing:0.5px">IMPLICATIONS</div>${implications}` : ""}
+  ${risks ? `<div style="font-weight:700;font-size:11px;color:#ff6b6b;margin-top:14px;margin-bottom:8px;letter-spacing:0.5px">⚠️ RISK SCENARIOS</div>${risks}` : ""}
 
-    <!-- Market Intelligence -->
-    <div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:24px;margin-bottom:24px">
-      <div style="font-size:13px;font-weight:800;color:#a5b4fc;margin-bottom:14px;letter-spacing:1px">📊  MARKET INTELLIGENCE</div>
-      <div style="font-size:14px;color:#c9d1d9;line-height:1.7;margin-bottom:16px">${esc(briefing.market_intelligence?.analysis || "")}</div>
-      ${implications ? `<div style="font-weight:700;font-size:11px;color:#a5b4fc;margin-bottom:8px;letter-spacing:0.5px">IMPLICATIONS</div><ul style="margin:0 0 16px 16px;padding:0">${implications}</ul>` : ""}
-      ${risks ? `<div style="font-weight:700;font-size:11px;color:#f85149;margin-bottom:8px;letter-spacing:0.5px">⚠️ RISK SCENARIOS</div><ul style="margin:0 0 0 16px;padding:0">${risks}</ul>` : ""}
-    </div>
+  ${blindspots ? `${sectionDiv("🚨", "BLINDSPOTS — MISSING COVERAGE")}${blindspots}` : ""}
 
-    <!-- Contrarian Watch -->
-    ${contrarian ? `
-    <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #30363d">
-      <div style="font-size:13px;font-weight:800;color:#e6edf3;margin-bottom:14px;letter-spacing:1px">⚠️  CONTRARIAN WATCH</div>
-      ${contrarian}
-    </div>` : ""}
+  ${contrarian ? `${sectionDiv("⚠️", "CONTRARIAN WATCH")}${contrarian}` : ""}
 
-    <!-- Blindspots -->
-    ${blindspots ? `
-    <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #30363d">
-      <div style="font-size:13px;font-weight:800;color:#e6edf3;margin-bottom:14px;letter-spacing:1px">🚨  BLINDSPOTS — MISSING COVERAGE</div>
-      ${blindspots}
-    </div>` : ""}
+  ${powerNodes ? `${sectionDiv("🔄", "POWER NODE TRACKER")}
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="text-align:left;padding:7px 12px;font-size:10px;color:#8b949e;border-bottom:1px solid #30363d;letter-spacing:0.8px">ENTITY</th>
+      <th style="text-align:center;padding:7px 12px;font-size:10px;color:#8b949e;border-bottom:1px solid #30363d;letter-spacing:0.8px">LEVEL</th>
+      <th style="text-align:center;padding:7px 12px;font-size:10px;color:#8b949e;border-bottom:1px solid #30363d;letter-spacing:0.8px">HITS</th>
+      <th style="text-align:left;padding:7px 12px;font-size:10px;color:#8b949e;border-bottom:1px solid #30363d;letter-spacing:0.8px">CONTEXT</th>
+    </tr></thead>
+    <tbody>${powerNodes}</tbody>
+  </table>` : ""}
 
-    <!-- Power Nodes -->
-    ${powerNodes ? `
-    <div style="background:#161b22;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #30363d">
-      <div style="font-size:13px;font-weight:800;color:#e6edf3;margin-bottom:14px;letter-spacing:1px">🔄  POWER NODE TRACKER</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:10px 16px;font-size:10px;color:#8b949e;border-bottom:2px solid #30363d;letter-spacing:0.8px">ENTITY</th>
-            <th style="text-align:center;padding:10px 16px;font-size:10px;color:#8b949e;border-bottom:2px solid #30363d;letter-spacing:0.8px">LEVEL</th>
-            <th style="text-align:center;padding:10px 16px;font-size:10px;color:#8b949e;border-bottom:2px solid #30363d;letter-spacing:0.8px">HITS</th>
-            <th style="text-align:left;padding:10px 16px;font-size:10px;color:#8b949e;border-bottom:2px solid #30363d;letter-spacing:0.8px">CONTEXT</th>
-          </tr>
-        </thead>
-        <tbody>${powerNodes}</tbody>
-      </table>
-    </div>` : ""}
+  ${opportunities ? `${sectionDiv("💡", "OPPORTUNITIES")}${opportunities}` : ""}
 
-    <!-- Opportunities -->
-    ${opportunities ? `
-    <div style="background:#0d1f14;border:1px solid #1b4332;border-radius:16px;padding:24px;margin-bottom:24px">
-      <div style="font-size:13px;font-weight:800;color:#3fb950;margin-bottom:14px;letter-spacing:1px">💡  OPPORTUNITIES</div>
-      <ul style="margin:0 0 0 16px;padding:0">${opportunities}</ul>
-    </div>` : ""}
-
-    <!-- Divider -->
-    <div style="text-align:center;margin:12px 0 28px 0">
-      <div style="display:inline-block;background:#1e1b4b;color:#a5b4fc;padding:6px 20px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:2px">FULL BRIEFING BELOW</div>
-    </div>
-
-    <!-- Full Section Briefing -->
-    ${sectionBlocks}
-
+  ${sectionBlocks ? `
+  <div style="text-align:center;margin:24px 0 8px 0">
+    <span style="font-size:10px;font-weight:800;color:#a5b4fc;letter-spacing:2px">── FULL BRIEFING ──</span>
   </div>
+  ${sectionBlocks}` : ""}
 
-  <!-- Footer -->
-  <div style="background:#0d1117;border-top:1px solid #30363d;padding:28px;text-align:center">
-    <div style="font-size:11px;font-weight:700;color:#818cf8;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
-    <div style="font-size:11px;color:#8b949e;margin-top:6px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
-    <div style="margin-top:12px;height:3px;width:60px;background:#6366f1;border-radius:2px;display:inline-block"></div>
+  <div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #30363d">
+    <div style="font-size:10px;font-weight:700;color:#818cf8;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
+    <div style="font-size:10px;color:#6e7681;margin-top:4px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
   </div>
 
 </div>

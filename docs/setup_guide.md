@@ -108,6 +108,9 @@ cp .env.example .env
 | `EMAIL_SMTP_PORT` | No | `587` | SMTP port |
 | `EMAIL_SMTP_USER` | For email | — | SMTP username |
 | `EMAIL_SMTP_PASS` | For email | — | SMTP password or app password |
+| `CHAT_MODEL` | No | `gpt-4o-mini` | Fallback chat model when web-enabled call is unavailable |
+| `CHAT_WEB_MODEL` | No | `gpt-4.1-mini` | Model used for chat with live web search |
+| `DISABLE_CHAT_WEB_SEARCH` | No | `false` | Set `true` to disable live web search in chat |
 | `MAX_DAILY_AI_CALLS` | No | `30` | Hard ceiling for OpenAI calls/day |
 | `PREFILTER_THRESHOLD` | No | `40` | Minimum score to pass prefilter |
 | `ALERT_COOLDOWN_HOURS` | No | `2` | Hours between Telegram alerts |

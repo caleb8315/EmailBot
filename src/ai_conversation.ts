@@ -37,6 +37,31 @@ const AssistantResponseSchema = z.object({
   actions: AssistantActionsSchema,
 });
 
+const AssistantResponseJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    reply: { type: "string" },
+    actions: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        add_interests: { type: "array", items: { type: "string" } },
+        remove_interests: { type: "array", items: { type: "string" } },
+        add_dislikes: { type: "array", items: { type: "string" } },
+        remove_dislikes: { type: "array", items: { type: "string" } },
+        alert_sensitivity: { type: "integer", minimum: 1, maximum: 10 },
+        briefing_boost_sections: { type: "array", items: { type: "string" } },
+        briefing_mute_sections: { type: "array", items: { type: "string" } },
+        breaking_keywords_add: { type: "array", items: { type: "string" } },
+        breaking_keywords_remove: { type: "array", items: { type: "string" } },
+      },
+      required: [],
+    },
+  },
+  required: ["reply"],
+} as const;
+
 function sortForBriefingContext(
   articles: ArticleHistory[],
   lastAlertUrl: string | null
@@ -191,10 +216,21 @@ You receive:
 2) A numbered list of recent stories from their monitoring pipeline. Items marked in_email_digest appeared in (or were candidates for) their email/Telegram morning digest. Items marked recent_alert were surfaced as a high-priority alert. Refer to stories by number (e.g. "story 2") when helpful.
 
 Your job:
-- Answer questions about these stories, compare them, explain why something matters, or discuss implications — stay grounded in the provided text; do not invent events or URLs.
-- If they ask about something not in the list, say you don't have it in the current briefing context and suggest running the pipeline or waiting for the next digest.
+- Answer questions about these stories, compare them, explain why something matters, or discuss implications — stay grounded in evidence and avoid fabricating facts.
+- If the user asks about something beyond the provided stories, use current web information when available and synthesize it with the briefing context.
+- Give high-signal analysis: likely scenarios, key indicators to watch, risks, and what would change your view.
+- When using web information, briefly cite sources in plain text (outlet + date/time if available). If evidence is weak or mixed, say so clearly.
 - Help them tune what they see: interests, filters, briefing section emphasis, alert sensitivity, breaking keywords — only when they clearly want a change.
 - Be concise; Telegram messages should be readable on a phone.
+- Use a direct, natural human tone. Avoid robotic stock phrases like "I can only..." or "I don't have specific insights."
+- If certainty is limited, still give the best reasoned take with confidence levels (high/medium/low), then state what new evidence would change the view.
+- For prediction questions, provide:
+  1) most likely scenario,
+  2) plausible alternative,
+  3) concrete signals to monitor over the next days/weeks.
+- Never answer with a refusal-only message. Even when uncertain, provide a best-effort assessment grounded in available evidence.
+- Do not mention limitations in a robotic way ("I am just an AI", "I can only provide"). Lead with analysis first, then uncertainty.
+- Prioritize usefulness over hedging. The user wants an operator-style read, not a generic disclaimer.
 
 You MUST respond with a single JSON object (no markdown fences) of this shape:
 {"reply":"string shown to the user","actions":{}}
@@ -215,18 +251,94 @@ Recent stories (numbered):
 ${articlesBlock}`;
 }
 
+function polishReplyTone(reply: string): string {
+  let out = reply.trim();
+  if (!out) return out;
+
+  // Remove common low-signal boilerplate openings.
+  out = out.replace(
+    /^I can only provide insights based on[^.]*\.\s*/i,
+    "Best read right now: "
+  );
+  out = out.replace(
+    /^I don't have specific insights into[^.]*\.\s*/i,
+    "Best estimate from current signals: "
+  );
+  out = out.replace(
+    /^As an AI[^.]*\.\s*/i,
+    "Here's the analytical take: "
+  );
+  out = out.replace(
+    /^I (can't|cannot) (predict|know)[^.]*\.\s*/i,
+    "Most likely scenario: "
+  );
+
+  return out.trim();
+}
+
+async function requestAssistantJson(
+  openai: OpenAI,
+  system: string,
+  userMessage: string
+): Promise<string> {
+  const webModel = process.env.CHAT_WEB_MODEL ?? process.env.CHAT_MODEL ?? "gpt-4.1-mini";
+  const fallbackModel = process.env.CHAT_MODEL ?? "gpt-4o-mini";
+  const webSearchDisabled = process.env.DISABLE_CHAT_WEB_SEARCH === "true";
+
+  if (!webSearchDisabled) {
+    try {
+      const response = await openai.responses.create({
+        model: webModel,
+        instructions: system,
+        input: userMessage,
+        temperature: 0.35,
+        max_output_tokens: 1000,
+        tools: [{ type: "web_search_preview", search_context_size: "high" }],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "assistant_response",
+            schema: AssistantResponseJsonSchema,
+            strict: true,
+          },
+        },
+      });
+      const raw = response.output_text?.trim() ?? "";
+      if (raw) return raw;
+      throw new Error("Empty output_text from responses API");
+    } catch (err) {
+      logger.warn("Web-enabled assistant call failed; falling back", {
+        error: err instanceof Error ? err.message : String(err),
+        model: webModel,
+      });
+    }
+  }
+
+  const response = await openai.chat.completions.create({
+    model: fallbackModel,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: userMessage },
+    ],
+    temperature: 0.35,
+    max_tokens: 1000,
+    response_format: { type: "json_object" },
+  });
+  return response.choices[0]?.message?.content?.trim() ?? "";
+}
+
 export async function runBriefingAssistant(
   userId: string,
   userMessage: string
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return "OpenAI is not configured (OPENAI_API_KEY). Add it to your environment to chat with the assistant.";
+    return "I can answer as soon as the AI key is connected. Add OPENAI_API_KEY, then ask again and I'll give you a full analysis.";
   }
 
   const allowed = await canMakeAICall();
   if (!allowed) {
-    return "Today's AI budget is used up (shared with the news pipeline). Try again tomorrow or raise MAX_DAILY_AI_CALLS. /status shows usage.";
+    return "We've hit today's AI budget cap, so I can't run a fresh analysis right now. If you raise MAX_DAILY_AI_CALLS, I'll resume immediately. /status shows usage.";
   }
 
   const [prefs, recent, lastAlert] = await Promise.all([
@@ -250,27 +362,16 @@ export async function runBriefingAssistant(
   ].join("\n");
 
   const system = buildSystemPrompt(prefsBlock, articlesBlock);
-  const model = process.env.CHAT_MODEL ?? "gpt-4o-mini";
 
   const openai = new OpenAI({ apiKey });
   let raw: string;
   try {
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.35,
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
-    });
-    raw = response.choices[0]?.message?.content?.trim() ?? "";
+    raw = await requestAssistantJson(openai, system, userMessage);
   } catch (err) {
     logger.error("OpenAI chat failed", {
       error: err instanceof Error ? err.message : String(err),
     });
-    return "The AI request failed. Check OPENAI_API_KEY and try again.";
+    return "I hit a temporary issue while generating your analysis. Please send that again and I'll take another pass.";
   }
 
   let parsed: z.infer<typeof AssistantResponseSchema>;
@@ -281,7 +382,7 @@ export async function runBriefingAssistant(
       error: err instanceof Error ? err.message : String(err),
     });
     await recordAICall();
-    return "I couldn't format that reply. Try asking in a shorter message.";
+    return "I had a formatting hiccup, but I can still answer this. Re-send your question and I'll give a tighter, clearer take.";
   }
 
   await recordAICall();
@@ -294,7 +395,7 @@ export async function runBriefingAssistant(
     });
   }
 
-  let out = parsed.reply.trim();
+  let out = polishReplyTone(parsed.reply);
   if (out.length > TG_MAX) {
     out = out.slice(0, TG_MAX - 12) + "\n…(truncated)";
   }
