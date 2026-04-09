@@ -57,10 +57,10 @@ function timeAgo(iso: string): string {
 }
 
 function importanceColor(score: number): string {
-  if (score >= 8) return "var(--bad)";
-  if (score >= 6) return "var(--warn)";
-  if (score >= 4) return "var(--accent)";
-  return "var(--muted)";
+  if (score >= 8) return "#f87171";
+  if (score >= 6) return "#fbbf24";
+  if (score >= 4) return "#8b5cf6";
+  return "#636380";
 }
 
 /* ──────────── Component ──────────── */
@@ -231,7 +231,16 @@ export default function Page() {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <h1>Jeff Intelligence</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 800, fontSize: "0.85rem", color: "white",
+            boxShadow: "0 2px 8px rgba(139,92,246,0.25)",
+          }}>J</div>
+          <h1>Jeff Intelligence</h1>
+        </div>
         <div className="header-actions">
           <button className="btn-icon" onClick={refreshData} title="Refresh">
             &#x21bb;
@@ -275,7 +284,7 @@ export default function Page() {
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-label">Pipeline</div>
-                <div className="stat-value" style={{ fontSize: "0.95rem" }}>
+                <div className="stat-value" style={{ fontSize: "0.95rem", background: "none", WebkitTextFillColor: "var(--text)" }}>
                   {lastRun ? (
                     <>
                       <span
@@ -515,6 +524,13 @@ export default function Page() {
             <div className="chat-messages">
               {chat.length === 0 && (
                 <div className="empty-state">
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(99,102,241,0.1))",
+                    border: "1px solid rgba(139,92,246,0.2)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 0.75rem", fontSize: "1.25rem",
+                  }}>&#x2709;</div>
                   <p>Ask about your digest, articles, preferences, or anything.</p>
                 </div>
               )}
