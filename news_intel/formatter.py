@@ -32,9 +32,9 @@ SECTION_ICONS = {
 }
 
 LABEL_COLORS = {
-    "🟢 VERIFIED": ("#0d9488", "#f0fdfa", "VERIFIED"),
-    "🟡 DEVELOPING": ("#d97706", "#fffbeb", "DEVELOPING"),
-    "🔴 UNVERIFIED": ("#dc2626", "#fef2f2", "UNVERIFIED"),
+    "🟢 VERIFIED": ("#3fb950", "#0d1f14", "VERIFIED"),
+    "🟡 DEVELOPING": ("#d29922", "#1c1a00", "DEVELOPING"),
+    "🔴 UNVERIFIED": ("#f85149", "#1c0f0f", "UNVERIFIED"),
 }
 
 
@@ -67,7 +67,7 @@ def _esc(text: str) -> str:
 
 
 def _label_badge(label: str) -> str:
-    color, bg, text = LABEL_COLORS.get(label, ("#6b7280", "#f9fafb", "UNKNOWN"))
+    color, bg, text = LABEL_COLORS.get(label, ("#8b949e", "#161b22", "UNKNOWN"))
     return (
         f'<span style="display:inline-block;padding:2px 10px;border-radius:12px;'
         f'font-size:11px;font-weight:700;letter-spacing:0.5px;'
@@ -103,13 +103,13 @@ def _thread_badge_html(cluster: StoryCluster) -> str:
     if not label:
         return ""
     if "NEW" in label:
-        color, bg = "#059669", "#ecfdf5"
+        color, bg = "#3fb950", "#0d1f14"
     elif "Escalating" in label:
-        color, bg = "#dc2626", "#fef2f2"
+        color, bg = "#f85149", "#1c0f0f"
     elif "De-escalating" in label:
-        color, bg = "#2563eb", "#eff6ff"
+        color, bg = "#58a6ff", "#0c2d6b"
     else:
-        color, bg = "#6b7280", "#f3f4f6"
+        color, bg = "#8b949e", "#161b22"
     return (
         f'<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;'
         f'font-size:10px;font-weight:600;color:{color};background:{bg};border:1px solid {color};'
@@ -125,7 +125,7 @@ def _get_sentiment_section_html() -> str:
         content = format_sentiment_section(summarizer.sentiment_scores, summarizer.sentiment_notes)
         if not content:
             return ""
-        return _insight_box_html("💹", "Market Mood", content, "#0369a1", "#f0f9ff", "#bae6fd")
+        return _insight_box_html("💹", "Market Mood", content, "#58a6ff", "#0c2d6b", "#1f3d6f")
     except Exception:
         return ""
 
@@ -154,22 +154,22 @@ def _story_html(cluster: StoryCluster) -> str:
     sources_html_parts = []
     for pub, link in source_links:
         sources_html_parts.append(
-            f'<a href="{_esc(link)}" style="color:#6366f1;text-decoration:none;font-weight:500;" target="_blank">{_esc(pub)}</a>'
+            f'<a href="{_esc(link)}" style="color:#818cf8;text-decoration:none;font-weight:500;" target="_blank">{_esc(pub)}</a>'
         )
     sources_html = " &nbsp;·&nbsp; ".join(sources_html_parts) if sources_html_parts else "—"
 
     return f"""
     <tr><td style="padding:0 0 20px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="
-        background:#ffffff;
-        border:1px solid #e5e7eb;
+        background:#161b22;
+        border:1px solid #30363d;
         border-radius:10px;
         overflow:hidden;
       "><tr><td style="padding:16px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td>
             <table width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td style="font-size:16px;font-weight:700;color:#111827;line-height:1.4;">
+              <td style="font-size:16px;font-weight:700;color:#e6edf3;line-height:1.4;">
                 {_esc(cluster.headline)}
               </td>
             </tr></table>
@@ -178,17 +178,17 @@ def _story_html(cluster: StoryCluster) -> str:
           <td style="padding:8px 0 10px 0;">
             {_label_badge(cluster.label)}
             {_thread_badge_html(cluster)}
-            <span style="display:inline-block;margin-left:8px;font-size:11px;color:#9ca3af;vertical-align:middle;">
+            <span style="display:inline-block;margin-left:8px;font-size:11px;color:#8b949e;vertical-align:middle;">
               🕐 {_esc(timestamp)}
             </span>
           </td>
         </tr><tr>
-          <td style="font-size:14px;color:#374151;line-height:1.65;padding-bottom:12px;">
+          <td style="font-size:14px;color:#c9d1d9;line-height:1.65;padding-bottom:12px;">
             {summary_clean}
           </td>
         </tr><tr>
-          <td style="font-size:12px;color:#9ca3af;line-height:1.8;">
-            <span style="font-weight:600;color:#6b7280;">Read more:</span>&nbsp;&nbsp;{sources_html}
+          <td style="font-size:12px;color:#6e7681;line-height:1.8;">
+            <span style="font-weight:600;color:#8b949e;">Read more:</span>&nbsp;&nbsp;{sources_html}
           </td>
         </tr></table>
       </td></tr></table>
@@ -203,8 +203,8 @@ def _section_html(section_name: str, clusters: List[StoryCluster]) -> str:
     if is_alt:
         alt_banner = """
         <tr><td style="
-          background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;
-          padding:10px 16px;margin-bottom:12px;font-size:12px;color:#92400e;line-height:1.5;
+          background:#1c1a00;border:1px solid #3d3200;border-radius:8px;
+          padding:10px 16px;margin-bottom:12px;font-size:12px;color:#d29922;line-height:1.5;
         ">
           Items below are <strong>UNVERIFIED</strong> and included for signal monitoring only.
           They do not represent established fact.
@@ -218,7 +218,7 @@ def _section_html(section_name: str, clusters: List[StoryCluster]) -> str:
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="
           font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
-          color:#6366f1;padding-bottom:12px;border-bottom:2px solid #e5e7eb;
+          color:#818cf8;padding-bottom:12px;border-bottom:2px solid #30363d;
         ">{icon}&nbsp;&nbsp;{_esc(section_name)}</td>
       </tr></table>
     </td></tr>
@@ -256,7 +256,7 @@ def _insight_box_html(icon: str, title: str, content: str, color: str, bg: str, 
         <div style="font-size:14px;font-weight:800;color:{color};margin-bottom:10px;letter-spacing:0.5px;">
           {icon}&nbsp;&nbsp;{_esc(title)}
         </div>
-        <div style="font-size:13px;color:#374151;line-height:1.7;">
+        <div style="font-size:13px;color:#c9d1d9;line-height:1.7;">
           {content_html}
         </div>
       </td></tr></table>
@@ -288,9 +288,11 @@ def format_briefing_html(
 
     return f"""<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 0;">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background:#0d1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#e6edf3;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:24px 0;">
     <tr><td align="center">
       <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;">
 
@@ -309,13 +311,13 @@ def format_briefing_html(
               {date_display} &nbsp;&middot;&nbsp; {time_display}
             </div>
             <div style="margin-top:16px;">
-              <span style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
+              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
                 {source_count} sources
               </span>
-              <span style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
+              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
                 {len(clusters)} stories
               </span>
-              <span style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:5px 14px;font-size:12px;color:#e0e7ff;margin:0 4px;">
+              <span style="display:inline-block;background:rgba(255,255,255,0.10);border-radius:20px;padding:5px 14px;font-size:12px;color:#c9d1d9;margin:0 4px;">
                 {active_sections} sections
               </span>
             </div>
@@ -323,9 +325,9 @@ def format_briefing_html(
         </td></tr>
 
         <!-- LEGEND -->
-        <tr><td style="background:#eef2ff;padding:14px 32px;border-bottom:1px solid #e5e7eb;">
+        <tr><td style="background:#161b22;padding:14px 32px;border-bottom:1px solid #30363d;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="font-size:12px;color:#6b7280;line-height:1.6;" align="center">
+            <td style="font-size:12px;color:#8b949e;line-height:1.6;" align="center">
               {_label_badge("🟢 VERIFIED")}&nbsp;&nbsp;2+ credible sources agree
               &nbsp;&nbsp;&nbsp;
               {_label_badge("🟡 DEVELOPING")}&nbsp;&nbsp;Limited confirmation
@@ -338,33 +340,34 @@ def format_briefing_html(
         {intelligence_html}
 
         <!-- BODY -->
-        <tr><td style="background:#f9fafb;padding:0 32px 32px 32px;">
+        <tr><td style="background:#0d1117;padding:0 32px 32px 32px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             {section_blocks}
           </table>
         </td></tr>
 
         <!-- MARKET MOOD + BIG THIS WEEK + ON THE RADAR -->
-        <tr><td style="background:#f9fafb;padding:0 32px 24px 32px;">
+        <tr><td style="background:#0d1117;padding:0 32px 24px 32px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             {_get_sentiment_section_html()}
             <tr><td style="height:16px;"></td></tr>
             {_insight_box_html("📌", "Big This Week", _get_summarizer_field("big_this_week"),
-                               "#1e40af", "#eff6ff", "#dbeafe")}
+                               "#58a6ff", "#0c2d6b", "#1f3d6f")}
             <tr><td style="height:16px;"></td></tr>
             {_insight_box_html("🔭", "On the Radar", _get_summarizer_field("on_the_radar"),
-                               "#7c3aed", "#f5f3ff", "#ede9fe")}
+                               "#bc8cff", "#1c0f3a", "#2d1b5e")}
           </table>
         </td></tr>
 
         <!-- FOOTER -->
         <tr><td style="
-          background:#1e1b4b;
+          background:#0d1117;
           border-radius:0 0 16px 16px;
+          border-top:1px solid #30363d;
           padding:24px 32px;
           text-align:center;
         ">
-          <div style="font-size:12px;color:#a5b4fc;line-height:1.6;">
+          <div style="font-size:12px;color:#8b949e;line-height:1.6;">
             Generated automatically &middot; Verification labels reflect source agreement, not absolute truth.
             <br>Always consult primary sources for critical decisions.
           </div>

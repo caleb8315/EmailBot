@@ -38,14 +38,14 @@ def _one_sentence_html(sentence: str) -> str:
     return f"""
         <tr><td style="padding:24px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);
-            border:1px solid #f59e0b;
+            background:linear-gradient(135deg,#1c1a00 0%,#2d2800 100%);
+            border:1px solid #3d3200;
             border-radius:12px;
           "><tr><td style="padding:20px 24px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#92400e;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#d29922;margin-bottom:8px;">
               ⚡ TODAY IN ONE SENTENCE
             </div>
-            <div style="font-size:16px;font-weight:600;color:#78350f;line-height:1.5;">
+            <div style="font-size:16px;font-weight:600;color:#e3b341;line-height:1.5;">
               {_esc(sentence)}
             </div>
           </td></tr></table>
@@ -61,25 +61,25 @@ def _signals_html(signals: List[Signal]) -> str:
         "escalation": "🔺", "de-escalation": "🔻",
     }
     confidence_colors = {
-        "high": "#059669", "medium": "#d97706", "low": "#9ca3af",
+        "high": "#3fb950", "medium": "#d29922", "low": "#8b949e",
     }
 
     rows = ""
     for sig in signals[:8]:
         icon = direction_icons.get(sig.direction, "•")
-        conf_color = confidence_colors.get(sig.confidence, "#9ca3af")
+        conf_color = confidence_colors.get(sig.confidence, "#8b949e")
         drivers_str = ", ".join(sig.drivers[:2]) if sig.drivers else ""
         rows += f"""
             <tr>
-              <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151;">
+              <td style="padding:8px 0;border-bottom:1px solid #30363d;font-size:13px;color:#c9d1d9;">
                 <span style="font-size:16px;">{icon}</span>&nbsp;
                 <strong>{_esc(sig.title)}</strong>
                 <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;
-                  font-size:10px;font-weight:700;color:{conf_color};background:#f9fafb;border:1px solid {conf_color};">
+                  font-size:10px;font-weight:700;color:{conf_color};background:#161b22;border:1px solid {conf_color};">
                   {sig.confidence.upper()}
                 </span>
                 <br>
-                <span style="font-size:11px;color:#9ca3af;margin-left:28px;">
+                <span style="font-size:11px;color:#8b949e;margin-left:28px;">
                   {sig.type.capitalize()} · {sig.sources_count} sources{(' · ' + _esc(drivers_str)) if drivers_str else ''}
                 </span>
               </td>
@@ -88,11 +88,11 @@ def _signals_html(signals: List[Signal]) -> str:
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#ffffff;
-            border:1px solid #e5e7eb;
+            background:#161b22;
+            border:1px solid #30363d;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#6366f1;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#818cf8;margin-bottom:12px;">
               🧠 KEY SIGNALS
             </div>
             <table width="100%" cellpadding="0" cellspacing="0">
@@ -108,31 +108,31 @@ def _insight_html(insight: Insight) -> str:
 
     impl_items = ""
     for imp in insight.implications[:5]:
-        impl_items += f'<li style="margin-bottom:4px;color:#374151;">{_esc(imp)}</li>'
+        impl_items += f'<li style="margin-bottom:4px;color:#c9d1d9;">{_esc(imp)}</li>'
 
     risk_items = ""
     for risk in insight.risk_scenarios[:4]:
-        risk_items += f'<li style="margin-bottom:4px;color:#991b1b;">{_esc(risk)}</li>'
+        risk_items += f'<li style="margin-bottom:4px;color:#f85149;">{_esc(risk)}</li>'
 
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#eff6ff;
-            border:1px solid #bfdbfe;
-            border-left:4px solid #2563eb;
+            background:#0c2d6b;
+            border:1px solid #1f3d6f;
+            border-left:4px solid #58a6ff;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#1e40af;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#58a6ff;margin-bottom:10px;">
               📊 MARKET INTELLIGENCE
             </div>
-            <div style="font-size:14px;color:#1e3a5f;line-height:1.65;margin-bottom:12px;">
+            <div style="font-size:14px;color:#c9d1d9;line-height:1.65;margin-bottom:12px;">
               {_esc(insight.summary)}
             </div>
-            <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px;">Implications:</div>
+            <div style="font-size:12px;font-weight:700;color:#58a6ff;margin-bottom:6px;">Implications:</div>
             <ul style="margin:0 0 12px 16px;padding:0;font-size:13px;line-height:1.6;">
               {impl_items}
             </ul>
-            <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:6px;">⚠️ Risk Scenarios:</div>
+            <div style="font-size:12px;font-weight:700;color:#f85149;margin-bottom:6px;">⚠️ Risk Scenarios:</div>
             <ul style="margin:0 0 0 16px;padding:0;font-size:13px;line-height:1.6;">
               {risk_items}
             </ul>
@@ -147,11 +147,11 @@ def _contrarian_html(alerts: List[ContrarianAlert]) -> str:
     items = ""
     for alert in alerts[:4]:
         items += f"""
-            <tr><td style="padding:8px 0;border-bottom:1px solid #fde8e8;">
-              <div style="font-size:13px;font-weight:600;color:#374151;">
+            <tr><td style="padding:8px 0;border-bottom:1px solid #3d2800;">
+              <div style="font-size:13px;font-weight:600;color:#e6edf3;">
                 🔄 {_esc(alert.consensus)}
               </div>
-              <div style="font-size:12px;color:#991b1b;margin-top:4px;">
+              <div style="font-size:12px;color:#d29922;margin-top:4px;">
                 Risk: {_esc(alert.risk)}
               </div>
             </td></tr>"""
@@ -159,12 +159,12 @@ def _contrarian_html(alerts: List[ContrarianAlert]) -> str:
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#fff7ed;
-            border:1px solid #fed7aa;
-            border-left:4px solid #ea580c;
+            background:#1c1a00;
+            border:1px solid #3d3200;
+            border-left:4px solid #d29922;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ea580c;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#d29922;margin-bottom:10px;">
               ⚠️ CONTRARIAN WATCH
             </div>
             <table width="100%" cellpadding="0" cellspacing="0">
@@ -179,19 +179,19 @@ def _blindspots_html(blindspots: List[str]) -> str:
         return ""
 
     items = "".join(
-        f'<li style="margin-bottom:4px;color:#991b1b;font-size:13px;">{_esc(b)}</li>'
+        f'<li style="margin-bottom:4px;color:#f85149;font-size:13px;">{_esc(b)}</li>'
         for b in blindspots[:8]
     )
 
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#fef2f2;
-            border:1px solid #fecaca;
-            border-left:4px solid #dc2626;
+            background:#1c0f0f;
+            border:1px solid #3d1515;
+            border-left:4px solid #f85149;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#dc2626;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f85149;margin-bottom:10px;">
               🚨 BLINDSPOTS — Missing Coverage
             </div>
             <ul style="margin:0 0 0 16px;padding:0;line-height:1.7;">
@@ -206,38 +206,38 @@ def _power_nodes_html(nodes: List[PowerNode]) -> str:
         return ""
 
     activity_colors = {
-        "high": ("#dc2626", "#fef2f2"),
-        "medium": ("#d97706", "#fffbeb"),
-        "low": ("#6b7280", "#f9fafb"),
+        "high": ("#f85149", "#1c0f0f"),
+        "medium": ("#d29922", "#1c1a00"),
+        "low": ("#8b949e", "#161b22"),
     }
 
     rows = ""
     for node in nodes[:10]:
-        color, bg = activity_colors.get(node.activity, ("#6b7280", "#f9fafb"))
+        color, bg = activity_colors.get(node.activity, ("#8b949e", "#161b22"))
         rows += f"""
             <tr>
-              <td style="padding:6px 0;border-bottom:1px solid #f3f4f6;">
-                <strong style="font-size:13px;color:#111827;">{_esc(node.entity)}</strong>
+              <td style="padding:6px 0;border-bottom:1px solid #30363d;">
+                <strong style="font-size:13px;color:#e6edf3;">{_esc(node.entity)}</strong>
                 <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;
                   font-size:10px;font-weight:700;color:{color};background:{bg};border:1px solid {color};">
                   {node.activity.upper()}
                 </span>
-                <span style="display:inline-block;margin-left:6px;font-size:11px;color:#9ca3af;">
+                <span style="display:inline-block;margin-left:6px;font-size:11px;color:#8b949e;">
                   ({node.mention_count} mentions)
                 </span>
                 <br>
-                <span style="font-size:12px;color:#6b7280;margin-left:0;">{_esc(node.context[:100])}</span>
+                <span style="font-size:12px;color:#8b949e;margin-left:0;">{_esc(node.context[:100])}</span>
               </td>
             </tr>"""
 
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#ffffff;
-            border:1px solid #e5e7eb;
+            background:#161b22;
+            border:1px solid #30363d;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#7c3aed;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#bc8cff;margin-bottom:12px;">
               🔄 POWER NODE TRACKER
             </div>
             <table width="100%" cellpadding="0" cellspacing="0">
@@ -252,19 +252,19 @@ def _opportunities_html(opportunities: List[str]) -> str:
         return ""
 
     items = "".join(
-        f'<li style="margin-bottom:6px;color:#065f46;font-size:13px;line-height:1.5;">{_esc(opp)}</li>'
+        f'<li style="margin-bottom:6px;color:#3fb950;font-size:13px;line-height:1.5;">{_esc(opp)}</li>'
         for opp in opportunities[:6]
     )
 
     return f"""
         <tr><td style="padding:20px 32px 0 32px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="
-            background:#ecfdf5;
-            border:1px solid #a7f3d0;
-            border-left:4px solid #059669;
+            background:#0d1f14;
+            border:1px solid #1b4332;
+            border-left:4px solid #3fb950;
             border-radius:12px;
           "><tr><td style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#059669;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#3fb950;margin-bottom:10px;">
               💡 OPPORTUNITIES
             </div>
             <ul style="margin:0 0 0 16px;padding:0;line-height:1.7;">
@@ -278,8 +278,8 @@ def _section_divider_html() -> str:
     return """
         <tr><td style="padding:24px 32px 8px 32px;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="border-bottom:2px solid #e5e7eb;"></td></tr>
-            <tr><td style="padding-top:4px;text-align:center;font-size:11px;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;">
+            <tr><td style="border-bottom:2px solid #30363d;"></td></tr>
+            <tr><td style="padding-top:4px;text-align:center;font-size:11px;color:#8b949e;letter-spacing:1px;text-transform:uppercase;">
               Full Briefing Below
             </td></tr>
           </table>
@@ -319,7 +319,7 @@ def format_intelligence_html(
 
     return f"""
         <!-- INTELLIGENCE LAYER START -->
-        <tr><td style="background:#f9fafb;padding:0 0 0 0;">
+        <tr><td style="background:#0d1117;padding:0 0 0 0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             {content}
           </table>
