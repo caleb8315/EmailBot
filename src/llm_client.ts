@@ -161,6 +161,22 @@ export function createOpenAICompatibleClient(): OpenAI | null {
   return new OpenAI(opts);
 }
 
+export function createGroqClient(): OpenAI | null {
+  const groqKey = cleanEnv(process.env.GROQ_API_KEY);
+  if (!groqKey) {
+    logger.warn("No GROQ_API_KEY configured — Groq digest unavailable");
+    return null;
+  }
+  return new OpenAI({
+    apiKey: groqKey,
+    baseURL: DEFAULT_GROQ_BASE_URL,
+  });
+}
+
+export function getGroqDigestModel(): string {
+  return cleanEnv(process.env.GROQ_DIGEST_MODEL) ?? "qwen/qwen3-32b";
+}
+
 function getErrorStatus(error: unknown): number | null {
   const e = error as {
     status?: number;

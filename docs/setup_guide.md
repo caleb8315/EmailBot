@@ -119,7 +119,8 @@ cp .env.example .env
 | `CHAT_MODEL` | No | `gemini-2.5-flash` | Fallback chat model when web-enabled call is unavailable |
 | `CHAT_WEB_MODEL` | No | `gemini-2.5-flash` | Model used for chat with live web grounding |
 | `PIPELINE_MODEL` | No | `gemini-2.5-flash-lite` | Model used for optional pipeline AI scoring |
-| `DIGEST_MODEL` | No | `gemini-2.5-flash` | Model used for digest synthesis |
+| `GROQ_API_KEY` | Recommended | — | Free Groq API key used for digest generation (more reliable than Gemini free tier) |
+| `GROQ_DIGEST_MODEL` | No | `qwen/qwen3-32b` | Model used for digest synthesis on Groq |
 | `PYTHON_INTELLIGENCE_MODEL` | No | `gemini-2.5-flash` | Model used by optional Python intelligence modules |
 | `DISABLE_CHAT_WEB_SEARCH` | No | `false` | Set `true` to disable live web search in chat |
 | `MAX_DAILY_AI_CALLS` | No | `30` | Global hard ceiling for AI calls/day |

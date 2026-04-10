@@ -23,6 +23,7 @@ Next.js UI hosted on **Vercel (free tier)** for digest history, system events, r
 | `GEMINI_NATIVE_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta` |
 | `CHAT_MODEL` | Recommended `gemini-2.5-flash` |
 | `CHAT_WEB_MODEL` | Recommended `gemini-2.5-flash` |
+| `GROQ_API_KEY` | Free Groq key for digest generation |
 | `MAX_DAILY_AI_CALLS` | Global AI cap (recommended `30`) |
 | `MAX_DAILY_CHAT_CALLS` | Chat-only cap (recommended `20`) |
 | `TELEGRAM_CHAT_ID` | Your user id (matches pipeline `DEFAULT_USER_ID`) |

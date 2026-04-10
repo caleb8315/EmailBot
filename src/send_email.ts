@@ -17,8 +17,8 @@ import {
   recordAICall,
 } from "./usage_limiter";
 import {
-  createOpenAICompatibleClient,
-  getModelForWorkload,
+  createGroqClient,
+  getGroqDigestModel,
   withLLMRetry,
 } from "./llm_client";
 import { BRIEFING_SECTIONS } from "./types";
@@ -172,9 +172,9 @@ function safeParseJSON(text: string): Record<string, unknown> {
   }
 }
 
-const DIGEST_MODEL = getModelForWorkload("digest");
+const GROQ_DIGEST_MODEL = getGroqDigestModel();
 
-const RETRY_OPTS = { attempts: 4, baseDelayMs: 4000, maxDelayMs: 30000 };
+const RETRY_OPTS = { attempts: 3, baseDelayMs: 1000, maxDelayMs: 8000 };
 
 function toArray(v: unknown): any[] {
   return Array.isArray(v) ? v : [];
@@ -187,7 +187,7 @@ interface TriageResult {
 }
 
 async function triageArticles(
-  openai: OpenAI,
+  groq: OpenAI,
   articles: ArticleHistory[],
   interests: string[],
   horizon: "daily" | "weekly"
@@ -225,10 +225,10 @@ Given ${horizonLabel}'s ${articleData.length} articles, rank and analyze them. R
 Be specific, analytical, no filler. Return ONLY valid JSON.`;
 
   const response = await withLLMRetry(
-    "digest_triage",
+    "digest_triage_groq",
     () =>
-      openai.chat.completions.create({
-        model: DIGEST_MODEL,
+      groq.chat.completions.create({
+        model: GROQ_DIGEST_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -252,7 +252,7 @@ Be specific, analytical, no filler. Return ONLY valid JSON.`;
 }
 
 async function generateDeepBriefing(
-  openai: OpenAI,
+  groq: OpenAI,
   triage: TriageResult,
   interests: string[],
   horizon: "daily" | "weekly"
@@ -289,10 +289,10 @@ ${styleLine}
 Return ONLY valid JSON.`;
 
   const response = await withLLMRetry(
-    "digest_deep_briefing",
+    "digest_deep_briefing_groq",
     () =>
-      openai.chat.completions.create({
-        model: DIGEST_MODEL,
+      groq.chat.completions.create({
+        model: GROQ_DIGEST_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -341,16 +341,16 @@ async function generateBriefing(
     return null;
   }
 
-  const openai = createOpenAICompatibleClient();
-  if (!openai) {
-    logger.warn("No LLM API key — skipping AI briefing");
+  const groq = createGroqClient();
+  if (!groq) {
+    logger.warn("No GROQ_API_KEY — skipping AI briefing");
     return null;
   }
 
   let triage: TriageResult | null = null;
   try {
-    logger.info("Digest Call 1/2: triaging articles");
-    triage = await triageArticles(openai, articles, interests, horizon);
+    logger.info("Digest Call 1/2: triaging articles via Groq");
+    triage = await triageArticles(groq, articles, interests, horizon);
     await recordAICall("digest");
     if (!triage || triage.key_signals.length === 0) {
       logger.warn("Triage returned no signals");
@@ -370,8 +370,8 @@ async function generateBriefing(
   let deep: Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null =
     null;
   try {
-    logger.info("Digest Call 2/2: generating deep briefing");
-    deep = await generateDeepBriefing(openai, triage, interests, horizon);
+    logger.info("Digest Call 2/2: generating deep briefing via Groq");
+    deep = await generateDeepBriefing(groq, triage, interests, horizon);
     await recordAICall("digest");
     logger.info("Deep briefing complete");
   } catch (err) {
@@ -395,7 +395,7 @@ async function generateBriefing(
     section_articles: deep?.section_articles ?? {},
   };
 
-  logger.info(`AI briefing generated via ${DIGEST_MODEL} (2-call split)`);
+  logger.info(`AI briefing generated via Groq/${GROQ_DIGEST_MODEL} (2-call split)`);
   return parsed;
 }
 
@@ -764,7 +764,7 @@ function buildBriefingHtml(
 
   <div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #30363d">
     <div style="font-size:10px;font-weight:700;color:#818cf8;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
-    <div style="font-size:10px;color:#6e7681;margin-top:4px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
+    <div style="font-size:10px;color:#6e7681;margin-top:4px">AI: ${esc(GROQ_DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
   </div>
 
 </div>
@@ -1118,7 +1118,7 @@ async function sendDigest(
         mode,
         email_ok: emailOk,
         telegram_ok: telegramOk,
-        model: DIGEST_MODEL,
+        model: GROQ_DIGEST_MODEL,
         briefing_generated: Boolean(briefing),
         enhancement_weather: Boolean(enhancements.weather),
         enhancement_markets: enhancements.marketSnapshot.length > 0,
@@ -1132,7 +1132,7 @@ async function sendDigest(
       source: "digest",
       message: `${mode} briefing delivered via ${channels.join(
         " + "
-      )} (${DIGEST_MODEL})`,
+      )} (Groq/${GROQ_DIGEST_MODEL})`,
       meta: { article_count: recentArticles.length, mode },
     });
 
