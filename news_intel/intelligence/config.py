@@ -119,7 +119,10 @@ CORPORATE_ACTION_KEYWORDS: List[str] = [
 # ---------------------------------------------------------------------------
 # LLM / caching configuration
 # ---------------------------------------------------------------------------
-INTELLIGENCE_MODEL: str = "gpt-4o-mini"
+INTELLIGENCE_MODEL: str = os.environ.get(
+    "PYTHON_INTELLIGENCE_MODEL",
+    os.environ.get("INTELLIGENCE_MODEL", "gemini-2.5-flash"),
+)
 INTELLIGENCE_TEMPERATURE: float = 0.15
 INTELLIGENCE_MAX_TOKENS: int = 4000
 

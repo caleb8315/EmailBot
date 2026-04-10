@@ -34,7 +34,7 @@ fi
 echo ""
 echo "Next steps:"
 echo "  1. cd $REPO_DIR && npm ci && pip3 install -r requirements.txt"
-echo "  2. Copy .env with TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, SUPABASE_*, OPENAI_API_KEY, SMTP_*"
+echo "  2. Copy .env with TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, SUPABASE_*, GEMINI_API_KEY (or OPENAI_API_KEY alias), SMTP_*"
 echo "  3. Run the bot:  npm run bot"
 echo "  4. Cron examples:"
 echo "       0 7 * * * cd $REPO_DIR && python3 main.py --preferences-file data/user_preferences.json"

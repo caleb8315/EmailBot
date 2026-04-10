@@ -6,7 +6,7 @@ The central LLM-powered module that converts raw signals and clusters into:
 - "What this means" / "Why it matters" / "What could happen next"
 - Opportunity identification
 
-Uses a SINGLE batched OpenAI call to minimize cost.
+Uses a single batched LLM call to minimize cost.
 Results are cached to avoid redundant calls.
 """
 
@@ -15,7 +15,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +28,11 @@ from news_intel.intelligence.config import (
     INTELLIGENCE_MAX_TOKENS,
     CACHE_DIR_NAME,
     CACHE_TTL_HOURS,
+)
+from news_intel.llm_client import (
+    create_openai_client,
+    call_with_retry,
+    has_llm_credentials,
 )
 
 logger = logging.getLogger(__name__)
@@ -147,22 +151,26 @@ def _write_cache(key: str, data: dict) -> None:
 
 
 def _call_openai(system: str, user: str) -> Optional[str]:
-    """Make the OpenAI API call."""
+    """Make the configured LLM API call."""
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
-        response = client.chat.completions.create(
-            model=INTELLIGENCE_MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=INTELLIGENCE_TEMPERATURE,
-            max_tokens=INTELLIGENCE_MAX_TOKENS,
+        client = create_openai_client()
+        if client is None:
+            return None
+        response = call_with_retry(
+            "python_intelligence_insight_engine",
+            lambda: client.chat.completions.create(
+                model=INTELLIGENCE_MODEL,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                temperature=INTELLIGENCE_TEMPERATURE,
+                max_tokens=INTELLIGENCE_MAX_TOKENS,
+            ),
         )
         return response.choices[0].message.content.strip()
     except Exception as exc:
-        logger.error("Intelligence OpenAI call failed: %s", exc)
+        logger.error("Intelligence LLM call failed: %s", exc)
         return None
 
 
@@ -216,9 +224,8 @@ def generate_insights(
     if cached:
         parsed = cached
     else:
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key or api_key.startswith("sk-your"):
-            logger.info("No valid OpenAI key — using fallback insights")
+        if not has_llm_credentials():
+            logger.info("No valid LLM key — using fallback insights")
             parsed = _fallback_insight(signals, clusters)
         else:
             logger.info("Generating intelligence analysis via %s (%d chars prompt)",

@@ -68,6 +68,9 @@ async function handleSlashCommand(
         "",
         `${report.callsUsed}/${report.maxCalls} used today`,
         `${report.callsRemaining} remaining`,
+        "",
+        `Chat budget: ${report.chatCallsUsed}/${report.maxChatCalls} used`,
+        `${report.chatCallsRemaining} chat requests remaining`,
         `Date (UTC): ${report.date}`,
       ].join("\n");
     }

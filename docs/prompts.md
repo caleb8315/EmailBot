@@ -27,7 +27,7 @@ User dislikes: {dislikes}
 ```
 
 ### Parameters
-- Model: `gpt-4o-mini`
+- Model: `gemini-2.5-flash`
 - Temperature: `0.3`
 - Max tokens: `500`
 
@@ -51,7 +51,7 @@ Parse the user's message and return JSON: { "intent": string, "topic": string, "
 ```
 
 ### Parameters
-- Model: `gpt-4o-mini`
+- Model: `gemini-2.5-flash`
 - Temperature: `0.1`
 - Max tokens: `100`
 
@@ -78,7 +78,7 @@ Today's articles:
 ```
 
 ### Parameters
-- Model: `gpt-4o-mini`
+- Model: `gemini-2.5-flash`
 - Temperature: `0.5`
 - Max tokens: `200`
 
@@ -106,6 +106,6 @@ User interests: {interests}
 ```
 
 ### Parameters
-- Model: `gpt-4o-mini`
+- Model: `gemini-2.5-flash`
 - Temperature: `0.4`
 - Max tokens: `300`

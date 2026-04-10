@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { createLogger } from "./logger";
 import {
   getRecentArticles,
@@ -12,9 +11,15 @@ import { createSmtpTransport } from "./smtp";
 import { getTopArticles } from "./scoring";
 import { formatDigestPlainText, sendDigestTelegram } from "./telegram_digest";
 import {
+  canMakeAICall,
   getDailyUsageReport,
   recordAICall,
 } from "./usage_limiter";
+import {
+  createOpenAICompatibleClient,
+  getModelForWorkload,
+  withLLMRetry,
+} from "./llm_client";
 import { BRIEFING_SECTIONS } from "./types";
 import {
   fetchDailyFact,
@@ -114,7 +119,7 @@ function digestTelegramConfigured(): boolean {
 
 // ── AI Briefing Generation ──
 
-const DIGEST_MODEL = process.env.DIGEST_MODEL || "gpt-4o";
+const DIGEST_MODEL = getModelForWorkload("digest");
 
 async function generateBriefing(
   articles: ArticleHistory[],
@@ -122,15 +127,19 @@ async function generateBriefing(
   interests: string[],
   horizon: "daily" | "weekly" = "daily"
 ): Promise<BriefingData | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    logger.warn("No OPENAI_API_KEY — skipping AI briefing");
+  if (articles.length === 0) return null;
+
+  const budgetAvailable = await canMakeAICall("digest");
+  if (!budgetAvailable) {
+    logger.warn("Digest AI budget exhausted — skipping AI briefing generation");
     return null;
   }
 
-  if (articles.length === 0) return null;
-
-  const openai = new OpenAI({ apiKey });
+  const openai = createOpenAICompatibleClient();
+  if (!openai) {
+    logger.warn("No LLM API key — skipping AI briefing");
+    return null;
+  }
 
   const articleData = articles
     .filter((a) => a.title)
@@ -191,16 +200,18 @@ ${styleLine}
 Return ONLY valid JSON.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: DIGEST_MODEL,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(articleData) },
-      ],
-      temperature: 0.4,
-      max_tokens: 8000,
-    });
+    const response = await withLLMRetry("digest_generate_briefing", () =>
+      openai.chat.completions.create({
+        model: DIGEST_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(articleData) },
+        ],
+        temperature: 0.4,
+        max_tokens: 8000,
+      })
+    );
 
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
@@ -221,7 +232,7 @@ Return ONLY valid JSON.`;
       opportunities: toArray(raw.opportunities),
       section_articles: typeof raw.section_articles === "object" && raw.section_articles !== null ? raw.section_articles : {},
     };
-    await recordAICall();
+    await recordAICall("digest");
     logger.info(`AI briefing generated via ${DIGEST_MODEL}`);
     return parsed;
   } catch (err) {
@@ -999,7 +1010,7 @@ if (process.argv.includes("--daily") || process.argv.includes("--weekly")) {
     .then((ok) => {
       if (!ok) {
         logger.error(
-          `${isWeekly ? "Weekly" : "Daily"} digest failed — check SMTP secrets and OPENAI_API_KEY`
+          `${isWeekly ? "Weekly" : "Daily"} digest failed — check SMTP secrets and LLM key config`
         );
         process.exit(1);
       }

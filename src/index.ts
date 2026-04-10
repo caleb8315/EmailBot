@@ -167,7 +167,17 @@ async function runPipeline(): Promise<void> {
     logger.error("Failed to get usage report", {
       error: err instanceof Error ? err.message : String(err),
     });
-    usage = { date: "", callsUsed: 0, callsRemaining: 0, maxCalls: 5 };
+    usage = {
+      date: "",
+      callsUsed: 0,
+      callsRemaining: 0,
+      maxCalls: 5,
+      chatCallsUsed: 0,
+      chatCallsRemaining: 0,
+      maxChatCalls: 20,
+      pipelineCallsUsed: 0,
+      digestCallsUsed: 0,
+    };
   }
 
   const elapsed = Date.now() - startTime;

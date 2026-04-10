@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { runBriefingAssistant } from "../../../../src/ai_conversation";
+import { hasLLMCredentials } from "../../../../src/llm_client";
 
 export const maxDuration = 60;
 
@@ -8,9 +9,9 @@ export async function POST(req: Request) {
   const auth = requireAuth(req);
   if (auth) return auth;
 
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+  if (!hasLLMCredentials()) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured on server" },
+      { error: "LLM API key not configured on server" },
       { status: 503 }
     );
   }

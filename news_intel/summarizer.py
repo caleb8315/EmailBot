@@ -1,26 +1,31 @@
 """
 AI summarization module.
 
-Uses OpenAI for:
+Uses an LLM provider for:
   - Distilling story clusters into 1–3 bullet summaries
   - Generating a "Big This Week" recap from older context articles
   - Generating an "On the Radar" section for upcoming events
   - Neutral tone enforcement
   - Bias dampening across ideologically diverse sources
 
-Batches everything into a SINGLE API call to minimize cost.
+Batches everything into a single API call to minimize cost.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Dict, List, Optional
 
 from news_intel.verifier import StoryCluster
 from news_intel.normalizer import NormalizedArticle
 from news_intel.config import CAT_ALT, SECTION_ORDER
+from news_intel.llm_client import (
+    create_openai_client,
+    get_model_for_workload,
+    has_llm_credentials,
+    call_with_retry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,23 +117,28 @@ def _build_batch_prompt(
 
 
 def _call_openai_batch(system: str, user: str, num_stories: int) -> Optional[str]:
-    """Single OpenAI call for all stories. Returns raw response text."""
+    """Single LLM call for all stories. Returns raw response text."""
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+        client = create_openai_client()
+        if client is None:
+            return None
+        model = get_model_for_workload("python_intel")
         max_tokens = min(150 * num_stories + 800, 8000)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=0.2,
-            max_tokens=max_tokens,
+        response = call_with_retry(
+            "python_summarizer_batch",
+            lambda: client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                temperature=0.2,
+                max_tokens=max_tokens,
+            ),
         )
         return response.choices[0].message.content.strip()
     except Exception as exc:
-        logger.error("OpenAI batch call failed: %s", exc)
+        logger.error("LLM batch call failed: %s", exc)
         return None
 
 
@@ -174,9 +184,8 @@ def summarize_all(
     sentiment_scores = {}
     sentiment_notes = {}
 
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key or api_key.startswith("sk-your"):
-        logger.info("No valid OpenAI key — using fallback summaries for all %d clusters", len(clusters))
+    if not has_llm_credentials():
+        logger.info("No valid LLM key — using fallback summaries for all %d clusters", len(clusters))
         for cluster in clusters:
             summary = _fallback_summary(cluster)
             if cluster.category == CAT_ALT:
@@ -185,14 +194,14 @@ def summarize_all(
         return clusters
 
     prompt = _build_batch_prompt(clusters, context_articles)
-    logger.info("Sending 1 batch request to OpenAI for %d stories + context (%d chars)", len(clusters), len(prompt))
+    logger.info("Sending 1 batch request to LLM for %d stories + context (%d chars)", len(clusters), len(prompt))
     raw = _call_openai_batch(SYSTEM_PROMPT, prompt, len(clusters))
 
     parsed: dict = {}
     if raw:
         parsed = _parse_batch_response(raw)
         stories = parsed.get("stories", {})
-        logger.info("Parsed %d/%d story summaries from OpenAI", len(stories), len(clusters))
+        logger.info("Parsed %d/%d story summaries from LLM", len(stories), len(clusters))
     else:
         stories = {}
 

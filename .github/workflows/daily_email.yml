@@ -41,7 +41,12 @@ jobs:
         env:
           MORNING_DIGEST_RUN: "true"
           SEND_DIGEST_TELEGRAM: "false"
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: "gemini"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+          GEMINI_NATIVE_BASE_URL: "https://generativelanguage.googleapis.com/v1beta"
+          DIGEST_MODEL: "gemini-2.5-flash"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -57,7 +62,10 @@ jobs:
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
-          MAX_DAILY_AI_CALLS: '15'
+          MAX_DAILY_AI_CALLS: "30"
+          MAX_DAILY_CHAT_CALLS: "20"
+          MAX_DAILY_PIPELINE_AI_CALLS: "30"
+          MAX_DAILY_DIGEST_AI_CALLS: "4"
         run: npx ts-node src/send_email.ts --daily
 
       - name: Notify on failure

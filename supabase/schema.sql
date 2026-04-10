@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS usage_tracking (
   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date        DATE NOT NULL UNIQUE,
   api_calls_used INTEGER NOT NULL DEFAULT 0,
+  chat_calls_used INTEGER NOT NULL DEFAULT 0,
+  pipeline_calls_used INTEGER NOT NULL DEFAULT 0,
+  digest_calls_used INTEGER NOT NULL DEFAULT 0,
+  other_calls_used INTEGER NOT NULL DEFAULT 0,
   last_reset_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );

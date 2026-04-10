@@ -12,6 +12,15 @@ import { rankArticles } from "./scoring";
 import { canMakeAICall, recordAICall } from "./usage_limiter";
 import { matchBriefingSection } from "./briefing_helpers";
 import { BRIEFING_SECTIONS } from "./types";
+import {
+  createOpenAICompatibleClient,
+  getLLMRuntimeConfig,
+  getModelForWorkload,
+  hasLLMCredentials,
+  requestGeminiGroundedJson,
+  shouldUseGeminiGrounding,
+  withLLMRetry,
+} from "./llm_client";
 import type { ArticleHistory } from "./types";
 
 const logger = createLogger("ai_conversation");
@@ -356,52 +365,81 @@ async function requestAssistantJson(
   system: string,
   userMessage: string
 ): Promise<string> {
-  const webModel = process.env.CHAT_WEB_MODEL ?? process.env.CHAT_MODEL ?? "gpt-4.1-mini";
-  const fallbackModel = process.env.CHAT_MODEL ?? "gpt-4o-mini";
+  const webModel = getModelForWorkload("chat_web");
+  const fallbackModel = getModelForWorkload("chat");
   const webSearchDisabled = process.env.DISABLE_CHAT_WEB_SEARCH === "true";
+  const runtime = getLLMRuntimeConfig();
 
   if (!webSearchDisabled) {
-    const webModels = [...new Set([webModel, "gpt-4.1-mini", "gpt-4.1"])];
-    for (const model of webModels) {
+    if (runtime.provider === "gemini" && shouldUseGeminiGrounding()) {
       try {
-        const response = await openai.responses.create({
-          model,
-          instructions: system,
-          input: userMessage,
+        const grounded = await requestGeminiGroundedJson({
+          model: webModel,
+          systemInstruction: system,
+          userMessage,
           temperature: 0.35,
-          max_output_tokens: 1000,
-          tools: [{ type: "web_search_preview", search_context_size: "high" }],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "assistant_response",
-              schema: AssistantResponseJsonSchema,
-              strict: true,
-            },
-          },
+          maxOutputTokens: 1000,
         });
-        const raw = response.output_text?.trim() ?? "";
-        if (raw) return raw;
-        throw new Error("Empty output_text from responses API");
+        if (grounded) return grounded;
       } catch (err) {
-        logger.warn("Web-enabled assistant call failed; trying next option", {
+        logger.warn("Gemini grounded assistant call failed; falling back", {
           error: err instanceof Error ? err.message : String(err),
-          model,
+          model: webModel,
         });
+      }
+    } else {
+      const webModels = [...new Set([webModel, fallbackModel])];
+      for (const model of webModels) {
+        try {
+          const webTool: any =
+            runtime.provider === "groq"
+              ? [{ type: "browser_search" }]
+              : [{ type: "web_search_preview", search_context_size: "high" }];
+
+          const response = await withLLMRetry("assistant_web_search_response", () =>
+            openai.responses.create({
+              model,
+              instructions: system,
+              input: userMessage,
+              temperature: 0.35,
+              max_output_tokens: 1000,
+              tools: webTool,
+              text: {
+                format: {
+                  type: "json_schema",
+                  name: "assistant_response",
+                  schema: AssistantResponseJsonSchema,
+                  strict: true,
+                },
+              },
+            })
+          );
+          const raw = response.output_text?.trim() ?? "";
+          if (raw) return raw;
+          throw new Error("Empty output_text from web-enabled response API");
+        } catch (err) {
+          logger.warn("Web-enabled assistant call failed; trying next option", {
+            error: err instanceof Error ? err.message : String(err),
+            model,
+            provider: runtime.provider,
+          });
+        }
       }
     }
   }
 
-  const response = await openai.chat.completions.create({
-    model: fallbackModel,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: userMessage },
-    ],
-    temperature: 0.35,
-    max_tokens: 1000,
-    response_format: { type: "json_object" },
-  });
+  const response = await withLLMRetry("assistant_chat_completion", () =>
+    openai.chat.completions.create({
+      model: fallbackModel,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.35,
+      max_tokens: 1000,
+      response_format: { type: "json_object" },
+    })
+  );
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
@@ -409,14 +447,13 @@ export async function runBriefingAssistant(
   userId: string,
   userMessage: string
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return "I can answer as soon as the AI key is connected. Add OPENAI_API_KEY, then ask again and I'll give you a full analysis.";
+  if (!hasLLMCredentials()) {
+    return "I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.";
   }
 
-  const allowed = await canMakeAICall();
+  const allowed = await canMakeAICall("chat");
   if (!allowed) {
-    return "We've hit today's AI budget cap, so I can't run a fresh analysis right now. If you raise MAX_DAILY_AI_CALLS, I'll resume immediately. /status shows usage.";
+    return "We've hit today's AI budget cap for chat, so I can't run a fresh analysis right now. Increase MAX_DAILY_CHAT_CALLS (and MAX_DAILY_AI_CALLS if needed) to resume. /status shows usage.";
   }
 
   const [prefs, recent, lastAlert] = await Promise.all([
@@ -441,12 +478,15 @@ export async function runBriefingAssistant(
 
   const system = buildSystemPrompt(prefsBlock, articlesBlock);
 
-  const openai = new OpenAI({ apiKey });
+  const openai = createOpenAICompatibleClient();
+  if (!openai) {
+    return "I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.";
+  }
   let raw: string;
   try {
     raw = await requestAssistantJson(openai, system, userMessage);
   } catch (err) {
-    logger.error("OpenAI chat failed", {
+    logger.error("LLM chat failed", {
       error: err instanceof Error ? err.message : String(err),
     });
     return "I hit a temporary issue while generating your analysis. Please send that again and I'll take another pass.";
@@ -459,11 +499,11 @@ export async function runBriefingAssistant(
     logger.warn("Assistant JSON parse failed", {
       error: err instanceof Error ? err.message : String(err),
     });
-    await recordAICall();
+    await recordAICall("chat");
     return "I had a formatting hiccup, but I can still answer this. Re-send your question and I'll give a tighter, clearer take.";
   }
 
-  await recordAICall();
+  await recordAICall("chat");
 
   try {
     await applyActions(userId, parsed.actions ?? {});

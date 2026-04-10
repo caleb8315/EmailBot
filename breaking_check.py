@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -37,6 +36,12 @@ load_dotenv()
 from news_intel.config import SOURCES, Source
 from news_intel.rss_fetcher import fetch_all, RawArticle
 from news_intel.remote_prefs import fetch_briefing_overlay
+from news_intel.llm_client import (
+    create_openai_client,
+    get_model_for_workload,
+    call_with_retry,
+    has_llm_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -193,11 +198,10 @@ def _cluster_by_event(
 
 def _summarize_breaking(stories: List[dict]) -> List[dict]:
     """
-    Call OpenAI ONLY for confirmed breaking stories to add a 1-sentence summary.
+    Call the configured LLM only for confirmed breaking stories.
     Skips if no API key is set.
     """
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key or api_key.startswith("sk-your"):
+    if not has_llm_credentials():
         return stories
 
     headlines = [s["headline"] for s in stories[:5]]
@@ -209,14 +213,18 @@ def _summarize_breaking(stories: List[dict]) -> List[dict]:
     )
 
     try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=api_key)
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=500,
+        client = create_openai_client()
+        if client is None:
+            return stories
+        model = get_model_for_workload("pipeline")
+        resp = call_with_retry(
+            "breaking_summary",
+            lambda: client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=500,
+            ),
         )
         raw = resp.choices[0].message.content.strip()
         if raw.startswith("```"):

@@ -16,7 +16,15 @@ Next.js UI hosted on **Vercel (free tier)** for digest history, system events, r
 | `DASHBOARD_SECRET` | Long random string; you type it into the UI to unlock APIs |
 | `SUPABASE_URL` | Same as pipeline |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same as pipeline (server-only) |
-| `OPENAI_API_KEY` | Assistant + same models as main app |
+| `LLM_PROVIDER` | Set to `gemini` |
+| `GEMINI_API_KEY` | Primary Gemini key used by assistant + backend tasks |
+| `OPENAI_API_KEY` | Optional backward-compatible alias (can mirror `GEMINI_API_KEY`) |
+| `OPENAI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| `GEMINI_NATIVE_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta` |
+| `CHAT_MODEL` | Recommended `gemini-2.5-flash` |
+| `CHAT_WEB_MODEL` | Recommended `gemini-2.5-flash` |
+| `MAX_DAILY_AI_CALLS` | Global AI cap (recommended `30`) |
+| `MAX_DAILY_CHAT_CALLS` | Chat-only cap (recommended `20`) |
 | `TELEGRAM_CHAT_ID` | Your user id (matches pipeline `DEFAULT_USER_ID`) |
 | `GITHUB_TOKEN` | PAT with `repo` + **Actions** (read + workflow dispatch) |
 | `GITHUB_REPO` | `yourname/repo-name` |

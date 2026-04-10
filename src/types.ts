@@ -39,6 +39,10 @@ export interface UsageTracking {
   id: string;
   date: string;
   api_calls_used: number;
+  chat_calls_used: number;
+  pipeline_calls_used: number;
+  digest_calls_used: number;
+  other_calls_used: number;
   last_reset_at: string;
   created_at: string;
 }
@@ -111,6 +115,11 @@ export interface UsageReport {
   callsUsed: number;
   callsRemaining: number;
   maxCalls: number;
+  chatCallsUsed: number;
+  chatCallsRemaining: number;
+  maxChatCalls: number;
+  pipelineCallsUsed: number;
+  digestCallsUsed: number;
 }
 
 // ── Chat handler types ──

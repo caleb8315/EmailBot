@@ -3,6 +3,11 @@ import { createLogger } from "./logger";
 import { canMakeAICall, recordAICall } from "./usage_limiter";
 import { saveArticle } from "./memory";
 import { getAlertThresholds } from "./scoring";
+import {
+  createOpenAICompatibleClient,
+  getModelForWorkload,
+  withLLMRetry,
+} from "./llm_client";
 import { ArticleAnalysisSchema } from "./types";
 import type {
   FilteredArticle,
@@ -14,12 +19,12 @@ import type {
 const logger = createLogger("process_articles");
 
 function getOpenAI(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    logger.error("OPENAI_API_KEY not set");
+  const client = createOpenAICompatibleClient();
+  if (!client) {
+    logger.error("LLM API key not set");
     return null;
   }
-  return new OpenAI({ apiKey });
+  return client;
 }
 
 function buildAnalysisPrompt(
@@ -51,17 +56,20 @@ async function analyzeWithAI(
   if (!openai) return null;
 
   const prompt = buildAnalysisPrompt(article, prefs);
+  const model = getModelForWorkload("pipeline");
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt.system },
-        { role: "user", content: prompt.user },
-      ],
-      temperature: 0.3,
-      max_tokens: 500,
-    });
+    const response = await withLLMRetry("pipeline_article_scoring", () =>
+      openai.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      })
+    );
 
     const raw = response.choices[0]?.message?.content?.trim();
     if (!raw) {
@@ -173,7 +181,7 @@ export async function processArticles(
       let analysis: ArticleAnalysis | null = null;
 
       if (useAI) {
-        const budgetAvailable = await canMakeAICall();
+        const budgetAvailable = await canMakeAICall("pipeline");
         if (!budgetAvailable) {
           logger.info("AI budget exhausted — storing without analysis", {
             title: article.title.slice(0, 60),
@@ -182,7 +190,7 @@ export async function processArticles(
         } else {
           analysis = await analyzeWithAI(article, prefs);
           if (analysis) {
-            await recordAICall();
+            await recordAICall("pipeline");
             result.aiCallsMade++;
           } else {
             result.skippedError++;

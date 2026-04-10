@@ -25,13 +25,21 @@ jobs:
 
       - name: Run intelligence pipeline
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: "gemini"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+          GEMINI_NATIVE_BASE_URL: "https://generativelanguage.googleapis.com/v1beta"
+          PIPELINE_MODEL: "gemini-2.5-flash-lite"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MAX_DAILY_AI_CALLS: '15'
+          MAX_DAILY_AI_CALLS: "30"
+          MAX_DAILY_CHAT_CALLS: "20"
+          MAX_DAILY_PIPELINE_AI_CALLS: "30"
+          MAX_DAILY_DIGEST_AI_CALLS: "4"
           PREFILTER_THRESHOLD: '55'
           ALERT_COOLDOWN_HOURS: '4'
           ALERT_EMAIL_IMPORTANT: ${{ secrets.ALERT_EMAIL_IMPORTANT }}

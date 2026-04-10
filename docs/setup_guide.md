@@ -10,7 +10,7 @@ Complete setup instructions for the Selective Intelligence System.
 - **npm** (comes with Node.js)
 - **Supabase project** (free tier works)
 - **Telegram Bot** (via @BotFather)
-- **OpenAI API key** (with GPT-4o-mini access)
+- **Gemini API key** (Google AI Studio)
 - **Gmail or SMTP provider** (optional — only if you want email in addition to Telegram)
 
 ---
@@ -31,6 +31,7 @@ npm install
 2. Navigate to **SQL Editor**
 3. Paste the contents of `supabase/schema.sql` and run it  
    - If this database was created **before** the `briefing_overlay` column existed, also run `supabase/migrations/20260408120000_briefing_overlay.sql` once.
+   - If this database was created before per-purpose budgets were added, run `supabase/migrations/20260410113000_usage_tracking_purpose_counters.sql` once.
 4. Go to **Settings → API** and copy:
    - Project URL → `SUPABASE_URL`
    - `anon` key → `SUPABASE_ANON_KEY`
@@ -53,11 +54,13 @@ npm install
 
 ---
 
-## Step 4: Get OpenAI API Key
+## Step 4: Get Gemini API Key
 
-1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Create a new key → `OPENAI_API_KEY`
-3. Ensure your account has access to `gpt-4o-mini`
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Create a new key → `GEMINI_API_KEY`
+3. Use Gemini via the OpenAI-compatible endpoint by setting:
+   - `LLM_PROVIDER=gemini`
+   - `OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/`
 
 ---
 
@@ -94,7 +97,11 @@ cp .env.example .env
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | Yes | — | OpenAI API key |
+| `LLM_PROVIDER` | No | `gemini` | LLM backend selection (`gemini`, `openai`, `groq`, `openrouter`) |
+| `GEMINI_API_KEY` | Yes | — | Primary Gemini API key |
+| `OPENAI_API_KEY` | Recommended | — | Backward-compatible alias (can mirror `GEMINI_API_KEY`) |
+| `OPENAI_BASE_URL` | No | `https://generativelanguage.googleapis.com/v1beta/openai/` | OpenAI-compatible endpoint URL |
+| `GEMINI_NATIVE_BASE_URL` | No | `https://generativelanguage.googleapis.com/v1beta` | Native Gemini endpoint for grounded web chat |
 | `SUPABASE_URL` | Yes | — | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Yes | — | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Supabase service role key |
@@ -109,10 +116,16 @@ cp .env.example .env
 | `EMAIL_SMTP_USER` | For email | — | SMTP username |
 | `EMAIL_SMTP_PASS` | For email | — | SMTP password or app password |
 | `FINNHUB_API_KEY` | No | — | Optional free key for economic calendar events in digests |
-| `CHAT_MODEL` | No | `gpt-4o-mini` | Fallback chat model when web-enabled call is unavailable |
-| `CHAT_WEB_MODEL` | No | `gpt-4.1-mini` | Model used for chat with live web search |
+| `CHAT_MODEL` | No | `gemini-2.5-flash` | Fallback chat model when web-enabled call is unavailable |
+| `CHAT_WEB_MODEL` | No | `gemini-2.5-flash` | Model used for chat with live web grounding |
+| `PIPELINE_MODEL` | No | `gemini-2.5-flash-lite` | Model used for optional pipeline AI scoring |
+| `DIGEST_MODEL` | No | `gemini-2.5-flash` | Model used for digest synthesis |
+| `PYTHON_INTELLIGENCE_MODEL` | No | `gemini-2.5-flash` | Model used by optional Python intelligence modules |
 | `DISABLE_CHAT_WEB_SEARCH` | No | `false` | Set `true` to disable live web search in chat |
-| `MAX_DAILY_AI_CALLS` | No | `15` | Hard ceiling for OpenAI calls/day |
+| `MAX_DAILY_AI_CALLS` | No | `30` | Global hard ceiling for AI calls/day |
+| `MAX_DAILY_CHAT_CALLS` | No | `20` | Chat-specific daily cap |
+| `MAX_DAILY_PIPELINE_AI_CALLS` | No | `30` | Pipeline-specific daily cap |
+| `MAX_DAILY_DIGEST_AI_CALLS` | No | `4` | Digest-specific daily cap |
 | `PREFILTER_THRESHOLD` | No | `55` | Minimum score to pass prefilter |
 | `ALERT_COOLDOWN_HOURS` | No | `4` | Hours between Telegram alerts |
 
@@ -147,7 +160,7 @@ npm run typecheck
 1. Push your code to GitHub
 2. Go to **Settings → Secrets and variables → Actions**
 3. Add each environment variable as a **Repository secret**:
-   - `OPENAI_API_KEY`
+   - `GEMINI_API_KEY` (or keep `OPENAI_API_KEY` for backward compatibility)
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
@@ -175,7 +188,7 @@ npm run typecheck
 | Issue | Fix |
 |-------|-----|
 | "SUPABASE_URL required" | Check `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` |
-| "AI budget exhausted" | Normal — system limits to 15 calls/day by default. Resets at midnight UTC. |
+| "AI budget exhausted" | Normal — default global cap is 30/day with chat capped at 20/day. Resets at midnight UTC. |
 | Email not sending | Verify SMTP credentials. For Gmail, use App Passwords, not your main password. |
 | Telegram bot not responding | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once. |
 | No articles fetched | Some RSS feeds may be down. Check `config/sources.json` for working feeds. |
