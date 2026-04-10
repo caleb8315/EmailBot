@@ -195,13 +195,13 @@ async function generateBriefing(
 
   const articleData = articles
     .filter((a) => a.title)
-    .slice(0, 40)
+    .slice(0, 25)
     .map((a, i) => ({
       idx: i + 1,
       title: a.title,
       source: a.source,
       url: a.url,
-      summary: a.summary || "",
+      summary: (a.summary || "").slice(0, 200),
       importance: a.importance_score ?? 0,
       credibility: a.credibility_score ?? 0,
       fetched: a.fetched_at,
@@ -252,17 +252,20 @@ ${styleLine}
 Return ONLY valid JSON.`;
 
   try {
-    const response = await withLLMRetry("digest_generate_briefing", () =>
-      openai.chat.completions.create({
-        model: DIGEST_MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify(articleData) },
-        ],
-        temperature: 0.4,
-        max_tokens: 16000,
-      })
+    const response = await withLLMRetry(
+      "digest_generate_briefing",
+      () =>
+        openai.chat.completions.create({
+          model: DIGEST_MODEL,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: JSON.stringify(articleData) },
+          ],
+          temperature: 0.4,
+          max_tokens: 16000,
+        }),
+      { attempts: 5, baseDelayMs: 3000, maxDelayMs: 30000 }
     );
 
     const content = response.choices[0]?.message?.content;
