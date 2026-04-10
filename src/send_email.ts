@@ -119,6 +119,58 @@ function digestTelegramConfigured(): boolean {
 
 // ── AI Briefing Generation ──
 
+function safeParseJSON(text: string): Record<string, unknown> {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.split("\n", 2).pop()!;
+    cleaned = cleaned.replace(/```\s*$/, "").trim();
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Gemini may truncate the response mid-JSON; attempt repair
+  }
+
+  let repaired = cleaned;
+  let openBraces = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let escape = false;
+
+  for (const ch of repaired) {
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") openBraces++;
+    if (ch === "}") openBraces--;
+    if (ch === "[") openBrackets++;
+    if (ch === "]") openBrackets--;
+  }
+
+  if (inString) repaired += '"';
+  while (openBrackets > 0) { repaired += "]"; openBrackets--; }
+  while (openBraces > 0) { repaired += "}"; openBraces--; }
+
+  try {
+    const result = JSON.parse(repaired);
+    logger.warn("Recovered truncated JSON from LLM response", {
+      originalLength: text.length,
+      repairedLength: repaired.length,
+    });
+    return result;
+  } catch (err) {
+    logger.error("JSON repair failed", {
+      error: err instanceof Error ? err.message : String(err),
+      preview: text.slice(0, 200),
+    });
+    throw new Error(
+      `Unterminated JSON from LLM (${text.length} chars); repair also failed`
+    );
+  }
+}
+
 const DIGEST_MODEL = getModelForWorkload("digest");
 
 async function generateBriefing(
@@ -209,14 +261,14 @@ Return ONLY valid JSON.`;
           { role: "user", content: JSON.stringify(articleData) },
         ],
         temperature: 0.4,
-        max_tokens: 8000,
+        max_tokens: 16000,
       })
     );
 
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
 
-    const raw = JSON.parse(content);
+    const raw: any = safeParseJSON(content);
     const toArray = (v: unknown): any[] => (Array.isArray(v) ? v : []);
     const parsed: BriefingData = {
       one_sentence: typeof raw.one_sentence === "string" ? raw.one_sentence : "",
