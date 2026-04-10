@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { createLogger } from "./logger";
 import {
   getRecentArticles,
@@ -173,9 +174,162 @@ function safeParseJSON(text: string): Record<string, unknown> {
 
 const DIGEST_MODEL = getModelForWorkload("digest");
 
+const RETRY_OPTS = { attempts: 4, baseDelayMs: 4000, maxDelayMs: 30000 };
+
+function toArray(v: unknown): any[] {
+  return Array.isArray(v) ? v : [];
+}
+
+interface TriageResult {
+  one_sentence: string;
+  key_signals: KeySignal[];
+  blindspots: string[];
+}
+
+async function triageArticles(
+  openai: OpenAI,
+  articles: ArticleHistory[],
+  interests: string[],
+  horizon: "daily" | "weekly"
+): Promise<TriageResult | null> {
+  const articleData = articles
+    .filter((a) => a.title)
+    .slice(0, 25)
+    .map((a, i) => ({
+      n: i + 1,
+      t: a.title,
+      s: a.source,
+      u: a.url,
+      sum: (a.summary || "").slice(0, 150),
+    }));
+
+  const sections = BRIEFING_SECTIONS.join(", ");
+  const interestsStr =
+    interests.length > 0
+      ? interests.join(", ")
+      : "geopolitics, markets, crypto, AI, power dynamics";
+  const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
+  const oneSentenceRule =
+    horizon === "weekly"
+      ? '"one_sentence": THE single most important development this week in one punchy sentence'
+      : '"one_sentence": THE single most important development today in one punchy sentence';
+  const briefingLabel = horizon === "weekly" ? "weekly recap" : "daily briefing";
+
+  const systemPrompt = `You are an elite intelligence analyst producing a ${briefingLabel} triage for a reader interested in: ${interestsStr}.
+
+Given ${horizonLabel}'s ${articleData.length} articles, rank and analyze them. Return JSON with:
+- ${oneSentenceRule}
+- "key_signals": 8-12 most important stories ranked. Each: title, url (from input "u"), source, category (from: ${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords), "summary" (2-3 sentences, specific facts), "why_it_matters" (1-2 sentences, strategic significance)
+- "blindspots": 2-4 important topics with NO coverage today
+
+Be specific, analytical, no filler. Return ONLY valid JSON.`;
+
+  const response = await withLLMRetry(
+    "digest_triage",
+    () =>
+      openai.chat.completions.create({
+        model: DIGEST_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(articleData) },
+        ],
+        temperature: 0.4,
+        max_tokens: 5000,
+      }),
+    RETRY_OPTS
+  );
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) return null;
+
+  const raw: any = safeParseJSON(content);
+  return {
+    one_sentence: typeof raw.one_sentence === "string" ? raw.one_sentence : "",
+    key_signals: toArray(raw.key_signals),
+    blindspots: toArray(raw.blindspots),
+  };
+}
+
+async function generateDeepBriefing(
+  openai: OpenAI,
+  triage: TriageResult,
+  interests: string[],
+  horizon: "daily" | "weekly"
+): Promise<Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null> {
+  const signalSummary = triage.key_signals
+    .slice(0, 12)
+    .map(
+      (s, i) =>
+        `${i + 1}. [${s.importance}] ${s.title} (${s.category}) — ${s.summary || ""}`
+    )
+    .join("\n");
+
+  const interestsStr =
+    interests.length > 0
+      ? interests.join(", ")
+      : "geopolitics, markets, crypto, AI, power dynamics";
+  const sections = BRIEFING_SECTIONS.join(", ");
+  const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
+  const styleLine =
+    horizon === "weekly"
+      ? "Write like a senior analyst delivering a weekly recap. Highlight trend shifts, escalation/de-escalation, and what to watch next week."
+      : "Write like a senior analyst briefing a decision-maker. Be specific, analytical, connect the dots. No filler.";
+
+  const systemPrompt = `You are an elite intelligence analyst writing a deep ${horizon} briefing for a reader interested in: ${interestsStr}.
+
+Below are ${horizonLabel}'s top signals (pre-ranked). Using these signals, produce a JSON object with:
+- "market_intelligence": { "analysis" (4-5 sentence strategic assessment connecting dots), "implications" (3-4 specific actionable items), "risk_scenarios" (3-4 downside scenarios with trigger conditions) }
+- "contrarian_watch": 2-3 objects with "narrative" (consensus view) and "risk_if_wrong" (consequences). Be provocative and specific.
+- "power_nodes": 8-10 key entities with importance (HIGH/MEDIUM/LOW), mentions count, "context" explaining their role
+- "opportunities": 2-3 actionable insights specific enough to act on
+- "section_articles": group the signals into sections (${sections}). For each: title, url, source, verification (VERIFIED/DEVELOPING/UNVERIFIED), status (NEW/ESCALATING/DE-ESCALATING/ONGOING), time_label, "bullets" (3-4 bullet points telling the full story), related_sources
+
+${styleLine}
+Return ONLY valid JSON.`;
+
+  const response = await withLLMRetry(
+    "digest_deep_briefing",
+    () =>
+      openai.chat.completions.create({
+        model: DIGEST_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: signalSummary },
+        ],
+        temperature: 0.4,
+        max_tokens: 10000,
+      }),
+    RETRY_OPTS
+  );
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) return null;
+
+  const raw: any = safeParseJSON(content);
+  return {
+    market_intelligence: {
+      analysis:
+        typeof raw.market_intelligence?.analysis === "string"
+          ? raw.market_intelligence.analysis
+          : "",
+      implications: toArray(raw.market_intelligence?.implications),
+      risk_scenarios: toArray(raw.market_intelligence?.risk_scenarios),
+    },
+    contrarian_watch: toArray(raw.contrarian_watch),
+    power_nodes: toArray(raw.power_nodes),
+    opportunities: toArray(raw.opportunities),
+    section_articles:
+      typeof raw.section_articles === "object" && raw.section_articles !== null
+        ? raw.section_articles
+        : {},
+  };
+}
+
 async function generateBriefing(
   articles: ArticleHistory[],
-  sources: SourceRegistry[],
+  _sources: SourceRegistry[],
   interests: string[],
   horizon: "daily" | "weekly" = "daily"
 ): Promise<BriefingData | null> {
@@ -193,109 +347,56 @@ async function generateBriefing(
     return null;
   }
 
-  const articleData = articles
-    .filter((a) => a.title)
-    .slice(0, 25)
-    .map((a, i) => ({
-      idx: i + 1,
-      title: a.title,
-      source: a.source,
-      url: a.url,
-      summary: (a.summary || "").slice(0, 200),
-      importance: a.importance_score ?? 0,
-      credibility: a.credibility_score ?? 0,
-      fetched: a.fetched_at,
-    }));
-
-  const sourceNames = Array.from(new Set(articles.map((a) => a.source)));
-  const sections = BRIEFING_SECTIONS.join(", ");
-  const interestsStr = interests.length > 0 ? interests.join(", ") : "geopolitics, markets, crypto, AI, power dynamics";
-  const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
-  const oneSentenceRule =
-    horizon === "weekly"
-      ? `- "one_sentence": THE single most important development this week in one punchy sentence that captures both the event and why this week mattered`
-      : `- "one_sentence": THE single most important development today in one punchy sentence that captures both the event and its significance`;
-  const styleLine =
-    horizon === "weekly"
-      ? "Write like a senior analyst delivering a weekly recap to a decision-maker. Highlight trend shifts, escalation/de-escalation, and what to watch next week."
-      : "Write like a senior analyst briefing a decision-maker. Be specific, analytical, and connect the dots. Avoid filler language.";
-  const briefingLabel = horizon === "weekly" ? "weekly recap" : "daily briefing";
-
-  const systemPrompt = `You are an elite intelligence analyst producing a comprehensive ${briefingLabel} for a reader interested in: ${interestsStr}.
-
-Given ${horizonLabel}'s ${articleData.length} articles from ${sourceNames.length} sources, produce a structured intelligence briefing as JSON. The reader wants to UNDERSTAND what is happening and WHY it matters — not just see headlines.
-
-Available sections for categorization: ${sections}
-
-Rules:
-${oneSentenceRule}
-- "key_signals": the 8-12 most important stories, ranked. For EACH story include:
-  - title, url, source, category (from sections list), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords)
-  - "summary": 2-3 sentence explanation of what happened. Be specific with names, numbers, and facts — not vague.
-  - "why_it_matters": 1-2 sentences explaining the strategic significance. Connect it to bigger trends, explain second-order effects, or why the reader should care. This is the most important field — make it sharp and insightful.
-- "market_intelligence":
-  - "analysis": 4-5 sentence strategic assessment connecting the dots across today's top stories. Identify themes, correlations between events, and what the overall picture suggests. Be specific — reference actual events and data points.
-  - "implications": 3-4 specific, actionable implications (not generic platitudes like "markets may be volatile"). Each should reference a concrete scenario.
-  - "risk_scenarios": 3-4 specific downside scenarios with clear trigger conditions (e.g. "If X happens, then Y because Z")
-- "contrarian_watch": array of 2-3 objects with "narrative" (the dominant consensus view) and "risk_if_wrong" (specific consequences if the consensus is wrong). Be provocative and specific.
-- "blindspots": 2-4 important topics or regions with NO or minimal coverage today that the reader should be aware of
-- "power_nodes": 8-10 key entities (countries, companies, leaders) with importance, mentions count, and a brief "context" explaining their role today
-- "opportunities": 2-3 actionable insights — specific enough that someone could act on them (reference sectors, assets, or strategies)
-- "section_articles": group the top 15-20 stories into their sections. For each article:
-  - verification: VERIFIED (2+ credible sources), DEVELOPING (limited confirmation), UNVERIFIED (single/alt source)
-  - status label: NEW, ESCALATING, DE-ESCALATING, ONGOING
-  - time_label: relative time
-  - "bullets": 3-4 bullet points that tell the full story — include key facts, context, and what to watch next. The reader should understand the story from bullets alone without clicking through.
-  - related_sources: list of source names covering this story
-
-${styleLine}
-Return ONLY valid JSON.`;
-
+  let triage: TriageResult | null = null;
   try {
-    const response = await withLLMRetry(
-      "digest_generate_briefing",
-      () =>
-        openai.chat.completions.create({
-          model: DIGEST_MODEL,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: JSON.stringify(articleData) },
-          ],
-          temperature: 0.4,
-          max_tokens: 16000,
-        }),
-      { attempts: 5, baseDelayMs: 3000, maxDelayMs: 30000 }
-    );
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) return null;
-
-    const raw: any = safeParseJSON(content);
-    const toArray = (v: unknown): any[] => (Array.isArray(v) ? v : []);
-    const parsed: BriefingData = {
-      one_sentence: typeof raw.one_sentence === "string" ? raw.one_sentence : "",
-      key_signals: toArray(raw.key_signals),
-      market_intelligence: {
-        analysis: typeof raw.market_intelligence?.analysis === "string" ? raw.market_intelligence.analysis : "",
-        implications: toArray(raw.market_intelligence?.implications),
-        risk_scenarios: toArray(raw.market_intelligence?.risk_scenarios),
-      },
-      contrarian_watch: toArray(raw.contrarian_watch),
-      blindspots: toArray(raw.blindspots),
-      power_nodes: toArray(raw.power_nodes),
-      opportunities: toArray(raw.opportunities),
-      section_articles: typeof raw.section_articles === "object" && raw.section_articles !== null ? raw.section_articles : {},
-    };
+    logger.info("Digest Call 1/2: triaging articles");
+    triage = await triageArticles(openai, articles, interests, horizon);
     await recordAICall("digest");
-    logger.info(`AI briefing generated via ${DIGEST_MODEL}`);
-    return parsed;
+    if (!triage || triage.key_signals.length === 0) {
+      logger.warn("Triage returned no signals");
+      return null;
+    }
+    logger.info("Triage complete", {
+      signals: triage.key_signals.length,
+      blindspots: triage.blindspots.length,
+    });
   } catch (err) {
-    logger.error("AI briefing generation failed", {
+    logger.error("Digest triage (Call 1) failed", {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
   }
+
+  let deep: Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null =
+    null;
+  try {
+    logger.info("Digest Call 2/2: generating deep briefing");
+    deep = await generateDeepBriefing(openai, triage, interests, horizon);
+    await recordAICall("digest");
+    logger.info("Deep briefing complete");
+  } catch (err) {
+    logger.warn("Deep briefing (Call 2) failed — using triage-only data", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  const parsed: BriefingData = {
+    one_sentence: triage.one_sentence,
+    key_signals: triage.key_signals,
+    blindspots: triage.blindspots,
+    market_intelligence: deep?.market_intelligence ?? {
+      analysis: "",
+      implications: [],
+      risk_scenarios: [],
+    },
+    contrarian_watch: deep?.contrarian_watch ?? [],
+    power_nodes: deep?.power_nodes ?? [],
+    opportunities: deep?.opportunities ?? [],
+    section_articles: deep?.section_articles ?? {},
+  };
+
+  logger.info(`AI briefing generated via ${DIGEST_MODEL} (2-call split)`);
+  return parsed;
 }
 
 // ── Weather HTML Block ──
