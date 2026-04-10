@@ -1,14 +1,14 @@
-name: Morning Intelligence Digest
+name: Weekly Intelligence Recap
 
 on:
   schedule:
-    - cron: '0 7 * * *'
+    - cron: "0 14 * * 0"
   workflow_dispatch:
 
 jobs:
-  send-digest:
+  send-weekly-recap:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
 
     steps:
       - name: Checkout
@@ -31,20 +31,20 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Send morning digest (email only)
+      - name: Send weekly recap
         env:
-          MORNING_DIGEST_RUN: "true"
-          SEND_DIGEST_TELEGRAM: "false"
+          SEND_DIGEST_TELEGRAM: "true"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -57,8 +57,8 @@ jobs:
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
-          MAX_DAILY_AI_CALLS: '15'
-        run: npx ts-node src/send_email.ts --daily
+          MAX_DAILY_AI_CALLS: "15"
+        run: npx ts-node src/send_email.ts --weekly
 
       - name: Notify on failure
         if: failure()
@@ -67,9 +67,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
-            echo "Skipping Telegram notify (TELEGRAM_BOT_TOKEN empty — same reason digest could not send)."
+            echo "Skipping Telegram notify (TELEGRAM_BOT_TOKEN empty)."
             exit 0
           fi
           curl -s -S -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="⚠️ Morning digest failed — check GitHub Actions logs"
+            -d text="⚠️ Weekly recap failed — check GitHub Actions logs"

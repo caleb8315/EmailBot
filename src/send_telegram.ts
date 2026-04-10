@@ -2,7 +2,7 @@ import https from "https";
 import { createLogger } from "./logger";
 import { getLastAlertTime, markAlerted, logSystemEvent } from "./memory";
 import { createSmtpTransport } from "./smtp";
-import { shouldAlert } from "./scoring";
+import { shouldAlert, getAlertThresholds } from "./scoring";
 import type { ArticleHistory } from "./types";
 
 const logger = createLogger("send_telegram");
@@ -186,14 +186,18 @@ async function isCooldownActive(): Promise<boolean> {
 }
 
 export async function sendAlertIfNeeded(
-  article: ArticleHistory
+  article: ArticleHistory,
+  alertSensitivity: number = 5
 ): Promise<boolean> {
   try {
-    if (!shouldAlert(article)) {
+    const thresholds = getAlertThresholds(alertSensitivity);
+    if (!shouldAlert(article, alertSensitivity)) {
       logger.debug("Article below alert threshold", {
         title: article.title.slice(0, 60),
         importance: article.importance_score,
         credibility: article.credibility_score,
+        thresholds,
+        alertSensitivity,
       });
       return false;
     }

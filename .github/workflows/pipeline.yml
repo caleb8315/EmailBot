@@ -31,9 +31,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MAX_DAILY_AI_CALLS: '30'
-          PREFILTER_THRESHOLD: '40'
-          ALERT_COOLDOWN_HOURS: '2'
+          MAX_DAILY_AI_CALLS: '15'
+          PREFILTER_THRESHOLD: '55'
+          ALERT_COOLDOWN_HOURS: '4'
           ALERT_EMAIL_IMPORTANT: ${{ secrets.ALERT_EMAIL_IMPORTANT }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}

@@ -143,9 +143,13 @@ async function runPipeline(): Promise<void> {
 
   // Step 6: Check alert thresholds and send Telegram
   let alertsSent = 0;
+  const alertSensitivity =
+    typeof prefs.alert_sensitivity === "number"
+      ? prefs.alert_sensitivity
+      : 5;
   for (const article of processingResult.processed) {
     try {
-      const sent = await sendAlertIfNeeded(article);
+      const sent = await sendAlertIfNeeded(article, alertSensitivity);
       if (sent) alertsSent++;
     } catch (err) {
       logger.error("Step 6 failed: alert check", {

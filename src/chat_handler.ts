@@ -7,6 +7,7 @@ import {
 } from "./memory";
 import { getDailyUsageReport } from "./usage_limiter";
 import { runBriefingAssistant } from "./ai_conversation";
+import { fetchDenverWeather, fetchMarketSnapshot } from "./data_feeds";
 import type { UserPreferences } from "./types";
 import { BRIEFING_SECTIONS } from "./types";
 import { matchBriefingSection } from "./briefing_helpers";
@@ -69,6 +70,37 @@ async function handleSlashCommand(
         `${report.callsRemaining} remaining`,
         `Date (UTC): ${report.date}`,
       ].join("\n");
+    }
+    case "weather": {
+      const weather = await fetchDenverWeather();
+      if (!weather) {
+        return "Weather feed is unavailable right now. Try again in a few minutes.";
+      }
+      return [
+        "Denver weather",
+        "",
+        `${weather.emoji} ${weather.condition}, ${weather.temp}°F`,
+        `Feels like ${weather.feelsLike}°F`,
+        `High ${weather.high}° / Low ${weather.low}°`,
+        `Wind ${weather.wind} mph · Precip ${weather.precipChance}%`,
+      ].join("\n");
+    }
+    case "markets": {
+      const quotes = await fetchMarketSnapshot();
+      if (quotes.length === 0) {
+        return "Market feed is unavailable right now. Try again in a few minutes.";
+      }
+      const lines = quotes.map((q) => {
+        const sign = (q.changePercent ?? 0) >= 0 ? "+" : "";
+        const pct =
+          q.changePercent == null
+            ? "n/a"
+            : `${sign}${q.changePercent.toFixed(2)}%`;
+        return `${q.label}: ${q.price.toLocaleString("en-US", {
+          maximumFractionDigits: 2,
+        })} (${pct})`;
+      });
+      return ["Market snapshot", "", ...lines].join("\n");
     }
     case "boost": {
       const cat = matchBriefingSection(arg);
@@ -165,6 +197,8 @@ function handleHelp(): string {
     "",
     "/prefs — saved settings",
     "/status — AI budget today",
+    "/weather — Denver weather now",
+    "/markets — quick market snapshot",
     "/boost <section> — briefing emphasis",
     "/mute <section>",
     "/alert <1-10>",

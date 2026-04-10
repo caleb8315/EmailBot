@@ -16,6 +16,15 @@ import {
   recordAICall,
 } from "./usage_limiter";
 import { BRIEFING_SECTIONS } from "./types";
+import {
+  fetchDailyFact,
+  fetchDenverWeather,
+  fetchEconomicCalendar,
+  fetchMarketSnapshot,
+  type EconomicEvent,
+  type MarketQuote,
+  type WeatherData,
+} from "./data_feeds";
 import type { ArticleHistory, SourceRegistry, UsageReport } from "./types";
 
 const logger = createLogger("send_email");
@@ -67,6 +76,13 @@ interface BriefingData {
   >;
 }
 
+interface DigestEnhancements {
+  weather: WeatherData | null;
+  marketSnapshot: MarketQuote[];
+  economicCalendar: EconomicEvent[];
+  dailyFact: string | null;
+}
+
 // ── Transporter ──
 
 function createTransport() {
@@ -103,7 +119,8 @@ const DIGEST_MODEL = process.env.DIGEST_MODEL || "gpt-4o";
 async function generateBriefing(
   articles: ArticleHistory[],
   sources: SourceRegistry[],
-  interests: string[]
+  interests: string[],
+  horizon: "daily" | "weekly" = "daily"
 ): Promise<BriefingData | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -132,15 +149,25 @@ async function generateBriefing(
   const sourceNames = Array.from(new Set(articles.map((a) => a.source)));
   const sections = BRIEFING_SECTIONS.join(", ");
   const interestsStr = interests.length > 0 ? interests.join(", ") : "geopolitics, markets, crypto, AI, power dynamics";
+  const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
+  const oneSentenceRule =
+    horizon === "weekly"
+      ? `- "one_sentence": THE single most important development this week in one punchy sentence that captures both the event and why this week mattered`
+      : `- "one_sentence": THE single most important development today in one punchy sentence that captures both the event and its significance`;
+  const styleLine =
+    horizon === "weekly"
+      ? "Write like a senior analyst delivering a weekly recap to a decision-maker. Highlight trend shifts, escalation/de-escalation, and what to watch next week."
+      : "Write like a senior analyst briefing a decision-maker. Be specific, analytical, and connect the dots. Avoid filler language.";
+  const briefingLabel = horizon === "weekly" ? "weekly recap" : "daily briefing";
 
-  const systemPrompt = `You are an elite intelligence analyst producing a comprehensive daily briefing for a reader interested in: ${interestsStr}.
+  const systemPrompt = `You are an elite intelligence analyst producing a comprehensive ${briefingLabel} for a reader interested in: ${interestsStr}.
 
-Given today's ${articleData.length} articles from ${sourceNames.length} sources, produce a structured intelligence briefing as JSON. The reader wants to UNDERSTAND what is happening and WHY it matters — not just see headlines.
+Given ${horizonLabel}'s ${articleData.length} articles from ${sourceNames.length} sources, produce a structured intelligence briefing as JSON. The reader wants to UNDERSTAND what is happening and WHY it matters — not just see headlines.
 
 Available sections for categorization: ${sections}
 
 Rules:
-- "one_sentence": THE single most important development today in one punchy sentence that captures both the event and its significance
+${oneSentenceRule}
 - "key_signals": the 8-12 most important stories, ranked. For EACH story include:
   - title, url, source, category (from sections list), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords)
   - "summary": 2-3 sentence explanation of what happened. Be specific with names, numbers, and facts — not vague.
@@ -160,7 +187,7 @@ Rules:
   - "bullets": 3-4 bullet points that tell the full story — include key facts, context, and what to watch next. The reader should understand the story from bullets alone without clicking through.
   - related_sources: list of source names covering this story
 
-Write like a senior analyst briefing a decision-maker. Be specific, analytical, and connect the dots. Avoid filler language.
+${styleLine}
 Return ONLY valid JSON.`;
 
   try {
@@ -203,6 +230,91 @@ Return ONLY valid JSON.`;
     });
     return null;
   }
+}
+
+// ── Weather HTML Block ──
+
+function buildWeatherHtml(weather: WeatherData | null): string {
+  if (!weather) return "";
+  return `
+  <div style="margin:20px 0;padding:16px 20px;background:#161b22;border:1px solid #30363d;border-radius:12px">
+    <div style="font-size:11px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:10px">🌤 DENVER WEATHER</div>
+    <table style="width:100%;border-collapse:collapse"><tr>
+      <td style="vertical-align:middle;padding-right:16px">
+        <span style="font-size:36px;line-height:1">${weather.emoji}</span>
+      </td>
+      <td style="vertical-align:middle">
+        <div style="font-size:26px;font-weight:800;color:#e6edf3;line-height:1">${weather.temp}°F</div>
+        <div style="font-size:12px;color:#8b949e;margin-top:3px">${esc(weather.condition)} &nbsp;·&nbsp; Feels like ${weather.feelsLike}°F</div>
+      </td>
+      <td style="vertical-align:middle;text-align:right">
+        <div style="font-size:12px;color:#c9d1d9">H: <span style="font-weight:700;color:#f97316">${weather.high}°</span> &nbsp; L: <span style="font-weight:700;color:#60a5fa">${weather.low}°</span></div>
+        <div style="font-size:11px;color:#8b949e;margin-top:4px">💨 ${weather.wind} mph &nbsp;·&nbsp; 🌧 ${weather.precipChance}% precip</div>
+      </td>
+    </tr></table>
+  </div>`;
+}
+
+function impactLabel(impact: EconomicEvent["impact"]): string {
+  if (impact === "high") return "HIGH";
+  if (impact === "medium") return "MEDIUM";
+  if (impact === "low") return "LOW";
+  return "INFO";
+}
+
+function buildMarketSnapshotHtml(marketSnapshot: MarketQuote[]): string {
+  if (marketSnapshot.length === 0) return "";
+  const rows = marketSnapshot
+    .map((q) => {
+      const isUp = (q.changePercent ?? 0) >= 0;
+      const color = isUp ? "#34d399" : "#f87171";
+      const sign = isUp ? "+" : "";
+      const pct =
+        q.changePercent == null
+          ? "n/a"
+          : `${sign}${q.changePercent.toFixed(2)}%`;
+      return `
+      <tr>
+        <td style="padding:6px 0;font-size:12px;color:#8b949e">${esc(q.label)}</td>
+        <td style="padding:6px 0;font-size:13px;font-weight:700;color:#e6edf3;text-align:right">${q.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
+        <td style="padding:6px 0 6px 10px;font-size:12px;font-weight:700;color:${color};text-align:right">${esc(pct)}</td>
+      </tr>`;
+    })
+    .join("");
+  return `
+  <div style="margin:16px 0;padding:14px 20px;background:#161b22;border:1px solid #30363d;border-radius:12px">
+    <div style="font-size:11px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">📈 MARKET SNAPSHOT</div>
+    <table style="width:100%;border-collapse:collapse">${rows}</table>
+  </div>`;
+}
+
+function buildEconomicCalendarHtml(events: EconomicEvent[]): string {
+  if (events.length === 0) return "";
+  const rows = events
+    .map(
+      (event) => `
+      <div style="margin-bottom:8px;color:#c9d1d9;font-size:12px;line-height:1.5">
+        <span style="color:#8b949e">${esc(event.timeLabel)}</span>
+        <span style="color:#818cf8;margin-left:6px">${esc(event.country)}</span>
+        <span style="margin-left:8px;font-weight:600">${esc(event.event)}</span>
+        <span style="margin-left:8px;color:#fbbf24;font-size:10px;font-weight:700">${impactLabel(event.impact)}</span>
+      </div>`
+    )
+    .join("");
+  return `
+  <div style="margin:16px 0;padding:14px 20px;background:#161b22;border:1px solid #30363d;border-radius:12px">
+    <div style="font-size:11px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">📅 WHAT TO WATCH TODAY</div>
+    ${rows}
+  </div>`;
+}
+
+function buildDailyFactHtml(dailyFact: string | null): string {
+  if (!dailyFact) return "";
+  return `
+  <div style="margin:18px 0 8px 0;padding:14px 16px;background:#111827;border:1px solid #2b3340;border-radius:10px">
+    <div style="font-size:10px;font-weight:800;color:#93c5fd;letter-spacing:1.3px;margin-bottom:6px">💡 DAILY FACT</div>
+    <div style="font-size:12px;color:#c9d1d9;line-height:1.5">${esc(dailyFact)}</div>
+  </div>`;
 }
 
 // ── HTML Builder ──
@@ -265,8 +377,20 @@ function buildBriefingHtml(
   briefing: BriefingData,
   allArticles: ArticleHistory[],
   sources: SourceRegistry[],
-  usage: UsageReport
+  usage: UsageReport,
+  enhancements: DigestEnhancements = {
+    weather: null,
+    marketSnapshot: [],
+    economicCalendar: [],
+    dailyFact: null,
+  },
+  mode: "daily" | "weekly" = "daily"
 ): string {
+  const { weather, marketSnapshot, economicCalendar, dailyFact } = enhancements;
+  const digestTitle =
+    mode === "weekly" ? "Weekly Intelligence Recap" : "Daily Intelligence Briefing";
+  const oneSentenceLabel =
+    mode === "weekly" ? "THIS WEEK IN ONE SENTENCE" : "TODAY IN ONE SENTENCE";
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -419,7 +543,7 @@ function buildBriefingHtml(
 <div style="max-width:640px;margin:0 auto;padding:36px 28px">
 
   <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #30363d">
-    <div style="font-size:24px;font-weight:800;color:#e6edf3;letter-spacing:-0.5px">Daily Intelligence Briefing</div>
+    <div style="font-size:24px;font-weight:800;color:#e6edf3;letter-spacing:-0.5px">${digestTitle}</div>
     <div style="font-size:13px;color:#8b949e;margin-top:6px">${dateStr} · ${timeStr}</div>
     <div style="font-size:12px;color:#8b949e;margin-top:2px">${sourceCount} sources · ${storyCount} stories · ${sectionCount} sections</div>
     <div style="margin-top:14px;font-size:11px;line-height:2">
@@ -429,8 +553,12 @@ function buildBriefingHtml(
     </div>
   </div>
 
+  ${buildWeatherHtml(weather)}
+  ${buildMarketSnapshotHtml(marketSnapshot)}
+  ${buildEconomicCalendarHtml(economicCalendar)}
+
   <div style="padding:20px 0">
-    <div style="font-size:12px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">⚡ TODAY IN ONE SENTENCE</div>
+    <div style="font-size:12px;font-weight:800;color:#a5b4fc;letter-spacing:1.5px;margin-bottom:8px">⚡ ${oneSentenceLabel}</div>
     <div style="font-size:15px;color:#e6edf3;line-height:1.65;font-weight:600">${esc(briefing.one_sentence)}</div>
   </div>
 
@@ -465,6 +593,8 @@ function buildBriefingHtml(
   </div>
   ${sectionBlocks}` : ""}
 
+  ${buildDailyFactHtml(dailyFact)}
+
   <div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #30363d">
     <div style="font-size:10px;font-weight:700;color:#818cf8;letter-spacing:2px;text-transform:uppercase">Jeff Intelligence System</div>
     <div style="font-size:10px;color:#6e7681;margin-top:4px">AI: ${esc(DIGEST_MODEL)} · Budget: ${usage.callsUsed}/${usage.maxCalls} calls</div>
@@ -479,8 +609,22 @@ function buildBriefingHtml(
 
 function buildFallbackHtml(
   topArticles: ArticleHistory[],
-  usage: UsageReport
+  usage: UsageReport,
+  enhancements: DigestEnhancements = {
+    weather: null,
+    marketSnapshot: [],
+    economicCalendar: [],
+    dailyFact: null,
+  },
+  mode: "daily" | "weekly" = "daily"
 ): string {
+  const { weather, marketSnapshot, economicCalendar, dailyFact } = enhancements;
+  const digestTitle =
+    mode === "weekly" ? "Weekly Intelligence Recap" : "Intelligence Digest";
+  const subTitle =
+    mode === "weekly"
+      ? "AI briefing unavailable — weekly top stories only"
+      : "AI briefing unavailable — top stories only";
   const rows = topArticles
     .map(
       (a, i) => `
@@ -505,16 +649,20 @@ function buildFallbackHtml(
 <div style="max-width:680px;margin:0 auto;overflow:hidden">
   <div style="background:#1e1b4b;color:#fff;padding:36px 28px">
     <div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Jeff Intelligence System</div>
-    <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px">Intelligence Digest</div>
+    <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px">${digestTitle}</div>
     <div style="font-size:13px;color:#c7d2fe;margin-top:6px">${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
-    <div style="font-size:11px;color:#a5b4fc;margin-top:4px">AI briefing unavailable — top stories only</div>
+    <div style="font-size:11px;color:#a5b4fc;margin-top:4px">${subTitle}</div>
   </div>
   <div style="background:#0d1117;padding:24px">
+    ${buildWeatherHtml(weather)}
+    ${buildMarketSnapshotHtml(marketSnapshot)}
+    ${buildEconomicCalendarHtml(economicCalendar)}
     <div style="background:#161b22;border-radius:16px;border:1px solid #30363d;overflow:hidden">
       <table style="width:100%;border-collapse:collapse">
         <tbody>${rows || '<tr><td style="padding:24px;text-align:center;color:#6e7681">No articles today</td></tr>'}</tbody>
       </table>
     </div>
+    ${buildDailyFactHtml(dailyFact)}
   </div>
   <div style="background:#0d1117;padding:20px 28px;text-align:center;border-top:1px solid #30363d">
     <div style="font-size:11px;color:#6366f1;font-weight:700;letter-spacing:2px">JEFF INTELLIGENCE SYSTEM</div>
@@ -528,17 +676,62 @@ function buildFallbackHtml(
 function buildPlainText(
   briefing: BriefingData | null,
   topArticles: ArticleHistory[],
-  usage: UsageReport
+  usage: UsageReport,
+  enhancements: DigestEnhancements = {
+    weather: null,
+    marketSnapshot: [],
+    economicCalendar: [],
+    dailyFact: null,
+  },
+  mode: "daily" | "weekly" = "daily"
 ): string {
+  const weatherLine = enhancements.weather
+    ? `Denver: ${enhancements.weather.emoji} ${enhancements.weather.condition}, ${enhancements.weather.temp}°F (H:${enhancements.weather.high}° L:${enhancements.weather.low}°) · Wind ${enhancements.weather.wind} mph · Precip ${enhancements.weather.precipChance}%`
+    : null;
+  const marketLine =
+    enhancements.marketSnapshot.length > 0
+      ? "Markets: " +
+        enhancements.marketSnapshot
+          .map((q) => {
+            const sign = (q.changePercent ?? 0) >= 0 ? "+" : "";
+            const pct =
+              q.changePercent == null
+                ? "n/a"
+                : `${sign}${q.changePercent.toFixed(2)}%`;
+            return `${q.label} ${pct}`;
+          })
+          .join(" | ")
+      : null;
+  const calendarLines =
+    enhancements.economicCalendar.length > 0
+      ? enhancements.economicCalendar
+          .slice(0, 4)
+          .map(
+            (event) =>
+              `${event.timeLabel} ${event.country} ${event.event} [${impactLabel(event.impact)}]`
+          )
+      : [];
   const lines = [
-    "=== DAILY INTELLIGENCE BRIEFING ===",
+    mode === "weekly"
+      ? "=== WEEKLY INTELLIGENCE RECAP ==="
+      : "=== DAILY INTELLIGENCE BRIEFING ===",
     `Date: ${new Date().toISOString().slice(0, 10)}`,
     `AI Budget: ${usage.callsUsed}/${usage.maxCalls} calls used`,
+    ...(weatherLine ? [weatherLine] : []),
+    ...(marketLine ? [marketLine] : []),
+    ...(calendarLines.length > 0 ? ["Calendar:"] : []),
+    ...calendarLines.map((line) => `  - ${line}`),
+    ...(enhancements.dailyFact ? [`Fact: ${enhancements.dailyFact}`] : []),
     "",
   ];
 
   if (briefing) {
-    lines.push(`TODAY: ${briefing.one_sentence ?? "No headline available"}`, "");
+    lines.push(
+      `${mode === "weekly" ? "THIS WEEK" : "TODAY"}: ${
+        briefing.one_sentence ?? "No headline available"
+      }`,
+      ""
+    );
 
     lines.push("KEY SIGNALS:");
     for (const s of briefing.key_signals || []) {
@@ -572,11 +765,58 @@ function buildPlainText(
 
 // ── Main export ──
 
-export async function sendDailyDigest(
+function digestSubject(mode: "daily" | "weekly"): string {
+  if (mode === "weekly") {
+    const weekStart = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    return `📡 Weekly Intelligence Recap — Week of ${weekStart.toLocaleDateString(
+      "en-US",
+      { month: "short", day: "numeric" }
+    )}`;
+  }
+  return `📡 Daily Intelligence Briefing — ${new Date().toLocaleDateString(
+    "en-US",
+    { weekday: "short", month: "short", day: "numeric" }
+  )}`;
+}
+
+async function loadEnhancements(): Promise<DigestEnhancements> {
+  const [weatherRes, marketRes, calendarRes, factRes] = await Promise.allSettled([
+    fetchDenverWeather(),
+    fetchMarketSnapshot(),
+    fetchEconomicCalendar(),
+    fetchDailyFact(),
+  ] as const);
+
+  const pick = <T>(
+    result: PromiseSettledResult<T>,
+    fallback: T,
+    label: string
+  ): T => {
+    if (result.status === "fulfilled") return result.value;
+    logger.warn("Optional enhancement failed", {
+      label,
+      error:
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason),
+    });
+    return fallback;
+  };
+
+  return {
+    weather: pick(weatherRes, null, "weather"),
+    marketSnapshot: pick(marketRes, [], "markets"),
+    economicCalendar: pick(calendarRes, [], "economic_calendar"),
+    dailyFact: pick(factRes, null, "daily_fact"),
+  };
+}
+
+async function sendDigest(
+  mode: "daily" | "weekly",
   interests: string[] = []
 ): Promise<boolean> {
   try {
-    logger.info("Building daily intelligence briefing");
+    logger.info("Building intelligence briefing", { mode });
 
     if (!digestEmailConfigured() && !digestTelegramConfigured()) {
       logger.error(
@@ -585,7 +825,7 @@ export async function sendDailyDigest(
       await logSystemEvent({
         level: "error",
         source: "digest",
-        message: "Daily digest skipped: no delivery channel configured",
+        message: `${mode} digest skipped: no delivery channel configured`,
       });
       return false;
     }
@@ -601,42 +841,60 @@ export async function sendDailyDigest(
       }
     }
 
-    const [recentArticles, sources, usage] = await Promise.all([
-      getRecentArticles(24),
+    const lookbackHours = mode === "weekly" ? 168 : 24;
+    const [recentArticles, sources, usage, enhancements] = await Promise.all([
+      getRecentArticles(lookbackHours),
       getSources(),
       getDailyUsageReport(),
+      loadEnhancements(),
     ]);
 
-    const topArticles = getTopArticles(recentArticles, 20);
+    const topCount = mode === "weekly" ? 30 : 20;
+    const topArticles = getTopArticles(recentArticles, topCount);
 
-    logger.info(`Collected ${recentArticles.length} articles, ${sources.length} sources`);
+    logger.info("Digest inputs collected", {
+      mode,
+      articles: recentArticles.length,
+      sources: sources.length,
+      lookbackHours,
+    });
 
-    // Generate AI briefing (single call)
-    const briefing = await generateBriefing(recentArticles, sources, effectiveInterests);
+    const briefing = await generateBriefing(
+      recentArticles,
+      sources,
+      effectiveInterests,
+      mode
+    );
 
     const html = briefing
-      ? buildBriefingHtml(briefing, recentArticles, sources, usage)
-      : buildFallbackHtml(topArticles, usage);
-    const text = buildPlainText(briefing, topArticles, usage);
+      ? buildBriefingHtml(
+          briefing,
+          recentArticles,
+          sources,
+          usage,
+          enhancements,
+          mode
+        )
+      : buildFallbackHtml(topArticles, usage, enhancements, mode);
+    const text = buildPlainText(briefing, topArticles, usage, enhancements, mode);
+
+    const subject = digestSubject(mode);
 
     // ── Send email ──
     const transport = createTransport();
     let emailOk = false;
     if (transport) {
       const from = (
-        process.env.EMAIL_FROM || process.env.EMAIL_SMTP_USER || process.env.SMTP_USER || ""
+        process.env.EMAIL_FROM ||
+        process.env.EMAIL_SMTP_USER ||
+        process.env.SMTP_USER ||
+        ""
       ).trim();
       const to = (process.env.EMAIL_TO || "").trim();
       if (from && to) {
-        await transport.sendMail({
-          from,
-          to,
-          subject: `📡 Daily Intelligence Briefing — ${new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}`,
-          html,
-          text,
-        });
+        await transport.sendMail({ from, to, subject, html, text });
         await markEmailed(topArticles.map((a) => a.url));
-        logger.info("Intelligence briefing email sent", { to, articles: topArticles.length });
+        logger.info("Digest email sent", { mode, to, articles: topArticles.length });
         emailOk = true;
       } else {
         logger.warn("EMAIL_FROM or EMAIL_TO missing — skipping email");
@@ -652,9 +910,15 @@ export async function sendDailyDigest(
     let telegramOk = false;
     if (!skipTg) {
       try {
-        const topForTg = getTopArticles(recentArticles, 6);
+        const topForTg = getTopArticles(recentArticles, mode === "weekly" ? 8 : 6);
         const insight = briefing?.one_sentence || null;
-        const plain = formatDigestPlainText(topForTg, usage, insight);
+        const plain = formatDigestPlainText(topForTg, usage, insight, {
+          mode,
+          weather: enhancements.weather,
+          marketSnapshot: enhancements.marketSnapshot,
+          economicCalendar: enhancements.economicCalendar,
+          dailyFact: enhancements.dailyFact,
+        });
         telegramOk = await sendDigestTelegram(plain);
       } catch (err) {
         logger.warn("Telegram digest failed", {
@@ -668,7 +932,7 @@ export async function sendDailyDigest(
       await logSystemEvent({
         level: "error",
         source: "digest",
-        message: "Daily digest had no delivery channel",
+        message: `${mode} digest had no delivery channel`,
       });
       return false;
     }
@@ -679,45 +943,64 @@ export async function sendDailyDigest(
 
     await saveDigestArchive({
       channels,
-      subject: `Intelligence Briefing — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      subject,
       html_body: html,
       plain_text: text.slice(0, 120_000),
       article_urls: topArticles.map((a) => a.url),
       meta: {
+        mode,
         email_ok: emailOk,
         telegram_ok: telegramOk,
         model: DIGEST_MODEL,
         briefing_generated: Boolean(briefing),
+        enhancement_weather: Boolean(enhancements.weather),
+        enhancement_markets: enhancements.marketSnapshot.length > 0,
+        enhancement_calendar: enhancements.economicCalendar.length > 0,
+        enhancement_fact: Boolean(enhancements.dailyFact),
       },
     });
 
     await logSystemEvent({
       level: "info",
       source: "digest",
-      message: `Briefing delivered via ${channels.join(" + ")} (${DIGEST_MODEL})`,
-      meta: { article_count: recentArticles.length },
+      message: `${mode} briefing delivered via ${channels.join(
+        " + "
+      )} (${DIGEST_MODEL})`,
+      meta: { article_count: recentArticles.length, mode },
     });
 
-    logger.info(`Morning briefing complete via ${channels.join(" + ")}`);
+    logger.info("Digest complete", { mode, channels });
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.error("Daily digest failed", { error: msg });
+    logger.error("Digest failed", { mode, error: msg });
     await logSystemEvent({
       level: "error",
       source: "digest",
-      message: `Daily digest failed: ${msg}`,
+      message: `${mode} digest failed: ${msg}`,
     });
     return false;
   }
 }
 
+export async function sendDailyDigest(interests: string[] = []): Promise<boolean> {
+  return sendDigest("daily", interests);
+}
+
+export async function sendWeeklyDigest(interests: string[] = []): Promise<boolean> {
+  return sendDigest("weekly", interests);
+}
+
 // ── CLI entry point for GitHub Actions ──
-if (process.argv.includes("--daily")) {
-  sendDailyDigest()
+if (process.argv.includes("--daily") || process.argv.includes("--weekly")) {
+  const isWeekly = process.argv.includes("--weekly");
+  const run = isWeekly ? sendWeeklyDigest : sendDailyDigest;
+  run()
     .then((ok) => {
       if (!ok) {
-        logger.error("Morning briefing failed — check SMTP secrets and OPENAI_API_KEY");
+        logger.error(
+          `${isWeekly ? "Weekly" : "Daily"} digest failed — check SMTP secrets and OPENAI_API_KEY`
+        );
         process.exit(1);
       }
       process.exit(0);

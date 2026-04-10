@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "ts-node src/index.ts",
     "email": "ts-node src/send_email.ts --daily",
+    "email:weekly": "ts-node src/send_email.ts --weekly",
     "chat": "ts-node src/chat_handler.ts --listen",
     "bot": "ts-node src/chat_handler.ts --listen",
     "typecheck": "tsc --noEmit",

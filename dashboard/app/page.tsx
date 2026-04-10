@@ -331,7 +331,11 @@ export default function Page() {
               </button>
               <button className="btn btn-secondary" onClick={() => dispatch("daily_email.yml")}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1" /><path d="M2 4l6 5 6-5" /></svg>
-                Morning Digest
+                Daily Digest
+              </button>
+              <button className="btn btn-secondary" onClick={() => dispatch("weekly_digest.yml")}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v10H2z" /><path d="M2 6h12" /><path d="M5 1v4" /><path d="M11 1v4" /></svg>
+                Weekly Recap
               </button>
             </div>
             {dispatchMsg && <p className="muted" style={{ marginBottom: "1rem" }}>{dispatchMsg}</p>}
@@ -366,7 +370,7 @@ export default function Page() {
             {/* Recent digest */}
             <div className="section-title">Latest digest</div>
             {digests.length === 0 ? (
-              <p className="muted">No digests yet — run the morning digest workflow.</p>
+              <p className="muted">No digests yet — run the daily or weekly digest workflow.</p>
             ) : (
               <div className="card">
                 <div style={{ display: "flex", gap: "0.35rem", marginBottom: "0.35rem" }}>

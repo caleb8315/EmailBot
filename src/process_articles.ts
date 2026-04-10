@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { createLogger } from "./logger";
 import { canMakeAICall, recordAICall } from "./usage_limiter";
 import { saveArticle } from "./memory";
+import { getAlertThresholds } from "./scoring";
 import { ArticleAnalysisSchema } from "./types";
 import type {
   FilteredArticle,
@@ -116,6 +117,20 @@ function buildArticleHistoryRow(
   };
 }
 
+function shouldIncludeForAlertEvaluation(
+  article: FilteredArticle,
+  row: Omit<ArticleHistory, "id">,
+  alertSensitivity: number
+): boolean {
+  if (article.passedPrefilter) return true;
+  const importance = row.importance_score ?? article.heuristicImportance;
+  const credibility = row.credibility_score ?? article.heuristicCredibility;
+  const thresholds = getAlertThresholds(alertSensitivity);
+  return (
+    importance >= thresholds.importance && credibility >= thresholds.credibility
+  );
+}
+
 export interface ProcessingResult {
   processed: ArticleHistory[];
   skippedBudget: number;
@@ -133,12 +148,14 @@ export async function processArticles(
     skippedError: 0,
     aiCallsMade: 0,
   };
+  const alertSensitivity =
+    typeof prefs.alert_sensitivity === "number" ? prefs.alert_sensitivity : 5;
 
   const candidates = articles
     .filter((a) => a.passedPrefilter)
     .sort((a, b) => b.prefilterScore - a.prefilterScore);
 
-  const topPercent = Math.max(1, Math.ceil(candidates.length * 0.2));
+  const topPercent = Math.max(1, Math.ceil(candidates.length * 0.1));
   const toProcess = candidates.slice(0, topPercent);
 
   logger.info("Processing candidates", {
@@ -175,7 +192,9 @@ export async function processArticles(
 
       const row = buildArticleHistoryRow(article, analysis);
       await saveArticle(row);
-      result.processed.push({ ...row, id: "" });
+      if (shouldIncludeForAlertEvaluation(article, row, alertSensitivity)) {
+        result.processed.push({ ...row, id: "" });
+      }
     } catch (err) {
       logger.error("Failed to process article", {
         title: article.title,
@@ -192,6 +211,9 @@ export async function processArticles(
     try {
       const row = buildArticleHistoryRow(article, null);
       await saveArticle(row);
+      if (shouldIncludeForAlertEvaluation(article, row, alertSensitivity)) {
+        result.processed.push({ ...row, id: "" });
+      }
     } catch (err) {
       logger.error("Failed to save unprocessed article", {
         title: article.title,
@@ -204,6 +226,7 @@ export async function processArticles(
     aiCalls: result.aiCallsMade,
     budgetSkipped: result.skippedBudget,
     errors: result.skippedError,
+    alertCandidates: result.processed.length,
   });
 
   return result;

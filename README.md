@@ -8,9 +8,10 @@ There is **no separate assistant runtime** — only this repo, Supabase, OpenAI,
 
 | Piece | What it does |
 |--------|----------------|
-| `npm run bot` | Long-polling Telegram bot: `/prefs`, `/boost`, `/mute`, `/alert`, `/keyword`, plus natural phrases like “less crypto, more AI”. |
+| `npm run bot` | Long-polling Telegram bot: `/prefs`, `/boost`, `/mute`, `/alert`, `/keyword`, `/weather`, `/markets`, plus natural phrases like “less crypto, more AI”. |
 | GitHub Action **Intelligence Pipeline** (hourly) | Fetches feeds, dedupes, scores with AI; **Telegram (and optional email)** only for **high-importance** items. |
-| GitHub Action **Morning Intelligence Digest** (07:00 UTC) | One run: **email + Telegram** digest with **a single OpenAI insight** (not blocked by the hourly pipeline’s shared daily budget). |
+| GitHub Action **Morning Intelligence Digest** (07:00 UTC) | One run: **email digest** with optional Telegram mirror, plus a single OpenAI insight. |
+| GitHub Action **Weekly Intelligence Recap** (Sunday 14:00 UTC) | 7-day recap digest with trend shifts, key risks, and what to watch next week. |
 | `python main.py` (optional, local) | Deeper **Python** briefing to `output/` — not scheduled in GitHub Actions by default. |
 | **`dashboard/` on Vercel** | Web UI: past digests, errors/events, article list, **Run workflow** buttons, assistant chat. See `dashboard/README.md`. RSS jobs stay on **GitHub Actions**. |
 
@@ -36,6 +37,7 @@ RSS and public feeds can go surprisingly wide (wires, blogs, Reddit, Google News
 
 4. **GitHub Actions**  
    - Add repository secrets: `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and optionally SMTP secrets for email.  
+   - Optional: add `FINNHUB_API_KEY` to enable the "What to watch today" economic calendar block in digests.  
    - Optional: `SEND_DIGEST_TELEGRAM=false` if you want **email-only** morning digest (no Telegram message).  
    - Optional: set secret `ALERT_EMAIL_IMPORTANT` to `true` and configure SMTP secrets so **high-importance pipeline alerts** are emailed as well as sent on Telegram.
 
@@ -55,6 +57,7 @@ npm run build       # compile TypeScript
 npm run bot         # Telegram bot (same as npm run chat)
 npm start           # one-shot intelligence pipeline (ts-node src/index.ts)
 npm run email       # daily digest: email (if SMTP) + Telegram briefing
+npm run email:weekly # weekly recap digest
 ```
 
 ## Repo layout (short)

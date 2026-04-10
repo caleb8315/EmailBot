@@ -108,12 +108,13 @@ cp .env.example .env
 | `EMAIL_SMTP_PORT` | No | `587` | SMTP port |
 | `EMAIL_SMTP_USER` | For email | — | SMTP username |
 | `EMAIL_SMTP_PASS` | For email | — | SMTP password or app password |
+| `FINNHUB_API_KEY` | No | — | Optional free key for economic calendar events in digests |
 | `CHAT_MODEL` | No | `gpt-4o-mini` | Fallback chat model when web-enabled call is unavailable |
 | `CHAT_WEB_MODEL` | No | `gpt-4.1-mini` | Model used for chat with live web search |
 | `DISABLE_CHAT_WEB_SEARCH` | No | `false` | Set `true` to disable live web search in chat |
-| `MAX_DAILY_AI_CALLS` | No | `30` | Hard ceiling for OpenAI calls/day |
-| `PREFILTER_THRESHOLD` | No | `40` | Minimum score to pass prefilter |
-| `ALERT_COOLDOWN_HOURS` | No | `2` | Hours between Telegram alerts |
+| `MAX_DAILY_AI_CALLS` | No | `15` | Hard ceiling for OpenAI calls/day |
+| `PREFILTER_THRESHOLD` | No | `55` | Minimum score to pass prefilter |
+| `ALERT_COOLDOWN_HOURS` | No | `4` | Hours between Telegram alerts |
 
 ---
 
@@ -128,6 +129,9 @@ npm run bot
 
 # Morning-style digest (Telegram + optional email)
 npm run email
+
+# Weekly recap digest
+npm run email:weekly
 
 # Start the Telegram chat listener
 npm run chat
@@ -155,10 +159,12 @@ npm run typecheck
    - `EMAIL_SMTP_PORT`
    - `EMAIL_SMTP_USER`
    - `EMAIL_SMTP_PASS`
+   - `FINNHUB_API_KEY` (optional, for economic calendar block)
 
 4. The workflows will run automatically:
-   - **Pipeline:** every 5 hours
+   - **Pipeline:** every hour
    - **Daily digest:** 7am UTC daily
+   - **Weekly recap:** 2pm UTC Sundays
 
 5. To trigger manually: go to **Actions → select workflow → Run workflow**
 
@@ -169,7 +175,7 @@ npm run typecheck
 | Issue | Fix |
 |-------|-----|
 | "SUPABASE_URL required" | Check `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` |
-| "AI budget exhausted" | Normal — system limits to 30 calls/day. Resets at midnight UTC. |
+| "AI budget exhausted" | Normal — system limits to 15 calls/day by default. Resets at midnight UTC. |
 | Email not sending | Verify SMTP credentials. For Gmail, use App Passwords, not your main password. |
 | Telegram bot not responding | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once. |
 | No articles fetched | Some RSS feeds may be down. Check `config/sources.json` for working feeds. |

@@ -1,30 +1,97 @@
 import { createLogger } from "./logger";
 import type { ArticleHistory, UsageReport } from "./types";
+import type { EconomicEvent, MarketQuote, WeatherData } from "./data_feeds";
 
 const logger = createLogger("telegram_digest");
 
 const TG_MAX = 3900;
 
+interface DigestTelegramExtras {
+  mode?: "daily" | "weekly";
+  weather?: WeatherData | null;
+  marketSnapshot?: MarketQuote[];
+  economicCalendar?: EconomicEvent[];
+  dailyFact?: string | null;
+}
+
 export function formatDigestPlainText(
   topArticles: ArticleHistory[],
   usage: UsageReport,
-  insight: string | null
+  insight: string | null,
+  extras: DigestTelegramExtras = {}
 ): string {
+  const mode = extras.mode ?? "daily";
+  const weather = extras.weather ?? null;
+  const marketSnapshot = extras.marketSnapshot ?? [];
+  const economicCalendar = extras.economicCalendar ?? [];
+  const dailyFact = extras.dailyFact ?? null;
   const lines: string[] = [
-    `📡 Morning briefing — ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`,
+    `📡 ${
+      mode === "weekly" ? "Weekly briefing" : "Morning briefing"
+    } — ${new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}`,
     "",
     `AI budget today: ${usage.callsUsed}/${usage.maxCalls} used`,
     "",
   ];
 
+  if (weather) {
+    lines.push(
+      `Denver: ${weather.emoji} ${weather.condition}, ${weather.temp}°F (H:${weather.high}° L:${weather.low}°)`,
+      ""
+    );
+  }
+
+  if (marketSnapshot.length > 0) {
+    const marketLine = marketSnapshot
+      .map((q) => {
+        const sign = (q.changePercent ?? 0) >= 0 ? "+" : "";
+        const pct =
+          q.changePercent == null
+            ? "n/a"
+            : `${sign}${q.changePercent.toFixed(2)}%`;
+        return `${q.label} ${pct}`;
+      })
+      .join(" | ");
+    lines.push(`Markets: ${marketLine}`, "");
+  }
+
+  if (economicCalendar.length > 0) {
+    lines.push("What to watch today:");
+    for (const event of economicCalendar.slice(0, 3)) {
+      const impact =
+        event.impact === "high"
+          ? "HIGH"
+          : event.impact === "medium"
+          ? "MEDIUM"
+          : event.impact === "low"
+          ? "LOW"
+          : "INFO";
+      lines.push(
+        `  - ${event.timeLabel} ${event.country} ${event.event} [${impact}]`
+      );
+    }
+    lines.push("");
+  }
+
   if (insight) {
     lines.push(`💡 ${insight}`, "");
+  }
+
+  if (dailyFact) {
+    lines.push(`Fact: ${dailyFact}`, "");
   }
 
   lines.push("Top stories", "────────────");
   if (topArticles.length === 0) {
     lines.push(
-      "(No scored articles in the last 24h — the pipeline may still be collecting.)"
+      mode === "weekly"
+        ? "(No scored articles in the last 7 days — the pipeline may still be collecting.)"
+        : "(No scored articles in the last 24h — the pipeline may still be collecting.)"
     );
   } else {
     for (const [i, a] of topArticles.entries()) {

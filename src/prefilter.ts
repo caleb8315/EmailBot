@@ -9,34 +9,88 @@ const PREFILTER_THRESHOLD = parseInt(
 );
 
 // ── Tiered urgency keywords ─────────────────────────────────────
-// Tier 1: Existential / crisis-level events (immediate Telegram alert territory)
+// Tier 1: Life-threatening events, major crises, catastrophic market moves
 const TIER1_KEYWORDS = [
   "war declared",
   "declares war",
   "nuclear",
   "assassination",
   "assassinated",
-  "earthquake",
-  "tsunami",
-  "pandemic",
+  "pandemic declared",
   "coup",
   "martial law",
   "terrorist attack",
   "mass shooting",
-  "plane crash",
+  "mass casualty",
   "market crash",
   "stock market crash",
+  "flash crash",
   "bank collapse",
+  "banking crisis",
   "invasion",
   "missile strike",
   "state of emergency",
-  "killed in",
   "deaths reported",
-  "explosion",
+  "circuit breaker",
+  "dollar collapse",
+  "debt default",
+  "sovereign default",
+  "tsunami warning",
+  "earthquake",
+  "tornado warning",
+  "tornado emergency",
+  "blizzard warning",
+  "wildfire evacuation",
+  "evacuation order",
+  "active shooter",
+  "hostage",
+  "amber alert",
+  "denver emergency",
+  "colorado emergency",
+  "front range wildfire",
+  "front range tornado",
+  "denver tornado",
+  "colorado wildfire",
+  "colorado flooding",
+  "denver flooding",
+  "i-70 closure",
+  "i-25 closure",
 ];
 
-// Tier 2: High-importance events
+// Tier 2: Major market shifts and severe (but not immediately lethal) disruptions
 const TIER2_KEYWORDS = [
+  "recession declared",
+  "fed raises rates",
+  "fed cuts rates",
+  "rate hike",
+  "rate cut",
+  "bear market",
+  "market correction",
+  "dow drops",
+  "s&p 500 drops",
+  "nasdaq drops",
+  "treasury yield",
+  "yield inversion",
+  "oil embargo",
+  "opec cuts",
+  "currency crisis",
+  "hyperinflation",
+  "systemic risk",
+  "contagion",
+  "bank run",
+  "mass layoffs",
+  "government shutdown",
+  "ceasefire",
+  "peace deal",
+  "severe weather",
+  "winter storm warning",
+  "flood warning",
+  "colorado severe weather",
+  "denver severe weather",
+];
+
+// Tier 3: Noteworthy but routine — will NOT trigger alerts on their own
+const TIER3_KEYWORDS = [
   "breaking",
   "breaking news",
   "emergency",
@@ -56,17 +110,9 @@ const TIER2_KEYWORDS = [
   "banned",
   "shutdown",
   "shuts down",
-  "ceasefire",
-  "peace deal",
-  "hostage",
-  "evacuation",
   "collapse",
   "default",
   "inflation",
-];
-
-// Tier 3: Noteworthy but routine business/tech events
-const TIER3_KEYWORDS = [
   "announces",
   "launches",
   "raises",
@@ -82,6 +128,8 @@ const TIER3_KEYWORDS = [
   "fired",
   "layoffs",
   "partnership",
+  "evacuation",
+  "explosion",
 ];
 
 const NOISE_KEYWORDS = [
@@ -159,14 +207,14 @@ function computeHeuristicImportance(
   const titleLower = article.title.toLowerCase();
   const textLower = `${titleLower} ${article.content.toLowerCase()}`;
 
-  let base = 4;
+  let base = 3;
   const tier1Hits = matchesAny(textLower, TIER1_KEYWORDS);
   const tier2Hits = matchesAny(textLower, TIER2_KEYWORDS);
   const tier3Hits = matchesAny(textLower, TIER3_KEYWORDS);
 
-  const tier1Bonus = tier1Hits.length > 0 ? 3 + Math.min(tier1Hits.length - 1, 2) : 0;
-  const tier2Bonus = tier2Hits.length > 0 ? 2 + Math.min(tier2Hits.length - 1, 1) : 0;
-  const tier3Bonus = tier3Hits.length > 0 ? 1 : 0;
+  const tier1Bonus = tier1Hits.length > 0 ? 4 + Math.min(tier1Hits.length - 1, 2) : 0;
+  const tier2Bonus = tier2Hits.length > 0 ? 2 : 0;
+  const tier3Bonus = tier3Hits.length > 0 ? 0.5 : 0;
 
   // Cross-source corroboration
   let corroborationBonus = 0;

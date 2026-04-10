@@ -61,11 +61,38 @@ export function getTopArticles(
   return rankArticles(articles).slice(0, count);
 }
 
-export function shouldAlert(article: ArticleHistory): boolean {
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Sensitivity scale:
+ * 1 = strictest (only extreme, highly credible events)
+ * 10 = most permissive (still important, but wider net)
+ */
+export function getAlertThresholds(
+  alertSensitivity: number = 5
+): { importance: number; credibility: number } {
+  const sensitivity = clamp(Math.round(alertSensitivity), 1, 10);
+  // Linear mapping keeps behavior intuitive and bounded.
+  // sensitivity 1  -> importance 10.0 / credibility 8.0
+  // sensitivity 10 -> importance 8.0  / credibility 6.0
+  const importance = Number((10 - ((sensitivity - 1) * 2) / 9).toFixed(1));
+  const credibility = Number((8 - ((sensitivity - 1) * 2) / 9).toFixed(1));
+  return { importance, credibility };
+}
+
+export function shouldAlert(
+  article: ArticleHistory,
+  alertSensitivity: number = 5
+): boolean {
+  const thresholds = getAlertThresholds(alertSensitivity);
   const meetsImportance =
-    article.importance_score !== null && article.importance_score >= 8;
+    article.importance_score !== null &&
+    article.importance_score >= thresholds.importance;
   const meetsCredibility =
-    article.credibility_score !== null && article.credibility_score >= 6;
+    article.credibility_score !== null &&
+    article.credibility_score >= thresholds.credibility;
   return meetsImportance && meetsCredibility;
 }
 

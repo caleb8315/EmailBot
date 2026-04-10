@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireDashboardSecret } from "@/lib/auth";
 
-const ALLOWED = new Set(["pipeline.yml", "daily_email.yml"]);
+const ALLOWED = new Set([
+  "pipeline.yml",
+  "daily_email.yml",
+  "weekly_digest.yml",
+]);
 
 export async function POST(req: Request) {
   const auth = requireDashboardSecret(req);
