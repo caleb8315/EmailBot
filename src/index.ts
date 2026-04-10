@@ -7,15 +7,16 @@ import { processArticles } from "./process_articles";
 import { sendAlertIfNeeded } from "./send_telegram";
 import { sendPlainMessage } from "./send_telegram";
 import { getDailyUsageReport } from "./usage_limiter";
+import { resolvePreferenceUserId } from "./user_identity";
 import type { RawArticle, ArticleHistory } from "./types";
 
 const logger = createLogger("index");
 
-const DEFAULT_USER_ID = process.env.TELEGRAM_CHAT_ID ?? "default";
+const PREFERENCE_USER_ID = resolvePreferenceUserId();
 
 async function loadPreferences() {
-  logger.info("Loading user preferences", { userId: DEFAULT_USER_ID });
-  return getPreferences(DEFAULT_USER_ID);
+  logger.info("Loading user preferences", { userId: PREFERENCE_USER_ID });
+  return getPreferences(PREFERENCE_USER_ID);
 }
 
 async function fetchArticles(): Promise<RawArticle[]> {
@@ -52,7 +53,7 @@ async function runPipeline(): Promise<void> {
     });
     prefs = {
       id: "",
-      user_id: DEFAULT_USER_ID,
+      user_id: PREFERENCE_USER_ID,
       interests: [],
       dislikes: [],
       alert_sensitivity: 5,

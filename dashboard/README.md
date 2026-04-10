@@ -1,6 +1,6 @@
 # Jeff Intelligence — web dashboard
 
-Next.js UI hosted on **Vercel (free tier)** for digest history, system events, recent articles, GitHub Actions triggers, and the same **AI assistant** as Telegram.
+Next.js UI hosted on **Vercel (free tier)** for digest history, system events, recent articles, GitHub Actions triggers, the same **AI assistant** as Telegram, and a phone-friendly **Preferences** editor.
 
 **Important:** RSS polling and scoring still run on **GitHub Actions** (or `npm start` locally). The dashboard does not replace the scheduler — it is control + visibility.
 
@@ -27,6 +27,7 @@ Next.js UI hosted on **Vercel (free tier)** for digest history, system events, r
 | `MAX_DAILY_AI_CALLS` | Global AI cap (recommended `30`) |
 | `MAX_DAILY_CHAT_CALLS` | Chat-only cap (recommended `20`) |
 | `TELEGRAM_CHAT_ID` | Your user id (matches pipeline `DEFAULT_USER_ID`) |
+| `PREFERENCE_USER_ID` | Optional explicit profile id used for dashboard + digest + pipeline preference reads/writes |
 | `GITHUB_TOKEN` | PAT with `repo` + **Actions** (read + workflow dispatch) |
 | `GITHUB_REPO` | `yourname/repo-name` |
 | `GITHUB_DISPATCH_REF` | Optional, default `main` |

@@ -2,7 +2,7 @@
 
 Personal news intelligence: a **Telegram bot** you chat with to tune preferences, a **scheduled pipeline** that scans many RSS feeds (news, markets, tech, Reddit, Google News, etc.), **high-importance Telegram alerts**, and a **morning briefing** on Telegram (and optionally email).
 
-There is **no separate assistant runtime** — only this repo, Supabase, Gemini, and Telegram.
+There is **no separate assistant runtime** — only this repo, Supabase, Gemini/Groq, and Telegram.
 
 ## What you get
 
@@ -10,10 +10,10 @@ There is **no separate assistant runtime** — only this repo, Supabase, Gemini,
 |--------|----------------|
 | `npm run bot` | Long-polling Telegram bot: `/prefs`, `/boost`, `/mute`, `/alert`, `/keyword`, `/weather`, `/markets`, plus natural phrases like “less crypto, more AI”. |
 | GitHub Action **Intelligence Pipeline** (hourly) | Fetches feeds, dedupes, scores with AI; **Telegram (and optional email)** only for **high-importance** items. |
-| GitHub Action **Morning Intelligence Digest** (07:00 UTC) | One run: **email digest** with optional Telegram mirror, plus a single Gemini insight. |
+| GitHub Action **Morning Intelligence Digest** (07:00 UTC) | One run: balanced world+interest shortlist, then a 2-step Groq briefing (triage + deep synthesis), with optional Telegram mirror. |
 | GitHub Action **Weekly Intelligence Recap** (Sunday 14:00 UTC) | 7-day recap digest with trend shifts, key risks, and what to watch next week. |
 | `python main.py` (optional, local) | Deeper **Python** briefing to `output/` — not scheduled in GitHub Actions by default. |
-| **`dashboard/` on Vercel** | Web UI: past digests, errors/events, article list, **Run workflow** buttons, assistant chat. See `dashboard/README.md`. RSS jobs stay on **GitHub Actions**. |
+| **`dashboard/` on Vercel** | Web UI: past digests, errors/events, article list, **Run workflow** buttons, assistant chat, and a mobile-friendly **Preferences** tab. See `dashboard/README.md`. RSS jobs stay on **GitHub Actions**. |
 
 ### Coverage expectations
 
@@ -30,6 +30,7 @@ RSS and public feeds can go surprisingly wide (wires, blogs, Reddit, Google News
 2. **Environment**  
    - Copy `.env.example` → `.env` and fill in values (never commit `.env`).  
    - `TELEGRAM_CHAT_ID` should be **your** numeric chat id (same id the bot messages for alerts and digest).
+   - Optional: set `PREFERENCE_USER_ID` if you want one canonical profile id shared by dashboard, digest, and pipeline preference reads/writes.
 
 3. **Telegram bot**  
    - Create a bot with [@BotFather](https://t.me/BotFather), set `TELEGRAM_BOT_TOKEN`.  

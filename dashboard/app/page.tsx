@@ -44,7 +44,44 @@ type Run = {
 
 type ChatMsg = { role: "user" | "bot"; text: string };
 
-type Tab = "overview" | "intel" | "chat";
+type Tab = "overview" | "intel" | "chat" | "preferences";
+
+type BriefingOverlay = {
+  boost_categories: string[];
+  ignore_categories: string[];
+  tier1_keywords: string[];
+};
+
+type Preferences = {
+  interests: string[];
+  dislikes: string[];
+  alert_sensitivity: number;
+  trusted_sources: string[];
+  blocked_sources: string[];
+  briefing_overlay: BriefingOverlay;
+};
+
+const PREFERENCE_SECTIONS = [
+  "World & Geopolitics",
+  "Wars & Conflicts",
+  "Economy & Markets",
+  "Stocks",
+  "Crypto",
+  "AI & Technology",
+  "Power & Elite Activity",
+  "Conspiracy / Unverified Signals",
+] as const;
+
+const QUICK_INTERESTS = [
+  "AI",
+  "Macro",
+  "Geopolitics",
+  "Crypto",
+  "Energy",
+  "Defense",
+  "Semiconductors",
+  "Rates",
+] as const;
 
 /* ──────────── Helpers ──────────── */
 function timeAgo(iso: string): string {
@@ -63,6 +100,45 @@ function importanceColor(score: number): string {
   return "#636380";
 }
 
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const value = raw.trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+  return out;
+}
+
+function normalizePreferences(raw: unknown): Preferences {
+  const data = (raw ?? {}) as Partial<Preferences>;
+  const overlay = (data.briefing_overlay ?? {}) as Partial<BriefingOverlay>;
+  return {
+    interests: dedupeStrings(data.interests ?? []),
+    dislikes: dedupeStrings(data.dislikes ?? []),
+    alert_sensitivity:
+      typeof data.alert_sensitivity === "number" &&
+      Number.isFinite(data.alert_sensitivity)
+        ? Math.min(10, Math.max(1, Math.round(data.alert_sensitivity)))
+        : 5,
+    trusted_sources: dedupeStrings(data.trusted_sources ?? []),
+    blocked_sources: dedupeStrings(data.blocked_sources ?? []),
+    briefing_overlay: {
+      boost_categories: dedupeStrings(overlay.boost_categories ?? []),
+      ignore_categories: dedupeStrings(overlay.ignore_categories ?? []),
+      tier1_keywords: dedupeStrings(overlay.tier1_keywords ?? []),
+    },
+  };
+}
+
+function clonePreferences(prefs: Preferences): Preferences {
+  return JSON.parse(JSON.stringify(prefs)) as Preferences;
+}
+
 /* ──────────── Component ──────────── */
 export default function Page() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -78,6 +154,17 @@ export default function Page() {
   const [input, setInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [prefsUserId, setPrefsUserId] = useState("");
+  const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [prefsInitial, setPrefsInitial] = useState<Preferences | null>(null);
+  const [prefsDirty, setPrefsDirty] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsMsg, setPrefsMsg] = useState<string | null>(null);
+  const [interestInput, setInterestInput] = useState("");
+  const [dislikeInput, setDislikeInput] = useState("");
+  const [trustedInput, setTrustedInput] = useState("");
+  const [blockedInput, setBlockedInput] = useState("");
+  const [keywordInput, setKeywordInput] = useState("");
 
   // Intel feed state
   const [feedSearch, setFeedSearch] = useState("");
@@ -97,11 +184,12 @@ export default function Page() {
     setLoadErr(null);
     setRunErr(null);
     try {
-      const [d, e, a, r] = await Promise.all([
+      const [d, e, a, r, p] = await Promise.all([
         fetch("/api/data/digests"),
         fetch("/api/data/events"),
         fetch("/api/data/articles?limit=30"),
         fetch("/api/github/runs"),
+        fetch("/api/data/preferences"),
       ]);
       if (!d.ok) {
         const j = await d.json().catch(() => ({}));
@@ -115,9 +203,19 @@ export default function Page() {
         const j = await a.json().catch(() => ({}));
         throw new Error(j.error || a.statusText);
       }
+      if (!p.ok) {
+        const j = await p.json().catch(() => ({}));
+        throw new Error(j.error || p.statusText);
+      }
       setDigests((await d.json()).digests || []);
       setEvents((await e.json()).events || []);
       setArticles((await a.json()).articles || []);
+      const prefsPayload = await p.json();
+      const normalized = normalizePreferences(prefsPayload.preferences);
+      setPrefsUserId(prefsPayload.userId || "");
+      setPrefs(normalized);
+      setPrefsInitial(clonePreferences(normalized));
+      setPrefsDirty(false);
 
       const rj = await r.json();
       if (rj.error) setRunErr(rj.error);
@@ -206,6 +304,149 @@ export default function Page() {
     });
   };
 
+  const mutatePrefs = (mutator: (prev: Preferences) => Preferences) => {
+    setPrefs((prev) => {
+      if (!prev) return prev;
+      const next = normalizePreferences(mutator(prev));
+      setPrefsDirty(true);
+      return next;
+    });
+  };
+
+  const addPrefItem = (
+    field:
+      | "interests"
+      | "dislikes"
+      | "trusted_sources"
+      | "blocked_sources"
+      | "tier1_keywords",
+    rawValue: string
+  ) => {
+    const value = rawValue.trim();
+    if (!value) return;
+    mutatePrefs((prev) => {
+      if (field === "tier1_keywords") {
+        return {
+          ...prev,
+          briefing_overlay: {
+            ...prev.briefing_overlay,
+            tier1_keywords: dedupeStrings([
+              ...prev.briefing_overlay.tier1_keywords,
+              value,
+            ]),
+          },
+        };
+      }
+      return {
+        ...prev,
+        [field]: dedupeStrings([...(prev[field] as string[]), value]),
+      };
+    });
+  };
+
+  const removePrefItem = (
+    field:
+      | "interests"
+      | "dislikes"
+      | "trusted_sources"
+      | "blocked_sources"
+      | "tier1_keywords",
+    value: string
+  ) => {
+    mutatePrefs((prev) => {
+      if (field === "tier1_keywords") {
+        return {
+          ...prev,
+          briefing_overlay: {
+            ...prev.briefing_overlay,
+            tier1_keywords: prev.briefing_overlay.tier1_keywords.filter(
+              (item) => item !== value
+            ),
+          },
+        };
+      }
+      return {
+        ...prev,
+        [field]: (prev[field] as string[]).filter((item) => item !== value),
+      };
+    });
+  };
+
+  const toggleSectionPref = (
+    field: "boost_categories" | "ignore_categories",
+    section: string
+  ) => {
+    mutatePrefs((prev) => {
+      const boost = new Set(prev.briefing_overlay.boost_categories);
+      const ignore = new Set(prev.briefing_overlay.ignore_categories);
+
+      if (field === "boost_categories") {
+        if (boost.has(section)) boost.delete(section);
+        else boost.add(section);
+        ignore.delete(section);
+      } else {
+        if (ignore.has(section)) ignore.delete(section);
+        else ignore.add(section);
+        boost.delete(section);
+      }
+
+      return {
+        ...prev,
+        briefing_overlay: {
+          ...prev.briefing_overlay,
+          boost_categories: [...boost],
+          ignore_categories: [...ignore],
+        },
+      };
+    });
+  };
+
+  const savePreferences = async () => {
+    if (!prefs || prefsSaving) return;
+    setPrefsSaving(true);
+    setPrefsMsg(null);
+    try {
+      const res = await fetch("/api/data/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interests: prefs.interests,
+          dislikes: prefs.dislikes,
+          alert_sensitivity: prefs.alert_sensitivity,
+          trusted_sources: prefs.trusted_sources,
+          blocked_sources: prefs.blocked_sources,
+          briefing_overlay: {
+            boost_categories: prefs.briefing_overlay.boost_categories,
+            ignore_categories: prefs.briefing_overlay.ignore_categories,
+            tier1_keywords: prefs.briefing_overlay.tier1_keywords,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || res.statusText);
+      }
+      const normalized = normalizePreferences(json.preferences);
+      setPrefs(normalized);
+      setPrefsInitial(clonePreferences(normalized));
+      setPrefsDirty(false);
+      setPrefsMsg("Preferences saved");
+      setTimeout(() => setPrefsMsg(null), 2500);
+    } catch (err) {
+      setPrefsMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
+  const resetPreferences = () => {
+    if (!prefsInitial) return;
+    setPrefs(clonePreferences(prefsInitial));
+    setPrefsDirty(false);
+    setPrefsMsg("Reset unsaved changes");
+    setTimeout(() => setPrefsMsg(null), 2000);
+  };
+
   /* ──── Filtered feed articles ──── */
   const filtered = feedArticles.filter((a) => {
     if (feedSearch) {
@@ -218,6 +459,30 @@ export default function Page() {
     }
     return true;
   });
+
+  const renderChips = (
+    items: string[],
+    onRemove: (value: string) => void
+  ) => {
+    if (items.length === 0) {
+      return <p className="muted">None set yet.</p>;
+    }
+    return (
+      <div className="pref-chip-list">
+        {items.map((item) => (
+          <button
+            key={item}
+            className="pref-chip"
+            onClick={() => onRemove(item)}
+            title="Tap to remove"
+          >
+            <span>{item}</span>
+            <span className="chip-x">×</span>
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   /* ──── Computed stats ──── */
   const lastRun = runs[0];
@@ -276,6 +541,12 @@ export default function Page() {
           onClick={() => setTab("chat")}
         >
           Chat
+        </button>
+        <button
+          className={`tab-btn ${tab === "preferences" ? "active" : ""}`}
+          onClick={() => setTab("preferences")}
+        >
+          Preferences
         </button>
       </nav>
 
@@ -586,6 +857,299 @@ export default function Page() {
             </div>
           </div>
         )}
+
+        {/* ════════ PREFERENCES TAB ════════ */}
+        {tab === "preferences" && (
+          <>
+            <div className="section-title">Interests &amp; personalization</div>
+            {!prefs ? (
+              <p className="muted">Loading preferences...</p>
+            ) : (
+              <>
+                <div className="card prefs-card">
+                  <div className="prefs-header-row">
+                    <div>
+                      <div className="card-title">Balanced digest profile</div>
+                      <div className="card-meta">
+                        Used by pipeline + digest selection + briefing prompts.
+                      </div>
+                      {prefsUserId && (
+                        <div className="card-meta">Profile: {prefsUserId}</div>
+                      )}
+                    </div>
+                    <div className="prefs-actions">
+                      <button
+                        className="btn btn-secondary"
+                        onClick={resetPreferences}
+                        disabled={!prefsDirty || prefsSaving}
+                      >
+                        Reset
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={savePreferences}
+                        disabled={!prefsDirty || prefsSaving}
+                      >
+                        {prefsSaving ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                  {prefsMsg && (
+                    <p className="muted" style={{ marginTop: "0.5rem" }}>
+                      {prefsMsg}
+                    </p>
+                  )}
+                  <div className="prefs-control">
+                    <label htmlFor="alert-sensitivity">
+                      Alert sensitivity: <strong>{prefs.alert_sensitivity}</strong>/10
+                    </label>
+                    <input
+                      id="alert-sensitivity"
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={prefs.alert_sensitivity}
+                      onChange={(e) =>
+                        mutatePrefs((prev) => ({
+                          ...prev,
+                          alert_sensitivity: Number(e.target.value),
+                        }))
+                      }
+                    />
+                    <div className="prefs-range-labels">
+                      <span>Strict</span>
+                      <span>Balanced</span>
+                      <span>Wide net</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Quick interests</div>
+                  <div className="card-meta" style={{ marginBottom: "0.7rem" }}>
+                    Tap to quickly add or remove common themes.
+                  </div>
+                  <div className="pref-chip-list">
+                    {QUICK_INTERESTS.map((topic) => {
+                      const active = prefs.interests.some(
+                        (item) => item.toLowerCase() === topic.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={topic}
+                          className={`pref-pill ${active ? "active" : ""}`}
+                          onClick={() => {
+                            if (active) {
+                              removePrefItem("interests", topic);
+                            } else {
+                              addPrefItem("interests", topic);
+                            }
+                          }}
+                        >
+                          {topic}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Interests</div>
+                  <div className="pref-input-row">
+                    <input
+                      value={interestInput}
+                      onChange={(e) => setInterestInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addPrefItem("interests", interestInput);
+                          setInterestInput("");
+                        }
+                      }}
+                      placeholder="Add interest (e.g., trade war)"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addPrefItem("interests", interestInput);
+                        setInterestInput("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {renderChips(prefs.interests, (item) =>
+                    removePrefItem("interests", item)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Dislikes / lower-priority topics</div>
+                  <div className="pref-input-row">
+                    <input
+                      value={dislikeInput}
+                      onChange={(e) => setDislikeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addPrefItem("dislikes", dislikeInput);
+                          setDislikeInput("");
+                        }
+                      }}
+                      placeholder="Add topic to de-prioritize"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addPrefItem("dislikes", dislikeInput);
+                        setDislikeInput("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {renderChips(prefs.dislikes, (item) =>
+                    removePrefItem("dislikes", item)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Preferred sources</div>
+                  <div className="pref-input-row">
+                    <input
+                      value={trustedInput}
+                      onChange={(e) => setTrustedInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addPrefItem("trusted_sources", trustedInput);
+                          setTrustedInput("");
+                        }
+                      }}
+                      placeholder="e.g., reuters.com or Bloomberg"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addPrefItem("trusted_sources", trustedInput);
+                        setTrustedInput("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {renderChips(prefs.trusted_sources, (item) =>
+                    removePrefItem("trusted_sources", item)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Blocked sources</div>
+                  <div className="pref-input-row">
+                    <input
+                      value={blockedInput}
+                      onChange={(e) => setBlockedInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addPrefItem("blocked_sources", blockedInput);
+                          setBlockedInput("");
+                        }
+                      }}
+                      placeholder="e.g., source you do not trust"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addPrefItem("blocked_sources", blockedInput);
+                        setBlockedInput("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {renderChips(prefs.blocked_sources, (item) =>
+                    removePrefItem("blocked_sources", item)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Always-elevate keywords</div>
+                  <div className="card-meta" style={{ marginBottom: "0.65rem" }}>
+                    These keywords get extra weight in story selection.
+                  </div>
+                  <div className="pref-input-row">
+                    <input
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addPrefItem("tier1_keywords", keywordInput);
+                          setKeywordInput("");
+                        }
+                      }}
+                      placeholder="e.g., Taiwan Strait"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addPrefItem("tier1_keywords", keywordInput);
+                        setKeywordInput("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {renderChips(prefs.briefing_overlay.tier1_keywords, (item) =>
+                    removePrefItem("tier1_keywords", item)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Section boost / mute</div>
+                  <div className="card-meta" style={{ marginBottom: "0.7rem" }}>
+                    Boosted sections are favored. Muted sections appear only when globally important.
+                  </div>
+                  <div className="prefs-section-grid">
+                    {PREFERENCE_SECTIONS.map((section) => {
+                      const boosted = prefs.briefing_overlay.boost_categories.includes(
+                        section
+                      );
+                      const muted = prefs.briefing_overlay.ignore_categories.includes(
+                        section
+                      );
+                      return (
+                        <div key={section} className="prefs-section-row">
+                          <span>{section}</span>
+                          <div className="prefs-toggle-group">
+                            <button
+                              className={`pref-pill small ${boosted ? "active" : ""}`}
+                              onClick={() =>
+                                toggleSectionPref("boost_categories", section)
+                              }
+                            >
+                              Boost
+                            </button>
+                            <button
+                              className={`pref-pill small ${muted ? "active muted" : ""}`}
+                              onClick={() =>
+                                toggleSectionPref("ignore_categories", section)
+                              }
+                            >
+                              Mute
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {/* Mobile bottom nav */}
@@ -601,6 +1165,13 @@ export default function Page() {
         <button className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>
           <span className="nav-icon">&#x2709;</span>
           Chat
+        </button>
+        <button
+          className={tab === "preferences" ? "active" : ""}
+          onClick={() => setTab("preferences")}
+        >
+          <span className="nav-icon">&#x2699;</span>
+          Prefs
         </button>
       </nav>
     </div>

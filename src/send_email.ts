@@ -9,7 +9,7 @@ import {
   logSystemEvent,
 } from "./memory";
 import { createSmtpTransport } from "./smtp";
-import { getTopArticles } from "./scoring";
+import { selectBalancedDigestArticles } from "./scoring";
 import { formatDigestPlainText, sendDigestTelegram } from "./telegram_digest";
 import {
   canMakeAICall,
@@ -31,7 +31,13 @@ import {
   type MarketQuote,
   type WeatherData,
 } from "./data_feeds";
-import type { ArticleHistory, SourceRegistry, UsageReport } from "./types";
+import { resolvePreferenceUserId } from "./user_identity";
+import type {
+  ArticleHistory,
+  SourceRegistry,
+  UsageReport,
+  UserPreferences,
+} from "./types";
 
 const logger = createLogger("send_email");
 
@@ -130,7 +136,7 @@ function safeParseJSON(text: string): Record<string, unknown> {
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Gemini may truncate the response mid-JSON; attempt repair
+    // LLM responses can truncate mid-JSON; attempt repair
   }
 
   let repaired = cleaned;
@@ -186,15 +192,70 @@ interface TriageResult {
   blindspots: string[];
 }
 
+const TRIAGE_INPUT_LIMIT = 15;
+
+function toCleanList(values: string[] | undefined | null): string[] {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const value = raw.trim();
+    const key = value.toLowerCase();
+    if (!value || seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+  return out;
+}
+
+function buildPreferenceGuidance(preferences: UserPreferences): string {
+  const interests = toCleanList(preferences.interests);
+  const dislikes = toCleanList(preferences.dislikes);
+  const trustedSources = toCleanList(preferences.trusted_sources).slice(0, 8);
+  const blockedSources = toCleanList(preferences.blocked_sources).slice(0, 8);
+  const overlay = preferences.briefing_overlay ?? {};
+  const boostCategories = toCleanList(overlay.boost_categories).slice(0, 6);
+  const muteCategories = toCleanList(overlay.ignore_categories).slice(0, 6);
+  const tier1Keywords = toCleanList(overlay.tier1_keywords).slice(0, 10);
+
+  const parts = [
+    `Primary interests: ${
+      interests.length > 0
+        ? interests.join(", ")
+        : "geopolitics, markets, crypto, AI, power dynamics"
+    }.`,
+    dislikes.length > 0
+      ? `Lower-priority topics: ${dislikes.join(", ")}.`
+      : "No explicit dislike list configured.",
+    trustedSources.length > 0
+      ? `Preferred sources (if available): ${trustedSources.join(", ")}.`
+      : "No preferred source list configured.",
+    blockedSources.length > 0
+      ? `Avoid low-priority sources unless story is major/global: ${blockedSources.join(", ")}.`
+      : "No blocked source list configured.",
+    boostCategories.length > 0
+      ? `Boost sections: ${boostCategories.join(", ")}.`
+      : "No boosted sections configured.",
+    muteCategories.length > 0
+      ? `Mute sections unless globally critical: ${muteCategories.join(", ")}.`
+      : "No muted sections configured.",
+    tier1Keywords.length > 0
+      ? `Always-elevate keywords when present: ${tier1Keywords.join(", ")}.`
+      : "",
+  ].filter(Boolean);
+
+  return parts.join("\n");
+}
+
 async function triageArticles(
   groq: OpenAI,
   articles: ArticleHistory[],
-  interests: string[],
+  preferences: UserPreferences,
   horizon: "daily" | "weekly"
 ): Promise<TriageResult | null> {
   const articleData = articles
     .filter((a) => a.title)
-    .slice(0, 15)
+    .slice(0, TRIAGE_INPUT_LIMIT)
     .map((a, i) => ({
       n: i + 1,
       t: a.title,
@@ -204,10 +265,7 @@ async function triageArticles(
     }));
 
   const sections = BRIEFING_SECTIONS.join(", ");
-  const interestsStr =
-    interests.length > 0
-      ? interests.join(", ")
-      : "geopolitics, markets, crypto, AI, power dynamics";
+  const preferenceGuidance = buildPreferenceGuidance(preferences);
   const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
   const oneSentenceRule =
     horizon === "weekly"
@@ -215,12 +273,17 @@ async function triageArticles(
       : '"one_sentence": THE single most important development today in one punchy sentence';
   const briefingLabel = horizon === "weekly" ? "weekly recap" : "daily briefing";
 
-  const systemPrompt = `You are an elite intelligence analyst producing a ${briefingLabel} triage for a reader interested in: ${interestsStr}.
+  const systemPrompt = `You are an elite intelligence analyst producing a ${briefingLabel}.
+
+Reader preference profile:
+${preferenceGuidance}
 
 Given ${horizonLabel}'s ${articleData.length} articles, rank and analyze them. Return JSON with:
 - ${oneSentenceRule}
 - "key_signals": 6-8 most important stories ranked. Each: title, url (from input "u"), source, category (from: ${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords), "summary" (1-2 sentences, specific facts), "why_it_matters" (1 sentence, strategic significance)
 - "blindspots": 2-3 important topics with NO coverage today
+
+Critical balancing rule: keep this briefing globally smart. Always include major world/market/geopolitical shifts even when outside preferences, while still prioritizing the reader's interests.
 
 Be concise and specific. Return ONLY valid JSON.`;
 
@@ -254,7 +317,7 @@ Be concise and specific. Return ONLY valid JSON.`;
 async function generateDeepBriefing(
   groq: OpenAI,
   triage: TriageResult,
-  interests: string[],
+  preferences: UserPreferences,
   horizon: "daily" | "weekly"
 ): Promise<Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null> {
   const signalSummary = triage.key_signals
@@ -265,10 +328,7 @@ async function generateDeepBriefing(
     )
     .join("\n");
 
-  const interestsStr =
-    interests.length > 0
-      ? interests.join(", ")
-      : "geopolitics, markets, crypto, AI, power dynamics";
+  const preferenceGuidance = buildPreferenceGuidance(preferences);
   const sections = BRIEFING_SECTIONS.join(", ");
   const horizonLabel = horizon === "weekly" ? "the past 7 days" : "today";
   const styleLine =
@@ -276,7 +336,10 @@ async function generateDeepBriefing(
       ? "Write like a senior analyst delivering a weekly recap. Highlight trend shifts, escalation/de-escalation, and what to watch next week."
       : "Write like a senior analyst briefing a decision-maker. Be specific, analytical, connect the dots. No filler.";
 
-  const systemPrompt = `You are an elite intelligence analyst writing a deep ${horizon} briefing for a reader interested in: ${interestsStr}.
+  const systemPrompt = `You are an elite intelligence analyst writing a deep ${horizon} briefing.
+
+Reader preference profile:
+${preferenceGuidance}
 
 Below are ${horizonLabel}'s top signals (pre-ranked). Using these signals, produce a JSON object with:
 - "market_intelligence": { "analysis" (3-4 sentence strategic assessment), "implications" (2-3 specific items), "risk_scenarios" (2-3 downside scenarios) }
@@ -286,6 +349,7 @@ Below are ${horizonLabel}'s top signals (pre-ranked). Using these signals, produ
 - "section_articles": group signals into sections (${sections}). Each: title, url, source, verification (VERIFIED/DEVELOPING/UNVERIFIED), status (NEW/ESCALATING/DE-ESCALATING/ONGOING), time_label, "bullets" (2-3 bullet points), related_sources
 
 ${styleLine}
+Preserve a balanced worldview: keep major global context even when interests are narrow.
 Return ONLY valid JSON.`;
 
   const response = await withLLMRetry(
@@ -330,7 +394,7 @@ Return ONLY valid JSON.`;
 async function generateBriefing(
   articles: ArticleHistory[],
   _sources: SourceRegistry[],
-  interests: string[],
+  preferences: UserPreferences,
   horizon: "daily" | "weekly" = "daily"
 ): Promise<BriefingData | null> {
   if (articles.length === 0) return null;
@@ -350,7 +414,7 @@ async function generateBriefing(
   let triage: TriageResult | null = null;
   try {
     logger.info("Digest Call 1/2: triaging articles via Groq");
-    triage = await triageArticles(groq, articles, interests, horizon);
+    triage = await triageArticles(groq, articles, preferences, horizon);
     await recordAICall("digest");
     if (!triage || triage.key_signals.length === 0) {
       logger.warn("Triage returned no signals");
@@ -371,7 +435,7 @@ async function generateBriefing(
     null;
   try {
     logger.info("Digest Call 2/2: generating deep briefing via Groq");
-    deep = await generateDeepBriefing(groq, triage, interests, horizon);
+    deep = await generateDeepBriefing(groq, triage, preferences, horizon);
     await recordAICall("digest");
     logger.info("Deep briefing complete");
   } catch (err) {
@@ -997,15 +1061,25 @@ async function sendDigest(
       return false;
     }
 
-    const userId = process.env.TELEGRAM_CHAT_ID ?? "default";
-    let effectiveInterests = interests;
-    if (effectiveInterests.length === 0) {
-      try {
-        const prefs = await getPreferences(userId);
-        effectiveInterests = prefs.interests;
-      } catch {
-        /* use [] */
-      }
+    const userId = resolvePreferenceUserId();
+    let preferences: UserPreferences;
+    try {
+      preferences = await getPreferences(userId);
+    } catch {
+      preferences = {
+        id: "",
+        user_id: userId,
+        interests: [],
+        dislikes: [],
+        alert_sensitivity: 5,
+        trusted_sources: [],
+        blocked_sources: [],
+        briefing_overlay: {},
+        updated_at: new Date().toISOString(),
+      };
+    }
+    if (interests.length > 0) {
+      preferences = { ...preferences, interests };
     }
 
     const lookbackHours = mode === "weekly" ? 168 : 24;
@@ -1017,26 +1091,37 @@ async function sendDigest(
     ]);
 
     const topCount = mode === "weekly" ? 30 : 20;
-    const topArticles = getTopArticles(recentArticles, topCount);
+    const selection = selectBalancedDigestArticles(
+      recentArticles,
+      preferences,
+      topCount
+    );
+    const topArticles = selection.selected;
 
     logger.info("Digest inputs collected", {
       mode,
       articles: recentArticles.length,
+      shortlist: topArticles.length,
       sources: sources.length,
       lookbackHours,
+      mustKnowCount: selection.meta.mustKnowCount,
+      personalCount: selection.meta.personalCount,
+      sourceDiversity: selection.meta.sourceDiversity,
+      preferenceHits: selection.meta.interestMatchedCount,
+      blockedSourceSkipped: selection.meta.blockedSourceSkipped,
     });
 
     const briefing = await generateBriefing(
-      recentArticles,
+      topArticles,
       sources,
-      effectiveInterests,
+      preferences,
       mode
     );
 
     const html = briefing
       ? buildBriefingHtml(
           briefing,
-          recentArticles,
+          topArticles,
           sources,
           usage,
           enhancements,
@@ -1077,7 +1162,7 @@ async function sendDigest(
     let telegramOk = false;
     if (!skipTg) {
       try {
-        const topForTg = getTopArticles(recentArticles, mode === "weekly" ? 8 : 6);
+        const topForTg = topArticles.slice(0, mode === "weekly" ? 8 : 6);
         const insight = briefing?.one_sentence || null;
         const plain = formatDigestPlainText(topForTg, usage, insight, {
           mode,
@@ -1120,6 +1205,12 @@ async function sendDigest(
         telegram_ok: telegramOk,
         model: GROQ_DIGEST_MODEL,
         briefing_generated: Boolean(briefing),
+        shortlist_count: topArticles.length,
+        must_know_count: selection.meta.mustKnowCount,
+        personal_count: selection.meta.personalCount,
+        source_diversity: selection.meta.sourceDiversity,
+        preference_hits: selection.meta.interestMatchedCount,
+        blocked_source_skips: selection.meta.blockedSourceSkipped,
         enhancement_weather: Boolean(enhancements.weather),
         enhancement_markets: enhancements.marketSnapshot.length > 0,
         enhancement_calendar: enhancements.economicCalendar.length > 0,
@@ -1133,7 +1224,13 @@ async function sendDigest(
       message: `${mode} briefing delivered via ${channels.join(
         " + "
       )} (Groq/${GROQ_DIGEST_MODEL})`,
-      meta: { article_count: recentArticles.length, mode },
+      meta: {
+        article_count: recentArticles.length,
+        shortlist_count: topArticles.length,
+        must_know_count: selection.meta.mustKnowCount,
+        personal_count: selection.meta.personalCount,
+        mode,
+      },
     });
 
     logger.info("Digest complete", { mode, channels });

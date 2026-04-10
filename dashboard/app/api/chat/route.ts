@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { runBriefingAssistant } from "../../../../src/ai_conversation";
 import { hasLLMCredentials } from "../../../../src/llm_client";
+import { resolvePreferenceUserId } from "../../../../src/user_identity";
 
 export const maxDuration = 60;
 
@@ -30,8 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "message required" }, { status: 400 });
     }
 
-    const userId =
-      process.env.TELEGRAM_CHAT_ID?.trim() || process.env.DEFAULT_USER_ID || "default";
+    const userId = resolvePreferenceUserId();
     const reply = await runBriefingAssistant(userId, message);
     return NextResponse.json({ reply });
   } catch (e) {

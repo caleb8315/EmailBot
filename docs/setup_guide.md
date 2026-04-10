@@ -107,6 +107,7 @@ cp .env.example .env
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Supabase service role key |
 | `TELEGRAM_BOT_TOKEN` | Yes | — | Telegram bot token from BotFather |
 | `TELEGRAM_CHAT_ID` | Yes | — | Your Telegram chat ID (pipeline + digest target) |
+| `PREFERENCE_USER_ID` | No | — | Optional canonical profile id for dashboard + digest + pipeline preference reads/writes |
 | `TELEGRAM_ALLOWED_CHAT_IDS` | No | — | Comma-separated chat ids allowed to talk to the bot |
 | `SEND_DIGEST_TELEGRAM` | No | on | Set `false` to skip Telegram morning text (email-only) |
 | `EMAIL_FROM` | For email | — | Sender email address |
@@ -192,5 +193,6 @@ npm run typecheck
 | "AI budget exhausted" | Normal — default global cap is 30/day with chat capped at 20/day. Resets at midnight UTC. |
 | Email not sending | Verify SMTP credentials. For Gmail, use App Passwords, not your main password. |
 | Telegram bot not responding | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once. |
+| Dashboard preference edits do not affect digest | Set `PREFERENCE_USER_ID` (or align `TELEGRAM_CHAT_ID`) so dashboard and digest read/write the same profile row. |
 | No articles fetched | Some RSS feeds may be down. Check `config/sources.json` for working feeds. |
 | TypeScript errors | Run `npm run typecheck` and fix any reported issues. |

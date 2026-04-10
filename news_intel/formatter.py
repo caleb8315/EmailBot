@@ -40,8 +40,9 @@ LABEL_COLORS = {
 
 def select_top_clusters(clusters: List[StoryCluster]) -> List[StoryCluster]:
     """
-    Return only the clusters that will appear in the final briefing
-    (top N per section, ranked by source count then recency).
+    Return only the clusters that will appear in the final briefing.
+    Selection favors personalized priority (when available), then
+    corroboration depth and recency.
     Call this BEFORE summarization to avoid wasting API calls.
     """
     sections_map: Dict[str, List[StoryCluster]] = {cat: [] for cat in SECTION_ORDER}
@@ -53,12 +54,25 @@ def select_top_clusters(clusters: List[StoryCluster]) -> List[StoryCluster]:
     for cat in SECTION_ORDER:
         cat_clusters = sections_map.get(cat, [])
         cat_clusters.sort(
-            key=lambda c: (c.distinct_publishers, c.newest or datetime.min.replace(tzinfo=timezone.utc)),
+            key=lambda c: (
+                float(getattr(c, "_priority_score", 0.0)),
+                c.distinct_publishers,
+                c.newest or datetime.min.replace(tzinfo=timezone.utc),
+            ),
             reverse=True,
         )
         selected.extend(cat_clusters[:MAX_STORIES_PER_SECTION])
 
-    logger.info("Selected %d top clusters from %d total (max %d per section)", len(selected), len(clusters), MAX_STORIES_PER_SECTION)
+    prioritized = sum(
+        1 for c in selected if float(getattr(c, "_priority_score", 0.0)) > 0
+    )
+    logger.info(
+        "Selected %d top clusters from %d total (max %d per section, prioritized=%d)",
+        len(selected),
+        len(clusters),
+        MAX_STORIES_PER_SECTION,
+        prioritized,
+    )
     return selected
 
 

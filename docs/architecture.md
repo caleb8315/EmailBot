@@ -11,7 +11,7 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
 │                    GITHUB ACTIONS (cron)                        │
 │                                                                 │
 │  pipeline.yml  → hourly — alerts only when high-importance      │
-│  daily_email.yml → 7:00 UTC — morning digest (1× OpenAI insight)│
+│  daily_email.yml → 7:00 UTC — digest (balanced shortlist + Groq) │
 └───────┬─────────────────────────────────────┬───────────────────┘
         │                                     │
         ▼                                     ▼
@@ -43,7 +43,7 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
             │   SUPABASE      │
             │                 │
             │  usage_tracking │  ← AI budget enforcement
-            │  user_prefs +   │  ← interests + briefing_overlay (bot)
+│  user_prefs +   │  ← interests + dislikes + source prefs + briefing_overlay
             │  article_history│  ← dedup + history
             │  source_registry│  ← source quality
             └─────────────────┘
@@ -58,6 +58,13 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
        │  focus / ignore  │
        │  why / deeper    │
        └──────────────────┘
+
+       DASHBOARD (Vercel)
+       ┌──────────────────┐
+       │  app/page.tsx    │ ← overview + intel + chat + preferences
+       │  /api/data/*     │ ← digests/events/articles/preferences
+       │  /api/chat       │
+       └──────────────────┘
 ```
 
 ## Cost Model
@@ -66,14 +73,14 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
 |-----------|----------|-----------|
 | Article analysis | 1 per article | 0-3 per pipeline run |
 | Chat intent (AI fallback) | 1 per ambiguous message | Rare |
-| Daily insight | 1 per digest | 0-1 per day |
+| Digest triage + deep briefing | 2 per digest | 0-2 per day |
 | Deeper analysis | 1 per request | On-demand |
-| **Budget** | **5 max/day** | **Target: 0-3 avg** |
+| **Budget** | **env-driven (default 30/day)** | **chat + pipeline + digest buckets** |
 
 ## Key Design Decisions
 
 1. **Fail closed on budget** — if Supabase is down, no AI calls are made
 2. **Prefilter before AI** — heuristic scoring eliminates 80%+ of noise for free
 3. **Try/catch everywhere** — no single failure stops the pipeline
-4. **Daily digest** — Telegram briefing when configured; email only if SMTP is set
+4. **Daily digest** — balanced world+interest candidate selection before Groq triage/deep briefing
 5. **Telegram cooldown** — max 1 alert per 2 hours to avoid notification fatigue

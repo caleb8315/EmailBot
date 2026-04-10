@@ -57,30 +57,52 @@ Parse the user's message and return JSON: { "intent": string, "topic": string, "
 
 ---
 
-## 3. Daily Insight Prompt
+## 3. Digest Triage + Deep Briefing Prompts
 
-**Used in:** `send_email.ts` (only if budget allows)
-**Budget cost:** 1 AI call
+**Used in:** `send_email.ts` (daily + weekly digest path)  
+**Budget cost:** 2 AI calls (`triage` then `deep briefing`)
 
-### System message
-
-```
-Based on today's top articles, write a 2-sentence strategic insight for someone interested in: {interests}. Be specific, not generic.
-```
-
-### User message
+### 3a) Triage system message (shape)
 
 ```
-Today's articles:
-- {title}: {summary}
-- {title}: {summary}
-...
+You are an elite intelligence analyst producing a daily/weekly triage.
+
+Reader preference profile:
+- primary interests
+- lower-priority topics
+- preferred/blocked sources
+- boosted/muted sections
+- always-elevate keywords
+
+Given today's candidate articles, return JSON:
+- one_sentence
+- key_signals (6-8 ranked)
+- blindspots (2-3 missing topics)
+
+Balancing rule: always include major global stories, while prioritizing user interests.
+```
+
+### 3b) Deep briefing system message (shape)
+
+```
+You are an elite intelligence analyst writing a deep briefing.
+
+Reader preference profile: {same profile block}
+Input: pre-ranked top signals from triage
+Output JSON:
+- market_intelligence
+- contrarian_watch
+- power_nodes
+- opportunities
+- section_articles
+
+Preserve a balanced worldview; keep major global context even when interests are narrow.
 ```
 
 ### Parameters
-- Model: `gemini-2.5-flash`
-- Temperature: `0.5`
-- Max tokens: `200`
+- Model: `GROQ_DIGEST_MODEL` (default `qwen/qwen3-32b`)
+- Temperature: `0.4`
+- Max tokens: `3000` (triage), `4000` (deep briefing)
 
 ---
 
