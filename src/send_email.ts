@@ -194,13 +194,13 @@ async function triageArticles(
 ): Promise<TriageResult | null> {
   const articleData = articles
     .filter((a) => a.title)
-    .slice(0, 25)
+    .slice(0, 15)
     .map((a, i) => ({
       n: i + 1,
       t: a.title,
       s: a.source,
       u: a.url,
-      sum: (a.summary || "").slice(0, 150),
+      sum: (a.summary || "").slice(0, 80),
     }));
 
   const sections = BRIEFING_SECTIONS.join(", ");
@@ -219,10 +219,10 @@ async function triageArticles(
 
 Given ${horizonLabel}'s ${articleData.length} articles, rank and analyze them. Return JSON with:
 - ${oneSentenceRule}
-- "key_signals": 8-12 most important stories ranked. Each: title, url (from input "u"), source, category (from: ${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords), "summary" (2-3 sentences, specific facts), "why_it_matters" (1-2 sentences, strategic significance)
-- "blindspots": 2-4 important topics with NO coverage today
+- "key_signals": 6-8 most important stories ranked. Each: title, url (from input "u"), source, category (from: ${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords), "summary" (1-2 sentences, specific facts), "why_it_matters" (1 sentence, strategic significance)
+- "blindspots": 2-3 important topics with NO coverage today
 
-Be specific, analytical, no filler. Return ONLY valid JSON.`;
+Be concise and specific. Return ONLY valid JSON.`;
 
   const response = await withLLMRetry(
     "digest_triage_groq",
@@ -235,7 +235,7 @@ Be specific, analytical, no filler. Return ONLY valid JSON.`;
           { role: "user", content: JSON.stringify(articleData) },
         ],
         temperature: 0.4,
-        max_tokens: 5000,
+        max_tokens: 3000,
       }),
     RETRY_OPTS
   );
@@ -246,7 +246,7 @@ Be specific, analytical, no filler. Return ONLY valid JSON.`;
   const raw: any = safeParseJSON(content);
   return {
     one_sentence: typeof raw.one_sentence === "string" ? raw.one_sentence : "",
-    key_signals: toArray(raw.key_signals),
+    key_signals: toArray(raw.key_signals).slice(0, 10),
     blindspots: toArray(raw.blindspots),
   };
 }
@@ -258,10 +258,10 @@ async function generateDeepBriefing(
   horizon: "daily" | "weekly"
 ): Promise<Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null> {
   const signalSummary = triage.key_signals
-    .slice(0, 12)
+    .slice(0, 8)
     .map(
       (s, i) =>
-        `${i + 1}. [${s.importance}] ${s.title} (${s.category}) — ${s.summary || ""}`
+        `${i + 1}. [${s.importance}] ${s.title} (${s.category})`
     )
     .join("\n");
 
@@ -279,11 +279,11 @@ async function generateDeepBriefing(
   const systemPrompt = `You are an elite intelligence analyst writing a deep ${horizon} briefing for a reader interested in: ${interestsStr}.
 
 Below are ${horizonLabel}'s top signals (pre-ranked). Using these signals, produce a JSON object with:
-- "market_intelligence": { "analysis" (4-5 sentence strategic assessment connecting dots), "implications" (3-4 specific actionable items), "risk_scenarios" (3-4 downside scenarios with trigger conditions) }
-- "contrarian_watch": 2-3 objects with "narrative" (consensus view) and "risk_if_wrong" (consequences). Be provocative and specific.
-- "power_nodes": 8-10 key entities with importance (HIGH/MEDIUM/LOW), mentions count, "context" explaining their role
-- "opportunities": 2-3 actionable insights specific enough to act on
-- "section_articles": group the signals into sections (${sections}). For each: title, url, source, verification (VERIFIED/DEVELOPING/UNVERIFIED), status (NEW/ESCALATING/DE-ESCALATING/ONGOING), time_label, "bullets" (3-4 bullet points telling the full story), related_sources
+- "market_intelligence": { "analysis" (3-4 sentence strategic assessment), "implications" (2-3 specific items), "risk_scenarios" (2-3 downside scenarios) }
+- "contrarian_watch": 2 objects with "narrative" and "risk_if_wrong"
+- "power_nodes": 5-6 key entities with importance (HIGH/MEDIUM/LOW), mentions count, "context"
+- "opportunities": 2 actionable insights
+- "section_articles": group signals into sections (${sections}). Each: title, url, source, verification (VERIFIED/DEVELOPING/UNVERIFIED), status (NEW/ESCALATING/DE-ESCALATING/ONGOING), time_label, "bullets" (2-3 bullet points), related_sources
 
 ${styleLine}
 Return ONLY valid JSON.`;
@@ -299,7 +299,7 @@ Return ONLY valid JSON.`;
           { role: "user", content: signalSummary },
         ],
         temperature: 0.4,
-        max_tokens: 10000,
+        max_tokens: 4000,
       }),
     RETRY_OPTS
   );
