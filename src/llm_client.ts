@@ -270,6 +270,7 @@ export interface GeminiGroundedRequest {
   userMessage: string;
   temperature?: number;
   maxOutputTokens?: number;
+  responseSchema?: Record<string, unknown>;
 }
 
 function extractGeminiText(data: unknown): string {
@@ -317,8 +318,9 @@ export async function requestGeminiGroundedJson(
     tools: [{ google_search: {} }],
     generationConfig: {
       temperature: req.temperature ?? 0.35,
-      maxOutputTokens: req.maxOutputTokens ?? 1000,
+      maxOutputTokens: req.maxOutputTokens ?? 2048,
       responseMimeType: "application/json",
+      ...(req.responseSchema ? { responseSchema: req.responseSchema } : {}),
     },
   };
 

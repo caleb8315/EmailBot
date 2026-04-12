@@ -71,6 +71,28 @@ const AssistantResponseJsonSchema = {
   required: ["reply"],
 } as const;
 
+const GeminiNativeResponseSchema = {
+  type: "OBJECT",
+  properties: {
+    reply: { type: "STRING" },
+    actions: {
+      type: "OBJECT",
+      properties: {
+        add_interests: { type: "ARRAY", items: { type: "STRING" } },
+        remove_interests: { type: "ARRAY", items: { type: "STRING" } },
+        add_dislikes: { type: "ARRAY", items: { type: "STRING" } },
+        remove_dislikes: { type: "ARRAY", items: { type: "STRING" } },
+        alert_sensitivity: { type: "INTEGER" },
+        briefing_boost_sections: { type: "ARRAY", items: { type: "STRING" } },
+        briefing_mute_sections: { type: "ARRAY", items: { type: "STRING" } },
+        breaking_keywords_add: { type: "ARRAY", items: { type: "STRING" } },
+        breaking_keywords_remove: { type: "ARRAY", items: { type: "STRING" } },
+      },
+    },
+  },
+  required: ["reply"],
+};
+
 function sortForBriefingContext(
   articles: ArticleHistory[],
   lastAlertUrl: string | null
@@ -378,7 +400,8 @@ async function requestAssistantJson(
           systemInstruction: system,
           userMessage,
           temperature: 0.35,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 2048,
+          responseSchema: GeminiNativeResponseSchema,
         });
         if (grounded) return grounded;
       } catch (err) {
@@ -402,7 +425,7 @@ async function requestAssistantJson(
               instructions: system,
               input: userMessage,
               temperature: 0.35,
-              max_output_tokens: 1000,
+              max_output_tokens: 2048,
               tools: webTool,
               text: {
                 format: {
@@ -436,7 +459,7 @@ async function requestAssistantJson(
         { role: "user", content: userMessage },
       ],
       temperature: 0.35,
-      max_tokens: 1000,
+      max_tokens: 2048,
       response_format: { type: "json_object" },
     })
   );
@@ -494,10 +517,17 @@ export async function runBriefingAssistant(
 
   let parsed: z.infer<typeof AssistantResponseSchema>;
   try {
-    parsed = AssistantResponseSchema.parse(JSON.parse(raw));
-  } catch (err) {
-    logger.warn("Assistant JSON parse failed", {
-      error: err instanceof Error ? err.message : String(err),
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    parsed = AssistantResponseSchema.parse(JSON.parse(cleaned));
+  } catch {
+    const replyMatch = raw.match(/"reply"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+    if (replyMatch?.[1]) {
+      logger.warn("Assistant JSON parse failed; extracted reply field as fallback");
+      await recordAICall("chat");
+      return replyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+    }
+    logger.warn("Assistant JSON parse failed and no reply field found", {
+      rawSnippet: raw.slice(0, 200),
     });
     await recordAICall("chat");
     return "I had a formatting hiccup, but I can still answer this. Re-send your question and I'll give a tighter, clearer take.";

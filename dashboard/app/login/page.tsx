@@ -27,8 +27,10 @@ export default function LoginPage() {
         if (signUpError) throw signUpError;
         setSignupDone(true);
       } else {
-        const { error: signInError } =
-          await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         if (signInError) throw signInError;
         window.location.href = "/";
       }
@@ -41,16 +43,22 @@ export default function LoginPage() {
 
   if (signupDone) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-logo">J</div>
-          <h1>Check your email</h1>
-          <p className="login-muted">
-            We sent a confirmation link to <strong>{email}</strong>. Click it to
-            activate your account, then come back and log in.
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(99,102,241,0.26),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(56,189,248,0.16),transparent_40%)]" />
+        <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(37,99,235,0.5)] backdrop-blur-2xl">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">
+            J
+          </div>
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
+            Check your email
+          </h1>
+          <p className="mt-3 text-center text-sm text-slate-300">
+            We sent a confirmation link to{" "}
+            <strong className="text-slate-100">{email}</strong>. Confirm your account, then return
+            here to log in.
           </p>
           <button
-            className="login-btn"
+            className="mt-6 h-11 w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110"
             onClick={() => {
               setSignupDone(false);
               setMode("login");
@@ -64,17 +72,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-logo">J</div>
-        <h1>Jeff Intelligence</h1>
-        <p className="login-muted">
-          {mode === "login"
-            ? "Sign in to your dashboard"
-            : "Create your account"}
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(99,102,241,0.26),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(56,189,248,0.16),transparent_40%)]" />
+      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(37,99,235,0.5)] backdrop-blur-2xl">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">
+          J
+        </div>
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
+          Jeff Intelligence
+        </h1>
+        <p className="mt-2 text-center text-sm text-slate-400">
+          {mode === "login" ? "Sign in to your command dashboard" : "Create your account"}
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-3">
           <input
             type="email"
             placeholder="Email"
@@ -82,6 +93,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
           />
           <input
             type="password"
@@ -91,25 +103,30 @@ export default function LoginPage() {
             required
             minLength={6}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
           />
 
-          {error && <p className="login-error">{error}</p>}
+          {error && (
+            <p className="rounded-xl border border-rose-300/30 bg-rose-300/10 px-3 py-2 text-sm text-rose-100">
+              {error}
+            </p>
+          )}
 
-          <button className="login-btn" type="submit" disabled={loading}>
-            {loading
-              ? "..."
-              : mode === "login"
-                ? "Sign in"
-                : "Create account"}
+          <button
+            className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "..." : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
 
-        <p className="login-muted" style={{ marginTop: "1rem" }}>
+        <p className="mt-5 text-center text-sm text-slate-400">
           {mode === "login" ? (
             <>
               No account?{" "}
               <button
-                className="login-link"
+                className="font-semibold text-violet-200 transition hover:text-violet-100"
                 onClick={() => {
                   setMode("signup");
                   setError(null);
@@ -122,7 +139,7 @@ export default function LoginPage() {
             <>
               Already have an account?{" "}
               <button
-                className="login-link"
+                className="font-semibold text-violet-200 transition hover:text-violet-100"
                 onClick={() => {
                   setMode("login");
                   setError(null);
