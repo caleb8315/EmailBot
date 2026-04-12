@@ -252,7 +252,7 @@ function Badge({
     <span
       className={cx(
         "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
-        tone === "default" && "border-violet-300/30 bg-violet-300/10 text-violet-100",
+        tone === "default" && "border-rose-300/30 bg-rose-300/10 text-rose-100",
         tone === "alert" && "border-amber-300/30 bg-amber-300/10 text-amber-100",
         tone === "success" && "border-emerald-300/30 bg-emerald-300/10 text-emerald-100",
         tone === "warn" && "border-yellow-300/30 bg-yellow-300/10 text-yellow-100",
@@ -330,7 +330,7 @@ function ChatBubble({ message }: { message: ChatMsg }) {
     <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
         {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-xs font-bold text-white shadow-lg shadow-blue-500/30">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-500 text-xs font-bold text-white shadow-lg shadow-rose-500/30">
             J
           </div>
         )}
@@ -338,7 +338,7 @@ function ChatBubble({ message }: { message: ChatMsg }) {
           className={cx(
             "rounded-2xl px-4 py-3 shadow-xl shadow-black/30",
             isUser
-              ? "rounded-br-md border border-violet-300/25 bg-gradient-to-br from-violet-500/20 to-blue-500/20 text-slate-100"
+              ? "rounded-br-md border border-rose-300/25 bg-gradient-to-br from-fuchsia-500/20 to-rose-500/20 text-slate-100"
               : "rounded-bl-md border border-emerald-200/15 bg-emerald-200/5 text-slate-200"
           )}
         >
@@ -387,11 +387,11 @@ function ChipEditor({
             }
           }}
           placeholder={placeholder}
-          className="h-11 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
+          className="h-11 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/55 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
         />
         <button
           onClick={onAdd}
-          className="h-11 rounded-xl border border-violet-300/35 bg-violet-400/10 px-4 text-sm font-medium text-violet-100 transition hover:bg-violet-400/20"
+          className="h-11 rounded-xl border border-rose-300/35 bg-rose-400/10 px-4 text-sm font-medium text-rose-100 transition hover:bg-rose-400/20"
         >
           Add
         </button>
@@ -404,7 +404,7 @@ function ChipEditor({
             <button
               key={item}
               onClick={() => onRemove(item)}
-              className="inline-flex items-center gap-1 rounded-full border border-violet-300/35 bg-violet-300/10 px-2.5 py-1.5 text-xs text-violet-100 transition hover:bg-violet-300/20"
+              className="inline-flex items-center gap-1 rounded-full border border-rose-300/35 bg-rose-300/10 px-2.5 py-1.5 text-xs text-rose-100 transition hover:bg-rose-300/20"
               title="Tap to remove"
             >
               <span>{item}</span>
@@ -446,6 +446,7 @@ export default function DashboardClient() {
   const [feedSort, setFeedSort] = useState("date");
   const [feedMinScore, setFeedMinScore] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showFullDigest, setShowFullDigest] = useState(false);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -528,6 +529,10 @@ export default function DashboardClient() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
+
+  useEffect(() => {
+    setShowFullDigest(false);
+  }, [digests[0]?.id]);
 
   const dispatch = async (workflow: string) => {
     setDispatchMsg(null);
@@ -723,16 +728,22 @@ export default function DashboardClient() {
     (article) => new Date(article.fetched_at).toDateString() === new Date().toDateString()
   ).length;
   const alertCount = articles.filter((article) => article.alerted).length;
+  const latestDigest = digests[0];
+  const latestDigestText = latestDigest?.plain_text ?? "";
+  const hasLongDigest = latestDigestText.length > 950;
+  const digestSummary = hasLongDigest
+    ? `${latestDigestText.slice(0, 950).trimEnd()}\n…`
+    : latestDigestText;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(99,102,241,0.28),transparent_35%),radial-gradient(circle_at_100%_0%,rgba(59,130,246,0.22),transparent_40%),radial-gradient(circle_at_50%_100%,rgba(14,165,233,0.12),transparent_45%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(236,72,153,0.22),transparent_38%),radial-gradient(circle_at_85%_0%,rgba(251,146,60,0.2),transparent_40%),radial-gradient(circle_at_50%_100%,rgba(192,38,211,0.12),transparent_46%)]" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col">
-        <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 px-4 py-3 backdrop-blur-xl md:px-6">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-none flex-col xl:max-w-6xl">
+        <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/75 px-4 py-3 backdrop-blur-xl md:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-blue-500 text-sm font-bold text-white shadow-lg shadow-indigo-500/35">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-orange-400 text-sm font-bold text-white shadow-lg shadow-rose-500/35">
                 J
               </div>
               <div>
@@ -782,9 +793,9 @@ export default function DashboardClient() {
 
           {tab === "overview" && (
             <>
-              <Card className="shimmer-sweep p-5">
+              <Card className="p-5">
                 <div className="relative z-[1]">
-                  <p className="text-xs uppercase tracking-[0.16em] text-blue-200/80">{greeting}</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-rose-200/85">{greeting}</p>
                   <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-50">
                     Your intelligence command center
                   </h1>
@@ -793,7 +804,7 @@ export default function DashboardClient() {
                   </p>
                   <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button
-                      className="h-11 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110"
+                      className="h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-4 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110"
                       onClick={() => dispatch("pipeline.yml")}
                     >
                       Run pipeline
@@ -811,7 +822,7 @@ export default function DashboardClient() {
                       Send weekly recap
                     </button>
                   </div>
-                  {dispatchMsg && <p className="mt-3 text-xs text-sky-200">{dispatchMsg}</p>}
+                  {dispatchMsg && <p className="mt-3 text-xs text-amber-200">{dispatchMsg}</p>}
                 </div>
               </Card>
 
@@ -895,25 +906,43 @@ export default function DashboardClient() {
                 <div className="space-y-4">
                   <Card>
                     <SectionTitle title="Latest digest" />
-                    {digests.length === 0 ? (
+                    {!latestDigest ? (
                       <p className="text-sm text-slate-500">No digests yet.</p>
                     ) : (
                       <article>
                         <div className="mb-2 flex flex-wrap gap-2">
-                          {digests[0].channels?.map((channel) => (
+                          {latestDigest.channels?.map((channel) => (
                             <Badge key={channel} tone={channel === "telegram" ? "success" : "default"}>
                               {channel}
                             </Badge>
                           ))}
                         </div>
                         <h3 className="text-sm font-semibold text-slate-100">
-                          {digests[0].subject || "Digest"}
+                          {latestDigest.subject || "Digest"}
                         </h3>
                         <p className="mt-1 text-xs text-slate-500">
-                          {new Date(digests[0].created_at).toLocaleString()}
+                          {new Date(latestDigest.created_at).toLocaleString()}
                         </p>
-                        <p className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3 text-sm leading-relaxed text-slate-300 line-clamp-[10]">
-                          {digests[0].plain_text}
+                        <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3">
+                          <p
+                            className={cx(
+                              "whitespace-pre-wrap text-sm leading-relaxed text-slate-300",
+                              showFullDigest && "max-h-80 overflow-y-auto pr-1"
+                            )}
+                          >
+                            {showFullDigest ? latestDigestText : digestSummary}
+                          </p>
+                        </div>
+                        {hasLongDigest && (
+                          <button
+                            onClick={() => setShowFullDigest((current) => !current)}
+                            className="mt-2 text-xs font-medium text-rose-200 transition hover:text-rose-100"
+                          >
+                            {showFullDigest ? "Show shorter preview" : "Read full digest"}
+                          </button>
+                        )}
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          Preview uses saved digest text only (no extra AI calls).
                         </p>
                       </article>
                     )}
@@ -966,13 +995,13 @@ export default function DashboardClient() {
                     placeholder="Search title, source, or summary..."
                     value={feedSearch}
                     onChange={(e) => setFeedSearch(e.target.value)}
-                    className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25 md:col-span-2"
+                    className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25 md:col-span-2"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <select
                       value={feedSort}
                       onChange={(e) => setFeedSort(e.target.value)}
-                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-violet-300/50 focus:outline-none"
+                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-rose-300/50 focus:outline-none"
                     >
                       <option value="date">Newest</option>
                       <option value="importance">Importance</option>
@@ -980,7 +1009,7 @@ export default function DashboardClient() {
                     <select
                       value={feedMinScore}
                       onChange={(e) => setFeedMinScore(Number(e.target.value))}
-                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-violet-300/50 focus:outline-none"
+                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-rose-300/50 focus:outline-none"
                     >
                       <option value="0">All scores</option>
                       <option value="3">3+</option>
@@ -1025,7 +1054,7 @@ export default function DashboardClient() {
                           href={article.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-sky-300 transition hover:text-sky-100"
+                          className="inline-flex items-center gap-1 text-amber-300 transition hover:text-amber-100"
                         >
                           open article <OpenIcon />
                         </a>
@@ -1034,7 +1063,7 @@ export default function DashboardClient() {
                         <div className="mt-3">
                           <button
                             onClick={() => toggleExpand(article.url)}
-                            className="text-xs font-medium text-violet-200 transition hover:text-violet-100"
+                            className="text-xs font-medium text-rose-200 transition hover:text-rose-100"
                           >
                             {expanded.has(article.url) ? "Hide summary" : "Show summary"}
                           </button>
@@ -1062,7 +1091,7 @@ export default function DashboardClient() {
                 <div className="h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3">
                   {chat.length === 0 && (
                     <div className="mx-auto mt-16 max-w-sm text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/25 to-blue-500/25 text-lg text-violet-100">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500/25 to-orange-400/25 text-lg text-rose-100">
                         ✦
                       </div>
                       <p className="text-sm text-slate-300">
@@ -1075,7 +1104,7 @@ export default function DashboardClient() {
                   ))}
                   {chatBusy && (
                     <div className="mb-3 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-500 text-xs font-bold text-white">
                         J
                       </div>
                       <div className="rounded-2xl rounded-bl-md border border-white/10 bg-white/5 px-4 py-3">
@@ -1109,12 +1138,12 @@ export default function DashboardClient() {
                       }}
                       placeholder="Ask Jeff anything..."
                       disabled={chatBusy}
-                      className="h-14 max-h-36 min-h-[56px] flex-1 resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
+                      className="h-14 max-h-36 min-h-[56px] flex-1 resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
                     />
                     <button
                       onClick={sendChat}
                       disabled={chatBusy || !input.trim()}
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <SendIcon />
                     </button>
@@ -1146,13 +1175,13 @@ export default function DashboardClient() {
                     <button
                       onClick={savePreferences}
                       disabled={!prefsDirty || prefsSaving}
-                      className="h-10 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+                      className="h-10 rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
                     >
                       {prefsSaving ? "Saving..." : "Save"}
                     </button>
                   </div>
                 </div>
-                {prefsMsg && <p className="mt-3 text-xs text-sky-200">{prefsMsg}</p>}
+                {prefsMsg && <p className="mt-3 text-xs text-amber-200">{prefsMsg}</p>}
               </Card>
 
               {!prefs ? (
@@ -1179,7 +1208,7 @@ export default function DashboardClient() {
                           alert_sensitivity: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-violet-400"
+                      className="w-full accent-rose-400"
                     />
                     <div className="mt-2 flex justify-between text-xs text-slate-500">
                       <span>Strict</span>
@@ -1205,7 +1234,7 @@ export default function DashboardClient() {
                             className={cx(
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                               active
-                                ? "border-violet-300/45 bg-violet-300/15 text-violet-100"
+                                ? "border-rose-300/45 bg-rose-300/15 text-rose-100"
                                 : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
                             )}
                           >
@@ -1300,7 +1329,7 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   boosted
-                                    ? "border-violet-300/50 bg-violet-300/20 text-violet-100"
+                                    ? "border-rose-300/50 bg-rose-300/20 text-rose-100"
                                     : "border-white/12 bg-white/5 text-slate-300"
                                 )}
                               >
@@ -1330,10 +1359,10 @@ export default function DashboardClient() {
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/90 px-2 pt-2 backdrop-blur-2xl md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-zinc-950/92 px-4 pt-2 backdrop-blur-2xl md:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
         >
-          <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+          <div className="mx-auto grid w-full grid-cols-4 gap-1 xl:max-w-6xl">
             {tabs.map((item) => (
               <MobileTabButton
                 key={item.id}

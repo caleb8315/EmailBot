@@ -44,9 +44,9 @@ export default function LoginPage() {
   if (signupDone) {
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(99,102,241,0.26),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(56,189,248,0.16),transparent_40%)]" />
-        <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(37,99,235,0.5)] backdrop-blur-2xl">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(236,72,153,0.24),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(251,146,60,0.18),transparent_40%)]" />
+        <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(244,63,94,0.5)] backdrop-blur-2xl">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-rose-500 text-lg font-bold text-white">
             J
           </div>
           <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
@@ -58,7 +58,7 @@ export default function LoginPage() {
             here to log in.
           </p>
           <button
-            className="mt-6 h-11 w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110"
+            className="mt-6 h-11 w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110"
             onClick={() => {
               setSignupDone(false);
               setMode("login");
@@ -73,9 +73,9 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(99,102,241,0.26),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(56,189,248,0.16),transparent_40%)]" />
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(37,99,235,0.5)] backdrop-blur-2xl">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(236,72,153,0.24),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(251,146,60,0.18),transparent_40%)]" />
+      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(244,63,94,0.5)] backdrop-blur-2xl">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-rose-500 text-lg font-bold text-white">
           J
         </div>
         <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
@@ -93,7 +93,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
           />
           <input
             type="password"
@@ -103,7 +103,7 @@ export default function LoginPage() {
             required
             minLength={6}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none focus:ring-2 focus:ring-violet-300/25"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
           />
 
           {error && (
@@ -113,7 +113,7 @@ export default function LoginPage() {
           )}
 
           <button
-            className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-11 w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             type="submit"
             disabled={loading}
           >
@@ -126,7 +126,7 @@ export default function LoginPage() {
             <>
               No account?{" "}
               <button
-                className="font-semibold text-violet-200 transition hover:text-violet-100"
+                className="font-semibold text-rose-200 transition hover:text-rose-100"
                 onClick={() => {
                   setMode("signup");
                   setError(null);
@@ -139,7 +139,7 @@ export default function LoginPage() {
             <>
               Already have an account?{" "}
               <button
-                className="font-semibold text-violet-200 transition hover:text-violet-100"
+                className="font-semibold text-rose-200 transition hover:text-rose-100"
                 onClick={() => {
                   setMode("login");
                   setError(null);
