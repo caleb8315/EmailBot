@@ -110,9 +110,26 @@ function formatClock(iso: string): string {
 
 function importanceColor(score: number): string {
   if (score >= 8) return "#f87171";
-  if (score >= 6) return "#fbbf24";
-  if (score >= 4) return "#60a5fa";
-  return "#6366f1";
+  if (score >= 6) return "#fb923c";
+  if (score >= 4) return "#fbbf24";
+  return "#34d399";
+}
+
+function thumbGradient(seed: string): string {
+  const hues = [
+    "from-teal-400 to-emerald-700",
+    "from-cyan-500 to-teal-700",
+    "from-emerald-400 to-teal-800",
+    "from-teal-500 to-cyan-800",
+  ];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 997;
+  return hues[h % hues.length];
+}
+
+function titleInitials(title: string): string {
+  const words = title.trim().split(/\s+/).slice(0, 2);
+  return words.map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
 function dedupeStrings(values: string[]): string[] {
@@ -228,16 +245,278 @@ function SendIcon() {
   );
 }
 
-function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={cx("surface-card rounded-2xl p-4", className)}>{children}</section>;
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-zinc-400" stroke="currentColor" strokeWidth="2">
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
 }
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function SearchIcon() {
   return (
-    <div className="mb-3 flex items-end justify-between gap-3">
-      <h2 className="text-base font-semibold tracking-tight text-slate-100">{title}</h2>
-      {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-zinc-400" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.2-3.2" />
+    </svg>
+  );
+}
+
+function FilterIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="2">
+      <path d="M4 6h16M7 12h10m-7 6h4" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="2">
+      <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z" />
+      <path d="m22 7-10 6L2 7" />
+    </svg>
+  );
+}
+
+function Card({ children, className }: { children: ReactNode; className?: string }) {
+  return <section className={cx("surface-card p-4", className)}>{children}</section>;
+}
+
+function SectionHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight text-zinc-900">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
+      </div>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="shrink-0 text-xs font-semibold text-teal-700 transition hover:text-teal-800"
+        >
+          {action.label}
+        </button>
+      )}
     </div>
+  );
+}
+
+function SearchRow({
+  value,
+  onChange,
+  onSubmit,
+  placeholder,
+  filterSlot,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  filterSlot?: ReactNode;
+}) {
+  return (
+    <div className="flex items-stretch gap-2">
+      <form
+        className="surface-inset flex min-h-[48px] flex-1 items-center gap-2 px-3 shadow-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        <SearchIcon />
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
+        />
+      </form>
+      {filterSlot}
+    </div>
+  );
+}
+
+function TopicPillStrip({
+  topics,
+  activeLower,
+  onSelect,
+}: {
+  topics: readonly string[];
+  activeLower: Set<string>;
+  onSelect: (topic: string) => void;
+}) {
+  return (
+    <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {topics.map((topic) => {
+        const active = activeLower.has(topic.toLowerCase());
+        return (
+          <button
+            key={topic}
+            type="button"
+            onClick={() => onSelect(topic)}
+            className={cx(
+              "shrink-0 snap-start rounded-full border px-3 py-2 text-xs font-medium transition",
+              active
+                ? "border-teal-400/60 bg-teal-100 text-teal-900"
+                : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+            )}
+          >
+            {topic}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShortcutRow({
+  icon,
+  title,
+  subtitle,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:bg-zinc-50"
+    >
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-800">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-zinc-900">{title}</p>
+        <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+      </div>
+      <ChevronRightIcon />
+    </button>
+  );
+}
+
+function FeaturedArticleCard({ article }: { article: Article }) {
+  const g = thumbGradient(article.url);
+  const ini = titleInitials(article.title);
+  return (
+    <a
+      href={article.url}
+      target="_blank"
+      rel="noreferrer"
+      className="w-[220px] shrink-0 snap-start overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left shadow-sm transition hover:border-teal-300/60 hover:shadow-md"
+    >
+      <div
+        className={cx(
+          "flex aspect-[16/10] items-center justify-center bg-gradient-to-br text-lg font-bold text-white",
+          g
+        )}
+      >
+        {ini}
+      </div>
+      <div className="p-3">
+        <p className="line-clamp-2 text-sm font-semibold text-zinc-900">{article.title}</p>
+        <p className="mt-1 text-xs text-zinc-500">{article.source}</p>
+        {article.importance_score != null && (
+          <p className="mt-1 text-[11px] font-medium text-teal-800">Score {article.importance_score}/10</p>
+        )}
+      </div>
+    </a>
+  );
+}
+
+function IntelListRow({
+  article,
+  expanded,
+  onToggleExpand,
+  accentBorder,
+}: {
+  article: Article;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  accentBorder?: string;
+}) {
+  const g = thumbGradient(article.url);
+  const ini = titleInitials(article.title);
+  return (
+    <article
+      className={cx(
+        "surface-card flex gap-3 overflow-hidden p-3",
+        accentBorder && "border-l-[4px] border-zinc-200"
+      )}
+      style={accentBorder ? { borderLeftColor: accentBorder } : undefined}
+    >
+      <div
+        className={cx(
+          "flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-bold text-white",
+          g
+        )}
+      >
+        {ini}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex flex-wrap items-center gap-1.5">
+          <Badge>{article.source}</Badge>
+          {article.alerted && <Badge tone="alert">alert</Badge>}
+          {article.emailed && <Badge tone="success">emailed</Badge>}
+          {article.importance_score != null && (
+            <span className="text-[11px] text-zinc-500">imp {article.importance_score}/10</span>
+          )}
+          {article.credibility_score != null && (
+            <span className="text-[11px] text-zinc-500">cred {article.credibility_score}/10</span>
+          )}
+        </div>
+        <h3 className="line-clamp-2 text-sm font-semibold text-zinc-900">{article.title}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <span>{timeAgo(article.fetched_at)}</span>
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-teal-700 hover:text-teal-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            open <OpenIcon />
+          </a>
+        </div>
+        {article.summary && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+            >
+              {expanded ? "Hide summary" : "Show summary"}
+            </button>
+            {expanded && (
+              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-zinc-700">
+                {article.summary}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -251,12 +530,12 @@ function Badge({
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
-        tone === "default" && "border-rose-300/30 bg-rose-300/10 text-rose-100",
-        tone === "alert" && "border-amber-300/30 bg-amber-300/10 text-amber-100",
-        tone === "success" && "border-emerald-300/30 bg-emerald-300/10 text-emerald-100",
-        tone === "warn" && "border-yellow-300/30 bg-yellow-300/10 text-yellow-100",
-        tone === "danger" && "border-rose-300/30 bg-rose-300/10 text-rose-100"
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        tone === "default" && "border-teal-200 bg-teal-50 text-teal-900",
+        tone === "alert" && "border-amber-200 bg-amber-50 text-amber-900",
+        tone === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900",
+        tone === "warn" && "border-yellow-200 bg-yellow-50 text-yellow-900",
+        tone === "danger" && "border-rose-200 bg-rose-50 text-rose-900"
       )}
     >
       {children}
@@ -277,10 +556,13 @@ function TabButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cx(
         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
-        active ? "bg-white/12 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
+        active
+          ? "bg-teal-500/20 text-teal-100"
+          : "text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100"
       )}
     >
       {icon}
@@ -302,13 +584,17 @@ function MobileTabButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cx(
-        "flex min-h-[52px] flex-col items-center justify-center rounded-2xl px-2 text-[11px] font-medium transition",
-        active ? "bg-white/12 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+        "relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl px-2 text-[11px] font-semibold transition",
+        active ? "text-teal-200" : "text-zinc-500 hover:text-zinc-300"
       )}
     >
-      <span className="mb-1">{icon}</span>
+      {active && (
+        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-teal-400 to-emerald-500" />
+      )}
+      <span className={cx("mb-1", active && "mt-1")}>{icon}</span>
       <span>{label}</span>
     </button>
   );
@@ -316,10 +602,10 @@ function MobileTabButton({
 
 function StatTile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="glass-panel-strong rounded-2xl p-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-100">{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    <div className="surface-card border border-zinc-200/95 p-3 shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-900">{value}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-zinc-500">{hint}</p>}
     </div>
   );
 }
@@ -330,21 +616,21 @@ function ChatBubble({ message }: { message: ChatMsg }) {
     <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
         {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-500 text-xs font-bold text-white shadow-lg shadow-rose-500/30">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-xs font-bold text-white shadow-md shadow-teal-900/40">
             J
           </div>
         )}
         <div
           className={cx(
-            "rounded-2xl px-4 py-3 shadow-xl shadow-black/30",
+            "rounded-2xl px-4 py-3 shadow-md",
             isUser
-              ? "rounded-br-md border border-rose-300/25 bg-gradient-to-br from-fuchsia-500/20 to-rose-500/20 text-slate-100"
-              : "rounded-bl-md border border-emerald-200/15 bg-emerald-200/5 text-slate-200"
+              ? "rounded-br-md border border-teal-200/50 bg-gradient-to-br from-teal-100 to-emerald-50 text-zinc-900"
+              : "rounded-bl-md border border-zinc-200 bg-white text-zinc-900"
           )}
         >
-          <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-slate-400">
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
             <span>{isUser ? "You" : "Jeff"}</span>
-            <span className="text-slate-500">{formatClock(message.createdAt)}</span>
+            <span className="text-zinc-400">{formatClock(message.createdAt)}</span>
           </div>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
         </div>
@@ -374,8 +660,8 @@ function ChipEditor({
 }) {
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
-      {description && <p className="mt-1 text-xs text-slate-400">{description}</p>}
+      <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+      {description && <p className="mt-1 text-xs text-zinc-500">{description}</p>}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={value}
@@ -387,24 +673,22 @@ function ChipEditor({
             }
           }}
           placeholder={placeholder}
-          className="h-11 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/55 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
+          className="input-hybrid h-11 flex-1"
         />
-        <button
-          onClick={onAdd}
-          className="h-11 rounded-xl border border-rose-300/35 bg-rose-400/10 px-4 text-sm font-medium text-rose-100 transition hover:bg-rose-400/20"
-        >
+        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-teal-200 px-4 text-teal-900">
           Add
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length === 0 ? (
-          <p className="text-xs text-slate-500">Nothing added yet.</p>
+          <p className="text-xs text-zinc-500">Nothing added yet.</p>
         ) : (
           items.map((item) => (
             <button
               key={item}
+              type="button"
               onClick={() => onRemove(item)}
-              className="inline-flex items-center gap-1 rounded-full border border-rose-300/35 bg-rose-300/10 px-2.5 py-1.5 text-xs text-rose-100 transition hover:bg-rose-300/20"
+              className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-medium text-teal-900 transition hover:bg-teal-100"
               title="Tap to remove"
             >
               <span>{item}</span>
@@ -447,6 +731,8 @@ export default function DashboardClient() {
   const [feedMinScore, setFeedMinScore] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showFullDigest, setShowFullDigest] = useState(false);
+  const [overviewSearch, setOverviewSearch] = useState("");
+  const [showIntelFilters, setShowIntelFilters] = useState(false);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -723,6 +1009,23 @@ export default function DashboardClient() {
     });
   }, [feedArticles, feedSearch]);
 
+  const featuredArticles = useMemo(() => {
+    return [...articles]
+      .sort((a, b) => {
+        const ia = a.importance_score ?? 0;
+        const ib = b.importance_score ?? 0;
+        if (ib !== ia) return ib - ia;
+        return new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime();
+      })
+      .slice(0, 12);
+  }, [articles]);
+
+  const quickInterestActive = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of prefs?.interests ?? []) s.add(i.toLowerCase());
+    return s;
+  }, [prefs?.interests]);
+
   const lastRun = runs[0];
   const articlesToday = articles.filter(
     (article) => new Date(article.fetched_at).toDateString() === new Date().toDateString()
@@ -737,32 +1040,34 @@ export default function DashboardClient() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(236,72,153,0.22),transparent_38%),radial-gradient(circle_at_85%_0%,rgba(251,146,60,0.2),transparent_40%),radial-gradient(circle_at_50%_100%,rgba(192,38,211,0.12),transparent_46%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(45,212,191,0.14),transparent_40%),radial-gradient(circle_at_85%_0%,rgba(16,185,129,0.1),transparent_42%),radial-gradient(circle_at_50%_100%,rgba(6,182,212,0.08),transparent_48%)]" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-none flex-col xl:max-w-6xl">
-        <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/75 px-4 py-3 backdrop-blur-xl md:px-6">
+        <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/85 px-4 py-3 backdrop-blur-xl md:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-orange-400 text-sm font-bold text-white shadow-lg shadow-rose-500/35">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-sm font-bold text-white shadow-lg shadow-teal-900/40">
                 J
               </div>
               <div>
-                <p className="text-sm font-semibold tracking-tight text-slate-100">Jeff Intelligence</p>
-                <p className="text-xs text-slate-400">AI command dashboard</p>
+                <p className="text-sm font-semibold tracking-tight text-zinc-100">Jeff Intelligence</p>
+                <p className="text-xs text-zinc-500">AI command dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={refreshData}
                 title="Refresh data"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:text-white"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition hover:text-zinc-100"
               >
                 <RefreshIcon />
               </button>
               <button
+                type="button"
                 onClick={handleSignOut}
                 title="Sign out"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:text-white"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition hover:text-zinc-100"
               >
                 <LogoutIcon />
               </button>
@@ -770,7 +1075,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        <nav className="sticky top-[65px] z-30 hidden border-b border-white/10 bg-slate-950/60 px-4 py-2 backdrop-blur-xl md:block md:px-6">
+        <nav className="sticky top-[65px] z-30 hidden border-b border-zinc-800/80 bg-zinc-950/70 px-4 py-2 backdrop-blur-xl md:block md:px-6">
           <div className="flex items-center gap-2">
             {tabs.map((item) => (
               <TabButton
@@ -786,47 +1091,78 @@ export default function DashboardClient() {
 
         <main className="flex-1 space-y-5 px-4 pb-28 pt-5 md:px-6 md:pb-8">
           {loadErr && (
-            <div className="rounded-2xl border border-rose-300/30 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
+            <div className="surface-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
               {loadErr}
             </div>
           )}
 
           {tab === "overview" && (
             <>
-              <Card className="p-5">
-                <div className="relative z-[1]">
-                  <p className="text-xs uppercase tracking-[0.16em] text-rose-200/85">{greeting}</p>
-                  <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-50">
-                    Your intelligence command center
-                  </h1>
-                  <p className="mt-2 max-w-2xl text-sm text-slate-300">
-                    Monitor workflow health, trigger digests, and review high-signal stories with a clean, mobile-first interface.
-                  </p>
-                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <button
-                      className="h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-4 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110"
-                      onClick={() => dispatch("pipeline.yml")}
-                    >
-                      Run pipeline
-                    </button>
-                    <button
-                      className="h-11 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-medium text-slate-100 transition hover:bg-white/10"
-                      onClick={() => dispatch("daily_email.yml")}
-                    >
-                      Send daily digest
-                    </button>
-                    <button
-                      className="h-11 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-medium text-slate-100 transition hover:bg-white/10"
-                      onClick={() => dispatch("weekly_digest.yml")}
-                    >
-                      Send weekly recap
-                    </button>
-                  </div>
-                  {dispatchMsg && <p className="mt-3 text-xs text-amber-200">{dispatchMsg}</p>}
-                </div>
-              </Card>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-teal-400/95">{greeting}</p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-50">Briefing home</h1>
+                <p className="mt-1 max-w-md text-sm text-zinc-400">
+                  Search, scan topics, and jump into intel or chat.
+                </p>
+              </div>
 
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <SearchRow
+                value={overviewSearch}
+                onChange={setOverviewSearch}
+                onSubmit={() => {
+                  setFeedSearch(overviewSearch);
+                  setTab("intel");
+                }}
+                placeholder="Search intel, sources, topics…"
+              />
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Hot topics</p>
+                <TopicPillStrip
+                  topics={QUICK_INTERESTS}
+                  activeLower={quickInterestActive}
+                  onSelect={(topic) => {
+                    setFeedSearch(topic);
+                    setTab("intel");
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <ShortcutRow
+                  icon={<FeedIcon />}
+                  title="Intel feed"
+                  subtitle="Browse all articles and filters"
+                  onClick={() => setTab("intel")}
+                />
+                <ShortcutRow
+                  icon={<ChatIcon />}
+                  title="Chat with Jeff"
+                  subtitle="Ask questions about your briefings"
+                  onClick={() => setTab("chat")}
+                />
+                <ShortcutRow
+                  icon={<PlayIcon />}
+                  title="Run pipeline"
+                  subtitle="Trigger latest ingest workflow"
+                  onClick={() => dispatch("pipeline.yml")}
+                />
+                <ShortcutRow
+                  icon={<MailIcon />}
+                  title="Send daily digest"
+                  subtitle="Email briefing snapshot"
+                  onClick={() => dispatch("daily_email.yml")}
+                />
+                <ShortcutRow
+                  icon={<MailIcon />}
+                  title="Send weekly recap"
+                  subtitle="Longer weekly newsletter"
+                  onClick={() => dispatch("weekly_digest.yml")}
+                />
+              </div>
+              {dispatchMsg && <p className="text-xs font-medium text-amber-400">{dispatchMsg}</p>}
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <StatTile
                   label="Pipeline"
                   value={lastRun ? lastRun.conclusion || lastRun.status : "-"}
@@ -837,128 +1173,148 @@ export default function DashboardClient() {
                 <StatTile label="Total digests" value={digests.length} />
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                <div className="space-y-4">
-                  <Card>
-                    <SectionTitle title="Workflow activity" subtitle="Recent GitHub runs" />
-                    {runErr && <p className="mb-2 text-xs text-rose-300">{runErr}</p>}
-                    {runs.length === 0 ? (
-                      <p className="text-sm text-slate-500">No workflow runs yet.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {runs.slice(0, 8).map((run) => (
-                          <div
-                            key={run.id}
-                            className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2"
-                          >
-                            <span
-                              className={cx(
-                                "h-2.5 w-2.5 rounded-full",
-                                run.status === "completed" && run.conclusion === "success"
-                                  ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.8)]"
-                                  : run.conclusion === "failure"
-                                    ? "bg-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.8)]"
-                                    : "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,0.8)]"
-                              )}
-                            />
-                            <p className="flex-1 truncate text-sm text-slate-200">{run.name}</p>
-                            <span className="text-xs text-slate-500">{timeAgo(run.created_at)}</span>
-                            <a
-                              href={run.html_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300 transition hover:text-white"
-                            >
-                              open <OpenIcon />
-                            </a>
-                          </div>
+              <div>
+                <SectionHeader
+                  title="Featured signals"
+                  subtitle="Ranked by importance"
+                  action={{ label: "View all", onClick: () => setTab("intel") }}
+                />
+                {featuredArticles.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No articles yet. Run the pipeline to populate.</p>
+                ) : (
+                  <div className="no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-1 pt-1">
+                    {featuredArticles.map((article) => (
+                      <FeaturedArticleCard key={article.url} article={article} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Card className="overflow-hidden p-0">
+                <div className="h-28 bg-gradient-to-br from-teal-400 via-emerald-500 to-cyan-600" />
+                <div className="p-4">
+                  <SectionHeader title="Latest digest" />
+                  {!latestDigest ? (
+                    <p className="text-sm text-zinc-500">No digests yet.</p>
+                  ) : (
+                    <article>
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {latestDigest.channels?.map((channel) => (
+                          <Badge key={channel} tone={channel === "telegram" ? "success" : "default"}>
+                            {channel}
+                          </Badge>
                         ))}
                       </div>
-                    )}
-                  </Card>
-
-                  <Card>
-                    <SectionTitle title="Recent articles" subtitle="Top signals" />
-                    <div className="space-y-2">
-                      {articles.slice(0, 8).map((article) => (
-                        <article
-                          key={article.url}
-                          className="rounded-xl border border-white/5 bg-white/[0.03] p-3"
+                      <h3 className="text-sm font-semibold text-zinc-900">
+                        {latestDigest.subject || "Digest"}
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {new Date(latestDigest.created_at).toLocaleString()}
+                      </p>
+                      <div className="surface-inset mt-3 p-3">
+                        <p
+                          className={cx(
+                            "whitespace-pre-wrap text-sm leading-relaxed text-zinc-700",
+                            showFullDigest && "max-h-80 overflow-y-auto pr-1"
+                          )}
                         >
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <Badge>{article.source}</Badge>
-                            {article.alerted && <Badge tone="alert">alert</Badge>}
-                            {article.emailed && <Badge tone="success">emailed</Badge>}
-                            {article.importance_score != null && (
-                              <span className="text-xs text-slate-400">
-                                importance {article.importance_score}/10
-                              </span>
+                          {showFullDigest ? latestDigestText : digestSummary}
+                        </p>
+                      </div>
+                      {hasLongDigest && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFullDigest((current) => !current)}
+                          className="mt-2 text-xs font-semibold text-teal-700 hover:text-teal-900"
+                        >
+                          {showFullDigest ? "Show shorter preview" : "Read full digest"}
+                        </button>
+                      )}
+                      <p className="mt-1 text-[11px] text-zinc-500">
+                        Preview uses saved digest text only (no extra AI calls).
+                      </p>
+                    </article>
+                  )}
+                </div>
+              </Card>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card>
+                  <SectionHeader title="Workflow activity" subtitle="Recent GitHub runs" />
+                  {runErr && <p className="mb-2 text-xs text-rose-700">{runErr}</p>}
+                  {runs.length === 0 ? (
+                    <p className="text-sm text-zinc-500">No workflow runs yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {runs.slice(0, 8).map((run) => (
+                        <div
+                          key={run.id}
+                          className="surface-inset flex items-center gap-2 px-3 py-2"
+                        >
+                          <span
+                            className={cx(
+                              "h-2.5 w-2.5 shrink-0 rounded-full",
+                              run.status === "completed" && run.conclusion === "success"
+                                ? "bg-emerald-500"
+                                : run.conclusion === "failure"
+                                  ? "bg-rose-500"
+                                  : "bg-amber-400"
                             )}
-                          </div>
-                          <h3 className="line-clamp-2 text-sm font-medium text-slate-100">{article.title}</h3>
-                          <p className="mt-1 text-xs text-slate-500">{timeAgo(article.fetched_at)}</p>
-                        </article>
+                          />
+                          <p className="min-w-0 flex-1 truncate text-sm text-zinc-800">{run.name}</p>
+                          <span className="shrink-0 text-xs text-zinc-500">{timeAgo(run.created_at)}</span>
+                          <a
+                            href={run.html_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs text-teal-800 hover:bg-zinc-50"
+                          >
+                            open <OpenIcon />
+                          </a>
+                        </div>
                       ))}
                     </div>
-                  </Card>
-                </div>
+                  )}
+                </Card>
 
                 <div className="space-y-4">
                   <Card>
-                    <SectionTitle title="Latest digest" />
-                    {!latestDigest ? (
-                      <p className="text-sm text-slate-500">No digests yet.</p>
-                    ) : (
-                      <article>
-                        <div className="mb-2 flex flex-wrap gap-2">
-                          {latestDigest.channels?.map((channel) => (
-                            <Badge key={channel} tone={channel === "telegram" ? "success" : "default"}>
-                              {channel}
-                            </Badge>
-                          ))}
-                        </div>
-                        <h3 className="text-sm font-semibold text-slate-100">
-                          {latestDigest.subject || "Digest"}
-                        </h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {new Date(latestDigest.created_at).toLocaleString()}
-                        </p>
-                        <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3">
-                          <p
-                            className={cx(
-                              "whitespace-pre-wrap text-sm leading-relaxed text-slate-300",
-                              showFullDigest && "max-h-80 overflow-y-auto pr-1"
-                            )}
+                    <SectionHeader title="Recent articles" subtitle="Latest in your briefing" />
+                    <div className="space-y-2">
+                      {articles.slice(0, 6).length === 0 ? (
+                        <p className="text-sm text-zinc-500">No articles yet.</p>
+                      ) : (
+                        articles.slice(0, 6).map((article) => (
+                          <a
+                            key={article.url}
+                            href={article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="surface-inset block p-3 transition hover:border-teal-200 hover:bg-teal-50/40"
                           >
-                            {showFullDigest ? latestDigestText : digestSummary}
-                          </p>
-                        </div>
-                        {hasLongDigest && (
-                          <button
-                            onClick={() => setShowFullDigest((current) => !current)}
-                            className="mt-2 text-xs font-medium text-rose-200 transition hover:text-rose-100"
-                          >
-                            {showFullDigest ? "Show shorter preview" : "Read full digest"}
-                          </button>
-                        )}
-                        <p className="mt-1 text-[11px] text-slate-500">
-                          Preview uses saved digest text only (no extra AI calls).
-                        </p>
-                      </article>
-                    )}
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <Badge>{article.source}</Badge>
+                              {article.alerted && <Badge tone="alert">alert</Badge>}
+                              {article.importance_score != null && (
+                                <span className="text-[11px] text-zinc-500">imp {article.importance_score}/10</span>
+                              )}
+                            </div>
+                            <h3 className="line-clamp-2 text-sm font-medium text-zinc-900">{article.title}</h3>
+                            <p className="mt-1 text-xs text-zinc-500">{timeAgo(article.fetched_at)}</p>
+                          </a>
+                        ))
+                      )}
+                    </div>
                   </Card>
 
                   <Card>
-                    <SectionTitle title="Events & errors" />
+                    <SectionHeader title="Events & errors" />
                     {events.length === 0 ? (
-                      <p className="text-sm text-slate-500">No events logged yet.</p>
+                      <p className="text-sm text-zinc-500">No events logged yet.</p>
                     ) : (
                       <div className="space-y-2">
-                        {events.slice(0, 10).map((event) => (
-                          <article
-                            key={event.id}
-                            className="rounded-xl border border-white/5 bg-white/[0.03] p-3"
-                          >
+                        {events.slice(0, 8).map((event) => (
+                          <article key={event.id} className="surface-inset p-3">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
                               <Badge
                                 tone={
@@ -972,9 +1328,9 @@ export default function DashboardClient() {
                                 {event.level}
                               </Badge>
                               <Badge>{event.source}</Badge>
-                              <span className="text-xs text-slate-500">{timeAgo(event.created_at)}</span>
+                              <span className="text-xs text-zinc-500">{timeAgo(event.created_at)}</span>
                             </div>
-                            <p className="text-sm text-slate-300">{event.message}</p>
+                            <p className="text-sm text-zinc-700">{event.message}</p>
                           </article>
                         ))}
                       </div>
@@ -988,20 +1344,34 @@ export default function DashboardClient() {
           {tab === "intel" && (
             <>
               <Card>
-                <SectionTitle title="Intel feed" subtitle="Search and filter live articles" />
-                <div className="grid gap-2 md:grid-cols-3">
-                  <input
-                    type="text"
-                    placeholder="Search title, source, or summary..."
-                    value={feedSearch}
-                    onChange={(e) => setFeedSearch(e.target.value)}
-                    className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25 md:col-span-2"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
+                <SectionHeader title="Intel feed" subtitle="Search and filter live articles" />
+                <SearchRow
+                  value={feedSearch}
+                  onChange={setFeedSearch}
+                  onSubmit={() => undefined}
+                  placeholder="Search title, source, or summary…"
+                  filterSlot={
+                    <button
+                      type="button"
+                      onClick={() => setShowIntelFilters((v) => !v)}
+                      title="Filters"
+                      className={cx(
+                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm transition",
+                        showIntelFilters
+                          ? "border-teal-400 bg-teal-50 text-teal-800"
+                          : "surface-inset border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                      )}
+                    >
+                      <FilterIcon />
+                    </button>
+                  }
+                />
+                {showIntelFilters && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
                     <select
                       value={feedSort}
                       onChange={(e) => setFeedSort(e.target.value)}
-                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-rose-300/50 focus:outline-none"
+                      className="input-hybrid h-11 text-sm"
                     >
                       <option value="date">Newest</option>
                       <option value="importance">Importance</option>
@@ -1009,7 +1379,7 @@ export default function DashboardClient() {
                     <select
                       value={feedMinScore}
                       onChange={(e) => setFeedMinScore(Number(e.target.value))}
-                      className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 focus:border-rose-300/50 focus:outline-none"
+                      className="input-hybrid h-11 text-sm"
                     >
                       <option value="0">All scores</option>
                       <option value="3">3+</option>
@@ -1017,64 +1387,26 @@ export default function DashboardClient() {
                       <option value="7">7+</option>
                     </select>
                   </div>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">
+                )}
+                <p className="mt-3 text-xs text-zinc-500">
                   {filteredFeed.length} article{filteredFeed.length === 1 ? "" : "s"} found
                 </p>
               </Card>
 
               {filteredFeed.length === 0 ? (
                 <Card className="py-10 text-center">
-                  <p className="text-sm text-slate-400">No articles match your filters right now.</p>
+                  <p className="text-sm text-zinc-500">No articles match your filters right now.</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
                   {filteredFeed.map((article) => (
-                    <article
+                    <IntelListRow
                       key={article.url}
-                      className="surface-card rounded-2xl border-l-4 p-4"
-                      style={{ borderLeftColor: importanceColor(article.importance_score ?? 0) }}
-                    >
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <Badge>{article.source}</Badge>
-                        {article.alerted && <Badge tone="alert">alert</Badge>}
-                        {article.emailed && <Badge tone="success">emailed</Badge>}
-                        {article.importance_score != null && (
-                          <span className="text-xs text-slate-400">importance {article.importance_score}/10</span>
-                        )}
-                        {article.credibility_score != null && (
-                          <span className="text-xs text-slate-500">cred {article.credibility_score}/10</span>
-                        )}
-                      </div>
-                      <h3 className="text-base font-medium tracking-tight text-slate-100">{article.title}</h3>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>{timeAgo(article.fetched_at)}</span>
-                        <span>•</span>
-                        <a
-                          href={article.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-amber-300 transition hover:text-amber-100"
-                        >
-                          open article <OpenIcon />
-                        </a>
-                      </div>
-                      {article.summary && (
-                        <div className="mt-3">
-                          <button
-                            onClick={() => toggleExpand(article.url)}
-                            className="text-xs font-medium text-rose-200 transition hover:text-rose-100"
-                          >
-                            {expanded.has(article.url) ? "Hide summary" : "Show summary"}
-                          </button>
-                          {expanded.has(article.url) && (
-                            <p className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-relaxed text-slate-300">
-                              {article.summary}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </article>
+                      article={article}
+                      expanded={expanded.has(article.url)}
+                      onToggleExpand={() => toggleExpand(article.url)}
+                      accentBorder={importanceColor(article.importance_score ?? 0)}
+                    />
                   ))}
                 </div>
               )}
@@ -1083,18 +1415,18 @@ export default function DashboardClient() {
 
           {tab === "chat" && (
             <Card className="p-3">
-              <SectionTitle
+              <SectionHeader
                 title="Chat with Jeff"
                 subtitle="Ask for timelines, context, and strategic analysis"
               />
               <div className="grid gap-3">
-                <div className="h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3">
+                <div className="surface-inset h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto p-3">
                   {chat.length === 0 && (
                     <div className="mx-auto mt-16 max-w-sm text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500/25 to-orange-400/25 text-lg text-rose-100">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-200 to-emerald-200 text-lg text-teal-900">
                         ✦
                       </div>
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-zinc-600">
                         Ask about your latest intelligence, storyline timelines, or key risks to watch.
                       </p>
                     </div>
@@ -1104,18 +1436,18 @@ export default function DashboardClient() {
                   ))}
                   {chatBusy && (
                     <div className="mb-3 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-500 text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-xs font-bold text-white">
                         J
                       </div>
-                      <div className="rounded-2xl rounded-bl-md border border-white/10 bg-white/5 px-4 py-3">
+                      <div className="rounded-2xl rounded-bl-md border border-zinc-200 bg-white px-4 py-3 shadow-sm">
                         <div className="flex gap-1.5">
-                          <span className="dot-typing h-2 w-2 rounded-full bg-slate-300/90" />
+                          <span className="dot-typing h-2 w-2 rounded-full bg-zinc-400" />
                           <span
-                            className="dot-typing h-2 w-2 rounded-full bg-slate-300/90"
+                            className="dot-typing h-2 w-2 rounded-full bg-zinc-400"
                             style={{ animationDelay: "-0.18s" }}
                           />
                           <span
-                            className="dot-typing h-2 w-2 rounded-full bg-slate-300/90"
+                            className="dot-typing h-2 w-2 rounded-full bg-zinc-400"
                             style={{ animationDelay: "-0.34s" }}
                           />
                         </div>
@@ -1125,7 +1457,7 @@ export default function DashboardClient() {
                   <div ref={chatEndRef} />
                 </div>
 
-                <div className="glass-panel rounded-2xl p-2">
+                <div className="surface-inset p-2">
                   <div className="flex items-end gap-2">
                     <textarea
                       value={input}
@@ -1138,12 +1470,13 @@ export default function DashboardClient() {
                       }}
                       placeholder="Ask Jeff anything..."
                       disabled={chatBusy}
-                      className="h-14 max-h-36 min-h-[56px] flex-1 resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
+                      className="input-hybrid max-h-36 min-h-[56px] flex-1 resize-none py-3"
                     />
                     <button
+                      type="button"
                       onClick={sendChat}
                       disabled={chatBusy || !input.trim()}
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="btn-primary flex h-14 w-14 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <SendIcon />
                     </button>
@@ -1158,43 +1491,45 @@ export default function DashboardClient() {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-slate-100">Personalization profile</h2>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <h2 className="text-base font-semibold text-zinc-900">Personalization profile</h2>
+                    <p className="mt-1 text-sm text-zinc-600">
                       Tune your briefing logic, topic priorities, and alert sensitivity.
                     </p>
-                    {prefsUserId && <p className="mt-1 text-xs text-slate-500">Profile: {prefsUserId}</p>}
+                    {prefsUserId && <p className="mt-1 text-xs text-zinc-500">Profile: {prefsUserId}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={resetPreferences}
                       disabled={!prefsDirty || prefsSaving}
-                      className="h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-slate-200 transition hover:bg-white/10 disabled:opacity-40"
+                      className="btn-ghost-dark h-10 px-4 text-sm disabled:opacity-40"
                     >
                       Reset
                     </button>
                     <button
+                      type="button"
                       onClick={savePreferences}
                       disabled={!prefsDirty || prefsSaving}
-                      className="h-10 rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+                      className="btn-primary h-10 px-4 text-sm disabled:opacity-40"
                     >
                       {prefsSaving ? "Saving..." : "Save"}
                     </button>
                   </div>
                 </div>
-                {prefsMsg && <p className="mt-3 text-xs text-amber-200">{prefsMsg}</p>}
+                {prefsMsg && <p className="mt-3 text-xs font-medium text-amber-700">{prefsMsg}</p>}
               </Card>
 
               {!prefs ? (
                 <Card className="py-8 text-center">
-                  <p className="text-sm text-slate-400">Loading preferences...</p>
+                  <p className="text-sm text-zinc-500">Loading preferences...</p>
                 </Card>
               ) : (
                 <>
                   <Card>
-                    <SectionTitle title="Alert sensitivity" />
-                    <p className="mb-3 text-sm text-slate-400">
+                    <SectionHeader title="Alert sensitivity" />
+                    <p className="mb-3 text-sm text-zinc-600">
                       Current setting:{" "}
-                      <span className="font-semibold text-slate-100">{prefs.alert_sensitivity}/10</span>
+                      <span className="font-semibold text-zinc-900">{prefs.alert_sensitivity}/10</span>
                     </p>
                     <input
                       type="range"
@@ -1208,9 +1543,9 @@ export default function DashboardClient() {
                           alert_sensitivity: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-rose-400"
+                      className="w-full accent-teal-600"
                     />
-                    <div className="mt-2 flex justify-between text-xs text-slate-500">
+                    <div className="mt-2 flex justify-between text-xs text-zinc-500">
                       <span>Strict</span>
                       <span>Balanced</span>
                       <span>Wide net</span>
@@ -1218,7 +1553,7 @@ export default function DashboardClient() {
                   </Card>
 
                   <Card>
-                    <SectionTitle title="Quick interests" subtitle="Tap to toggle high-value topics" />
+                    <SectionHeader title="Quick interests" subtitle="Tap to toggle high-value topics" />
                     <div className="flex flex-wrap gap-2">
                       {QUICK_INTERESTS.map((topic) => {
                         const active = prefs.interests.some(
@@ -1227,6 +1562,7 @@ export default function DashboardClient() {
                         return (
                           <button
                             key={topic}
+                            type="button"
                             onClick={() => {
                               if (active) removePrefItem("interests", topic);
                               else addPrefItem("interests", topic);
@@ -1234,8 +1570,8 @@ export default function DashboardClient() {
                             className={cx(
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                               active
-                                ? "border-rose-300/45 bg-rose-300/15 text-rose-100"
-                                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                                ? "border-teal-300 bg-teal-50 text-teal-900"
+                                : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
                             )}
                           >
                             {topic}
@@ -1312,7 +1648,7 @@ export default function DashboardClient() {
                   />
 
                   <Card>
-                    <SectionTitle title="Section boost / mute" />
+                    <SectionHeader title="Section boost / mute" />
                     <div className="space-y-2">
                       {PREFERENCE_SECTIONS.map((section) => {
                         const boosted = prefs.briefing_overlay.boost_categories.includes(section);
@@ -1320,28 +1656,30 @@ export default function DashboardClient() {
                         return (
                           <div
                             key={section}
-                            className="flex flex-col gap-2 rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between"
+                            className="surface-inset flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <span className="text-sm text-slate-200">{section}</span>
+                            <span className="text-sm text-zinc-800">{section}</span>
                             <div className="flex gap-2">
                               <button
+                                type="button"
                                 onClick={() => toggleSectionPref("boost_categories", section)}
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   boosted
-                                    ? "border-rose-300/50 bg-rose-300/20 text-rose-100"
-                                    : "border-white/12 bg-white/5 text-slate-300"
+                                    ? "border-teal-300 bg-teal-50 text-teal-900"
+                                    : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
                                 )}
                               >
                                 Boost
                               </button>
                               <button
+                                type="button"
                                 onClick={() => toggleSectionPref("ignore_categories", section)}
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   muted
-                                    ? "border-rose-300/45 bg-rose-300/15 text-rose-100"
-                                    : "border-white/12 bg-white/5 text-slate-300"
+                                    ? "border-amber-300 bg-amber-50 text-amber-900"
+                                    : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
                                 )}
                               >
                                 Mute
@@ -1359,7 +1697,7 @@ export default function DashboardClient() {
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-zinc-950/92 px-4 pt-2 backdrop-blur-2xl md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-800 bg-zinc-950/95 px-4 pt-2 backdrop-blur-2xl md:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
         >
           <div className="mx-auto grid w-full grid-cols-4 gap-1 xl:max-w-6xl">

@@ -44,21 +44,21 @@ export default function LoginPage() {
   if (signupDone) {
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(236,72,153,0.24),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(251,146,60,0.18),transparent_40%)]" />
-        <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(244,63,94,0.5)] backdrop-blur-2xl">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-rose-500 text-lg font-bold text-white">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(45,212,191,0.15),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(16,185,129,0.12),transparent_40%)]" />
+        <div className="surface-card relative w-full max-w-md border border-zinc-200/95 p-7">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-lg font-bold text-white shadow-lg shadow-teal-900/30">
             J
           </div>
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-zinc-900">
             Check your email
           </h1>
-          <p className="mt-3 text-center text-sm text-slate-300">
+          <p className="mt-3 text-center text-sm text-zinc-600">
             We sent a confirmation link to{" "}
-            <strong className="text-slate-100">{email}</strong>. Confirm your account, then return
+            <strong className="text-zinc-900">{email}</strong>. Confirm your account, then return
             here to log in.
           </p>
           <button
-            className="mt-6 h-11 w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110"
+            className="btn-primary mt-6 h-11 w-full text-sm"
             onClick={() => {
               setSignupDone(false);
               setMode("login");
@@ -73,15 +73,15 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(236,72,153,0.24),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(251,146,60,0.18),transparent_40%)]" />
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/80 p-7 shadow-[0_40px_90px_-35px_rgba(244,63,94,0.5)] backdrop-blur-2xl">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-rose-500 text-lg font-bold text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(45,212,191,0.15),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(16,185,129,0.12),transparent_40%)]" />
+      <div className="surface-card relative w-full max-w-md border border-zinc-200/95 p-7">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-lg font-bold text-white shadow-lg shadow-teal-900/30">
           J
         </div>
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-100">
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-zinc-900">
           Jeff Intelligence
         </h1>
-        <p className="mt-2 text-center text-sm text-slate-400">
+        <p className="mt-2 text-center text-sm text-zinc-500">
           {mode === "login" ? "Sign in to your command dashboard" : "Create your account"}
         </p>
 
@@ -93,7 +93,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
+            className="input-hybrid h-11 w-full"
           />
           <input
             type="password"
@@ -103,17 +103,17 @@ export default function LoginPage() {
             required
             minLength={6}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none focus:ring-2 focus:ring-rose-300/25"
+            className="input-hybrid h-11 w-full"
           />
 
           {error && (
-            <p className="rounded-xl border border-rose-300/30 bg-rose-300/10 px-3 py-2 text-sm text-rose-100">
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
               {error}
             </p>
           )}
 
           <button
-            className="h-11 w-full rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn-primary h-11 w-full text-sm"
             type="submit"
             disabled={loading}
           >
@@ -121,12 +121,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-400">
+        <p className="mt-5 text-center text-sm text-zinc-500">
           {mode === "login" ? (
             <>
               No account?{" "}
               <button
-                className="font-semibold text-rose-200 transition hover:text-rose-100"
+                className="font-semibold text-teal-700 transition hover:text-teal-800"
                 onClick={() => {
                   setMode("signup");
                   setError(null);
@@ -139,7 +139,7 @@ export default function LoginPage() {
             <>
               Already have an account?{" "}
               <button
-                className="font-semibold text-rose-200 transition hover:text-rose-100"
+                className="font-semibold text-teal-700 transition hover:text-teal-800"
                 onClick={() => {
                   setMode("login");
                   setError(null);

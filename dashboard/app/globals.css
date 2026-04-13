@@ -1,7 +1,20 @@
 @import "tailwindcss";
 
+/* Hybrid shell: soft dark page, light elevated cards, teal accent */
 :root {
   color-scheme: dark;
+  --page-bg: #0a0c0e;
+  --page-bg-muted: #12161a;
+  --chrome-fg: #a1a1aa;
+  --surface: #fafafa;
+  --surface-muted: #f4f4f5;
+  --surface-border: #e4e4e7;
+  --on-surface: #18181b;
+  --on-surface-muted: #52525b;
+  --accent: #14b8a6;
+  --accent-hover: #0d9488;
+  --accent-ring: rgba(45, 212, 191, 0.35);
+  --shadow-surface: 0 22px 50px -28px rgba(15, 118, 110, 0.35);
 }
 
 html,
@@ -12,16 +25,16 @@ body {
 body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial, sans-serif;
-  background: radial-gradient(circle at 14% -5%, rgba(236, 72, 153, 0.22), transparent 40%),
-    radial-gradient(circle at 86% 0%, rgba(251, 146, 60, 0.18), transparent 42%), #110d16;
-  color: #f5f0ff;
+  background: radial-gradient(circle at 18% -8%, rgba(45, 212, 191, 0.12), transparent 42%),
+    radial-gradient(circle at 88% 4%, rgba(16, 185, 129, 0.1), transparent 44%), var(--page-bg);
+  color: var(--chrome-fg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(251, 146, 60, 0.35) transparent;
+  scrollbar-color: rgba(45, 212, 191, 0.35) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -30,7 +43,7 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(251, 146, 60, 0.35);
+  background: rgba(45, 212, 191, 0.35);
   border-radius: 9999px;
 }
 
@@ -52,20 +65,53 @@ body {
 }
 
 @layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .page-shell {
+    @apply text-zinc-400;
+  }
+
   .glass-panel {
-    @apply border border-white/12 bg-white/[0.05] backdrop-blur-xl;
+    @apply border border-zinc-700/80 bg-zinc-900/75 backdrop-blur-xl;
   }
 
   .glass-panel-strong {
-    @apply border border-white/15 bg-white/[0.07] backdrop-blur-2xl;
+    @apply border border-zinc-600/60 bg-zinc-900/85 backdrop-blur-2xl;
   }
 
+  /* Light card on dark page */
   .surface-card {
-    @apply rounded-2xl border border-white/10 bg-zinc-950/75 shadow-[0_22px_60px_-30px_rgba(244,63,94,0.45)];
+    @apply rounded-2xl border border-zinc-200/90 bg-zinc-50 text-zinc-900 shadow-[0_22px_50px_-28px_rgba(15,118,110,0.28)];
+  }
+
+  .surface-inset {
+    @apply rounded-xl border border-zinc-200 bg-white;
   }
 
   .text-muted {
-    @apply text-sm text-slate-400;
+    @apply text-sm text-zinc-500;
+  }
+
+  .text-on-surface-muted {
+    @apply text-zinc-500;
+  }
+
+  .input-hybrid {
+    @apply rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-teal-400/80 focus:outline-none focus:ring-2 focus:ring-teal-400/25;
+  }
+
+  .btn-primary {
+    @apply rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 font-semibold text-white shadow-lg shadow-teal-900/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .btn-ghost-dark {
+    @apply rounded-xl border border-zinc-200 bg-white text-sm font-medium text-zinc-800 transition hover:bg-zinc-100;
   }
 
   .dot-typing {
