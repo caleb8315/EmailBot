@@ -5,6 +5,8 @@ import type { IntelEvent } from './types';
 
 import { RSSAdapter } from './adapters/rss-adapter';
 import { GDELTAdapter } from './adapters/gdelt';
+import { GDELTEventsAdapter } from './adapters/gdelt-events';
+import { ConflictRSSAdapter } from './adapters/reliefweb';
 import { ACLEDAdapter } from './adapters/acled';
 import { USGSAdapter } from './adapters/usgs';
 import { FIRMSAdapter } from './adapters/firms';
@@ -33,6 +35,8 @@ function getAllAdapters(): IngestionAdapter[] {
   return [
     new RSSAdapter(),
     new GDELTAdapter(),
+    new GDELTEventsAdapter(),
+    new ConflictRSSAdapter(),
     new ACLEDAdapter(),
     new USGSAdapter(),
     new FIRMSAdapter(),
