@@ -30,7 +30,8 @@ export class PolymarketAdapter extends BaseAdapter {
         return [];
       }
 
-      const markets = await res.json() as PolyMarket[];
+      const body = await res.json() as { data?: PolyMarket[] } | PolyMarket[];
+      const markets = Array.isArray(body) ? body : (body.data || []);
       const events: IntelEvent[] = [];
       const sb = this.getSupabase();
 

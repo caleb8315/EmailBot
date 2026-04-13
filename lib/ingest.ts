@@ -8,6 +8,11 @@ import { GDELTAdapter } from './adapters/gdelt';
 import { ACLEDAdapter } from './adapters/acled';
 import { USGSAdapter } from './adapters/usgs';
 import { FIRMSAdapter } from './adapters/firms';
+import { SentinelAdapter } from './adapters/sentinel';
+import { ADSBMilitaryAdapter } from './adapters/adsb-military';
+import { NOTAMAdapter } from './adapters/notam';
+import { OONIAdapter } from './adapters/ooni';
+import { PolymarketAdapter } from './adapters/polymarket';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
@@ -31,7 +36,11 @@ function getAllAdapters(): IngestionAdapter[] {
     new ACLEDAdapter(),
     new USGSAdapter(),
     new FIRMSAdapter(),
-    // Phase 1.5+ adapters will be added here
+    new ADSBMilitaryAdapter(),
+    new SentinelAdapter(),
+    new NOTAMAdapter(),
+    new OONIAdapter(),
+    new PolymarketAdapter(),
   ];
 }
 
