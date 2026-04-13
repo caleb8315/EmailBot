@@ -117,10 +117,10 @@ function importanceColor(score: number): string {
 
 function thumbGradient(seed: string): string {
   const hues = [
-    "from-cyan-500 to-violet-900",
-    "from-[#7C3CFF] to-[#0B1020]",
-    "from-[#00F5FF] to-violet-800",
-    "from-violet-600 to-cyan-950",
+    "from-[#00F5FF] to-[#FF2BD6]",
+    "from-[#7C3CFF] to-[#00FFCC]",
+    "from-[#FF2BD6] to-[#7C3CFF]",
+    "from-[#00FFCC] to-[#00F5FF]",
   ];
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 997;
@@ -247,7 +247,7 @@ function SendIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-[#E9F1FF]/45" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white/45" stroke="currentColor" strokeWidth="2">
       <path d="m9 6 6 6-6 6" />
     </svg>
   );
@@ -255,7 +255,7 @@ function ChevronRightIcon() {
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-[#E9F1FF]/45" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white/45" stroke="currentColor" strokeWidth="2">
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.2-3.2" />
     </svg>
@@ -303,14 +303,14 @@ function SectionHeader({
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
-        <h2 className="text-base font-semibold tracking-tight text-[#E9F1FF]">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-[#E9F1FF]/55">{subtitle}</p>}
+        <h2 className="text-base font-semibold tracking-tight text-white">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-white/55">{subtitle}</p>}
       </div>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 text-xs font-semibold text-[#7C3CFF] transition hover:text-[#E9F1FF]"
+          className="shrink-0 text-xs font-semibold text-[#7C3CFF] transition hover:text-white"
         >
           {action.label}
         </button>
@@ -346,7 +346,7 @@ function SearchRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-[#E9F1FF] placeholder:text-[#E9F1FF]/45 focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-white placeholder:text-white/45 focus:outline-none focus:ring-0"
         />
       </form>
       {filterSlot}
@@ -375,8 +375,8 @@ function TopicPillStrip({
             className={cx(
               "shrink-0 snap-start rounded-full border px-3 py-2 text-xs font-medium transition",
               active
-                ? "border-[#00F5FF]/40 bg-[#00F5FF]/12 text-[#E9F1FF]"
-                : "border-white/[0.12] bg-[#111827]/90 text-[#E9F1FF]/80 hover:bg-[#111827]"
+                ? "border-[#00F5FF]/40 bg-[#00F5FF]/12 text-white"
+                : "border-white/[0.12] bg-[#121a2e]/90 text-white/80 hover:bg-[#121a2e]"
             )}
           >
             {topic}
@@ -405,22 +405,22 @@ function ShortcutRow({
       type="button"
       onClick={onClick}
       className={cx(
-        "flex w-full items-center gap-3 rounded-2xl border border-white/[0.1] bg-[#111827]/85 text-left shadow-sm transition hover:bg-[#111827]",
+        "flex w-full items-center gap-3 rounded-2xl border border-white/[0.1] bg-[#121a2e]/85 text-left shadow-sm transition hover:bg-[#121a2e]",
         dense ? "min-h-[44px] px-2.5 py-2" : "min-h-[48px] px-3 py-2.5"
       )}
     >
       <div
         className={cx(
-          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#00F5FF]/15 to-[#7C3CFF]/12 text-[#E9F1FF]/80",
+          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7C3CFF]/14 to-[#00FFCC]/12 text-white/80",
           dense ? "h-9 w-9" : "h-10 w-10"
         )}
       >
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[#E9F1FF]">{title}</p>
+        <p className="text-sm font-semibold text-white">{title}</p>
         {!dense && subtitle ? (
-          <p className="truncate text-xs text-[#E9F1FF]/55">{subtitle}</p>
+          <p className="truncate text-xs text-white/55">{subtitle}</p>
         ) : null}
       </div>
       <ChevronRightIcon />
@@ -444,7 +444,7 @@ function QuickActionsGrid({
   ];
   return (
     <div className="surface-card p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#E9F1FF]/55">Automations</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/55">Automations</p>
       <div className="grid grid-cols-3 gap-2">
         {actions.map((a) => (
           <button
@@ -452,12 +452,12 @@ function QuickActionsGrid({
             type="button"
             title={a.label}
             onClick={a.onClick}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/[0.1] bg-[#111827]/80 py-2.5 text-center transition hover:bg-[#111827]"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/[0.1] bg-[#121a2e]/80 py-2.5 text-center transition hover:bg-[#121a2e]"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00F5FF]/12 text-[#E9F1FF]/80">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00F5FF]/12 text-white/80">
               {a.icon}
             </span>
-            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-[#E9F1FF]">
+            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-white">
               {a.abbrev}
             </span>
             <span className="sr-only">{a.label}</span>
@@ -476,7 +476,7 @@ function FeaturedArticleCard({ article }: { article: Article }) {
       href={article.url}
       target="_blank"
       rel="noreferrer"
-      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[0.1] bg-[#111827]/90 text-left shadow-sm transition hover:border-[#00F5FF]/35 hover:shadow-md"
+      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[0.1] bg-[#121a2e]/90 text-left shadow-sm transition hover:border-[#00F5FF]/35 hover:shadow-md"
     >
       <div
         className={cx(
@@ -487,10 +487,10 @@ function FeaturedArticleCard({ article }: { article: Article }) {
         {ini}
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 text-sm font-semibold text-[#E9F1FF]">{article.title}</p>
-        <p className="mt-1 text-xs text-[#E9F1FF]/55">{article.source}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-white">{article.title}</p>
+        <p className="mt-1 text-xs text-white/55">{article.source}</p>
         {article.importance_score != null && (
-          <p className="mt-1 text-[11px] font-medium text-[#E9F1FF]/70">Score {article.importance_score}/10</p>
+          <p className="mt-1 text-[11px] font-medium text-white/70">Score {article.importance_score}/10</p>
         )}
       </div>
     </a>
@@ -532,20 +532,20 @@ function IntelListRow({
           {article.alerted && <Badge tone="alert">alert</Badge>}
           {article.emailed && <Badge tone="success">emailed</Badge>}
           {article.importance_score != null && (
-            <span className="text-[11px] text-[#E9F1FF]/55">imp {article.importance_score}/10</span>
+            <span className="text-[11px] text-white/55">imp {article.importance_score}/10</span>
           )}
           {article.credibility_score != null && (
-            <span className="text-[11px] text-[#E9F1FF]/55">cred {article.credibility_score}/10</span>
+            <span className="text-[11px] text-white/55">cred {article.credibility_score}/10</span>
           )}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold text-[#E9F1FF]">{article.title}</h3>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#E9F1FF]/55">
+        <h3 className="line-clamp-2 text-sm font-semibold text-white">{article.title}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/55">
           <span>{timeAgo(article.fetched_at)}</span>
           <a
             href={article.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-[#7C3CFF] hover:text-[#E9F1FF]"
+            className="inline-flex items-center gap-1 font-medium text-[#00FFCC] hover:text-white"
             onClick={(e) => e.stopPropagation()}
           >
             open <OpenIcon />
@@ -556,12 +556,12 @@ function IntelListRow({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="text-xs font-semibold text-[#7C3CFF] hover:text-[#E9F1FF]"
+              className="text-xs font-semibold text-[#00FFCC] hover:text-white"
             >
               {expanded ? "Hide summary" : "Show summary"}
             </button>
             {expanded && (
-              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-[#E9F1FF]/90">
+              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-white/90">
                 {article.summary}
               </p>
             )}
@@ -583,11 +583,11 @@ function Badge({
     <span
       className={cx(
         "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        tone === "default" && "border-[#00F5FF]/20 bg-[#00F5FF]/8 text-[#E9F1FF]",
-        tone === "alert" && "border-orange-200 bg-orange-50 text-orange-900",
-        tone === "success" && "border-green-200 bg-green-50 text-green-900",
-        tone === "warn" && "border-yellow-200 bg-yellow-50 text-yellow-900",
-        tone === "danger" && "border-rose-200 bg-rose-50 text-rose-900"
+        tone === "default" && "border-[#00F5FF]/22 bg-[#00F5FF]/10 text-white",
+        tone === "alert" && "border-orange-400/35 bg-orange-500/12 text-orange-200",
+        tone === "success" && "border-emerald-400/35 bg-emerald-500/12 text-emerald-200",
+        tone === "warn" && "border-yellow-400/35 bg-yellow-500/12 text-yellow-200",
+        tone === "danger" && "border-rose-400/35 bg-rose-500/12 text-rose-200"
       )}
     >
       {children}
@@ -614,7 +614,7 @@ function TabButton({
         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
           ? "bg-[#00F5FF]/12 text-[#00F5FF]"
-          : "text-[#E9F1FF]/45/90 hover:bg-[#111827]/80 hover:text-[#E9F1FF]"
+          : "text-white/50 hover:bg-[#121a2e]/80 hover:text-white"
       )}
     >
       {icon}
@@ -640,11 +640,11 @@ function MobileTabButton({
       onClick={onClick}
       className={cx(
         "relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl px-2 text-[11px] font-semibold transition",
-        active ? "text-[#00F5FF]" : "text-[#E9F1FF]/50 hover:text-[#E9F1FF]/75"
+        active ? "text-[#00F5FF]" : "text-white/50 hover:text-white/75"
       )}
     >
       {active && (
-        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-[#00F5FF] to-[#7C3CFF]" />
+        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-[#00F5FF] to-[#FF2BD6]" />
       )}
       <span className={cx("mb-1", active && "mt-1")}>{icon}</span>
       <span>{label}</span>
@@ -655,9 +655,9 @@ function MobileTabButton({
 function StatTile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="surface-card border border-white/[0.1] p-2.5 shadow-sm">
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-[#E9F1FF]/55">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tracking-tight text-[#E9F1FF]">{value}</p>
-      {hint && <p className="mt-0.5 text-[10px] text-[#E9F1FF]/55">{hint}</p>}
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tracking-tight text-white">{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-white/55">{hint}</p>}
     </div>
   );
 }
@@ -668,7 +668,7 @@ function ChatBubble({ message }: { message: ChatMsg }) {
     <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
         {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00F5FF] to-[#7C3CFF] text-xs font-bold text-[#0B1020] shadow-md shadow-[#7C3CFF]/30">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00F5FF] to-[#FF2BD6] text-xs font-bold text-white shadow-md shadow-[#FF2BD6]/35">
             J
           </div>
         )}
@@ -676,13 +676,13 @@ function ChatBubble({ message }: { message: ChatMsg }) {
           className={cx(
             "rounded-2xl px-4 py-3 shadow-md",
             isUser
-              ? "rounded-br-md border border-[#00F5FF]/25 bg-gradient-to-br from-[#00F5FF]/12 to-[#7C3CFF]/10 text-[#E9F1FF]"
-              : "rounded-bl-md border border-white/[0.12] bg-[#111827]/95 text-[#E9F1FF]"
+              ? "rounded-br-md border border-[#00F5FF]/25 bg-gradient-to-br from-[#00F5FF]/14 to-[#FF2BD6]/10 text-white"
+              : "rounded-bl-md border border-white/[0.12] bg-[#121a2e]/95 text-white"
           )}
         >
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[#E9F1FF]/55">
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-white/55">
             <span>{isUser ? "You" : "Jeff"}</span>
-            <span className="text-[#E9F1FF]/45">{formatClock(message.createdAt)}</span>
+            <span className="text-white/45">{formatClock(message.createdAt)}</span>
           </div>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
         </div>
@@ -712,8 +712,8 @@ function ChipEditor({
 }) {
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-[#E9F1FF]">{title}</h3>
-      {description && <p className="mt-1 text-xs text-[#E9F1FF]/55">{description}</p>}
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      {description && <p className="mt-1 text-xs text-white/55">{description}</p>}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={value}
@@ -727,20 +727,20 @@ function ChipEditor({
           placeholder={placeholder}
           className="input-hybrid h-11 flex-1"
         />
-        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-white/[0.12] px-4 text-[#E9F1FF]">
+        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-white/[0.12] px-4 text-white">
           Add
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length === 0 ? (
-          <p className="text-xs text-[#E9F1FF]/55">Nothing added yet.</p>
+          <p className="text-xs text-white/55">Nothing added yet.</p>
         ) : (
           items.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => onRemove(item)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#00F5FF]/20 bg-[#00F5FF]/8 px-2.5 py-1.5 text-xs font-medium text-[#E9F1FF] transition hover:bg-[#00F5FF]/15"
+              className="inline-flex items-center gap-1 rounded-full border border-[#00F5FF]/20 bg-[#00F5FF]/8 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-[#00F5FF]/15"
               title="Tap to remove"
             >
               <span>{item}</span>
@@ -1092,18 +1092,18 @@ export default function DashboardClient() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(0,245,255,0.07),transparent_46%),radial-gradient(circle_at_78%_10%,rgba(124,60,255,0.07),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(0,245,255,0.08),transparent_46%),radial-gradient(circle_at_72%_8%,rgba(255,43,214,0.06),transparent_50%),radial-gradient(circle_at_88%_92%,rgba(0,255,204,0.05),transparent_55%)]" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-none flex-col xl:max-w-6xl">
         <header className="sticky top-0 z-40 border-b border-[#7C3CFF]/20 bg-[#0B1020]/90 px-4 py-3 backdrop-blur-xl md:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#00F5FF] to-[#7C3CFF] text-sm font-bold text-[#0B1020] shadow-lg shadow-[#7C3CFF]/35">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#00F5FF] to-[#FF2BD6] text-sm font-bold text-white shadow-lg shadow-[#FF2BD6]/30">
                 J
               </div>
               <div>
-                <p className="text-sm font-semibold tracking-tight text-[#E9F1FF]">Jeff Intelligence</p>
-                <p className="text-xs text-[#E9F1FF]/50">AI command dashboard</p>
+                <p className="text-sm font-semibold tracking-tight text-white">Jeff Intelligence</p>
+                <p className="text-xs text-white/50">AI command dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1111,7 +1111,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={refreshData}
                 title="Refresh data"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-[#E9F1FF]/50 transition hover:text-[#E9F1FF]"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-white/50 transition hover:text-white"
               >
                 <RefreshIcon />
               </button>
@@ -1119,7 +1119,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={handleSignOut}
                 title="Sign out"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-[#E9F1FF]/50 transition hover:text-[#E9F1FF]"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-white/50 transition hover:text-white"
               >
                 <LogoutIcon />
               </button>
@@ -1143,7 +1143,7 @@ export default function DashboardClient() {
 
         <main className="flex-1 space-y-4 px-4 pb-28 pt-4 md:space-y-5 md:px-6 md:pb-8 md:pt-5">
           {loadErr && (
-            <div className="surface-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            <div className="surface-card border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
               {loadErr}
             </div>
           )}
@@ -1151,9 +1151,9 @@ export default function DashboardClient() {
           {tab === "overview" && (
             <>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#00F5FF]/90">{greeting}</p>
-                <h1 className="mt-1 text-xl font-bold tracking-tight text-[#E9F1FF]">Briefing home</h1>
-                <p className="mt-1 max-w-sm text-sm text-[#E9F1FF]/45">Search, then open intel or chat.</p>
+                <p className="bg-gradient-to-r from-[#00F5FF] to-[#FF2BD6] bg-clip-text text-xs font-semibold uppercase tracking-wider text-transparent">{greeting}</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Briefing home</h1>
+                <p className="mt-1 max-w-sm text-sm text-white/45">Search, then open intel or chat.</p>
               </div>
 
               <SearchRow
@@ -1167,7 +1167,7 @@ export default function DashboardClient() {
               />
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#E9F1FF]/45/90">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
                   Hot topics
                 </p>
                 <TopicPillStrip
@@ -1204,11 +1204,11 @@ export default function DashboardClient() {
               </div>
 
               <Card className="overflow-hidden p-0">
-                <div className="h-24 bg-gradient-to-br from-[#7C3CFF]/35 via-[#0B1020] to-[#0B1020]" />
+                <div className="h-24 bg-gradient-to-br from-[#7C3CFF]/35 via-[#00FFCC]/10 to-[#0B1020]" />
                 <div className="p-4">
                   <SectionHeader title="Latest digest" />
                   {!latestDigest ? (
-                    <p className="text-sm text-[#E9F1FF]/55">No digests yet.</p>
+                    <p className="text-sm text-white/55">No digests yet.</p>
                   ) : (
                     <article>
                       <div className="mb-2 flex flex-wrap gap-2">
@@ -1218,16 +1218,16 @@ export default function DashboardClient() {
                           </Badge>
                         ))}
                       </div>
-                      <h3 className="text-sm font-semibold text-[#E9F1FF]">
+                      <h3 className="text-sm font-semibold text-white">
                         {latestDigest.subject || "Digest"}
                       </h3>
-                      <p className="mt-1 text-xs text-[#E9F1FF]/55">
+                      <p className="mt-1 text-xs text-white/55">
                         {new Date(latestDigest.created_at).toLocaleString()}
                       </p>
                       <div className="surface-inset mt-3 p-3">
                         <p
                           className={cx(
-                            "whitespace-pre-wrap text-sm leading-relaxed text-[#E9F1FF]/90",
+                            "whitespace-pre-wrap text-sm leading-relaxed text-white/90",
                             showFullDigest && "max-h-80 overflow-y-auto pr-1"
                           )}
                         >
@@ -1238,12 +1238,12 @@ export default function DashboardClient() {
                         <button
                           type="button"
                           onClick={() => setShowFullDigest((current) => !current)}
-                          className="mt-2 text-xs font-semibold text-[#7C3CFF] hover:text-[#E9F1FF]"
+                          className="mt-2 text-xs font-semibold text-[#00FFCC] hover:text-white"
                         >
                           {showFullDigest ? "Show shorter preview" : "Read full digest"}
                         </button>
                       )}
-                      <p className="mt-1 text-[11px] text-[#E9F1FF]/55">
+                      <p className="mt-1 text-[11px] text-white/55">
                         Preview uses saved digest text only (no extra AI calls).
                       </p>
                     </article>
@@ -1254,8 +1254,8 @@ export default function DashboardClient() {
               <details className="surface-card group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                   <div>
-                    <p className="text-sm font-semibold text-[#E9F1FF]">Featured picks &amp; activity</p>
-                    <p className="text-xs text-[#E9F1FF]/55">Workflow runs, top articles, and logs</p>
+                    <p className="text-sm font-semibold text-white">Featured picks &amp; activity</p>
+                    <p className="text-xs text-white/55">Workflow runs, top articles, and logs</p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold text-[#7C3CFF] group-open:hidden">Expand</span>
                   <span className="hidden shrink-0 text-xs font-semibold text-[#7C3CFF] group-open:inline">
@@ -1270,7 +1270,7 @@ export default function DashboardClient() {
                       action={{ label: "View all", onClick: () => setTab("intel") }}
                     />
                     {featuredArticles.length === 0 ? (
-                      <p className="text-sm text-[#E9F1FF]/55">No articles yet. Run the pipeline to populate.</p>
+                      <p className="text-sm text-white/55">No articles yet. Run the pipeline to populate.</p>
                     ) : (
                       <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 pt-1">
                         {featuredArticles.slice(0, 10).map((article) => (
@@ -1283,9 +1283,9 @@ export default function DashboardClient() {
                   <div className="grid gap-4 lg:grid-cols-2">
                     <Card>
                       <SectionHeader title="Workflow activity" subtitle="Recent GitHub runs" />
-                      {runErr && <p className="mb-2 text-xs text-rose-700">{runErr}</p>}
+                      {runErr && <p className="mb-2 text-xs text-rose-300">{runErr}</p>}
                       {runs.length === 0 ? (
-                        <p className="text-sm text-[#E9F1FF]/55">No workflow runs yet.</p>
+                        <p className="text-sm text-white/55">No workflow runs yet.</p>
                       ) : (
                         <div className="space-y-2">
                           {runs.slice(0, 8).map((run) => (
@@ -1303,13 +1303,13 @@ export default function DashboardClient() {
                                       : "bg-orange-400"
                                 )}
                               />
-                              <p className="min-w-0 flex-1 truncate text-sm text-[#E9F1FF]">{run.name}</p>
-                              <span className="shrink-0 text-xs text-[#E9F1FF]/55">{timeAgo(run.created_at)}</span>
+                              <p className="min-w-0 flex-1 truncate text-sm text-white">{run.name}</p>
+                              <span className="shrink-0 text-xs text-white/55">{timeAgo(run.created_at)}</span>
                               <a
                                 href={run.html_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.12] px-2 py-1 text-xs text-[#7C3CFF] hover:bg-[#111827]"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.12] px-2 py-1 text-xs text-[#7C3CFF] hover:bg-[#121a2e]"
                               >
                                 open <OpenIcon />
                               </a>
@@ -1324,7 +1324,7 @@ export default function DashboardClient() {
                         <SectionHeader title="Recent articles" subtitle="Latest in your briefing" />
                         <div className="space-y-2">
                           {articles.slice(0, 6).length === 0 ? (
-                            <p className="text-sm text-[#E9F1FF]/55">No articles yet.</p>
+                            <p className="text-sm text-white/55">No articles yet.</p>
                           ) : (
                             articles.slice(0, 6).map((article) => (
                               <a
@@ -1338,15 +1338,15 @@ export default function DashboardClient() {
                                   <Badge>{article.source}</Badge>
                                   {article.alerted && <Badge tone="alert">alert</Badge>}
                                   {article.importance_score != null && (
-                                    <span className="text-[11px] text-[#E9F1FF]/55">
+                                    <span className="text-[11px] text-white/55">
                                       imp {article.importance_score}/10
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="line-clamp-2 text-sm font-medium text-[#E9F1FF]">
+                                <h3 className="line-clamp-2 text-sm font-medium text-white">
                                   {article.title}
                                 </h3>
-                                <p className="mt-1 text-xs text-[#E9F1FF]/55">{timeAgo(article.fetched_at)}</p>
+                                <p className="mt-1 text-xs text-white/55">{timeAgo(article.fetched_at)}</p>
                               </a>
                             ))
                           )}
@@ -1356,7 +1356,7 @@ export default function DashboardClient() {
                       <Card>
                         <SectionHeader title="Events & errors" />
                         {events.length === 0 ? (
-                          <p className="text-sm text-[#E9F1FF]/55">No events logged yet.</p>
+                          <p className="text-sm text-white/55">No events logged yet.</p>
                         ) : (
                           <div className="space-y-2">
                             {events.slice(0, 8).map((event) => (
@@ -1374,9 +1374,9 @@ export default function DashboardClient() {
                                     {event.level}
                                   </Badge>
                                   <Badge>{event.source}</Badge>
-                                  <span className="text-xs text-[#E9F1FF]/55">{timeAgo(event.created_at)}</span>
+                                  <span className="text-xs text-white/55">{timeAgo(event.created_at)}</span>
                                 </div>
-                                <p className="text-sm text-[#E9F1FF]/90">{event.message}</p>
+                                <p className="text-sm text-white/90">{event.message}</p>
                               </article>
                             ))}
                           </div>
@@ -1406,8 +1406,8 @@ export default function DashboardClient() {
                       className={cx(
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm transition",
                         showIntelFilters
-                          ? "border-[#00F5FF]/50 bg-[#00F5FF]/10 text-[#E9F1FF]/90"
-                          : "surface-inset border-white/[0.1] bg-[#0B1020]/70 text-[#E9F1FF]/80 hover:bg-[#00F5FF]/6"
+                          ? "border-[#00F5FF]/50 bg-[#00F5FF]/10 text-white/90"
+                          : "surface-inset border-white/[0.1] bg-[#0B1020]/70 text-white/80 hover:bg-[#00F5FF]/6"
                       )}
                     >
                       <FilterIcon />
@@ -1436,14 +1436,14 @@ export default function DashboardClient() {
                     </select>
                   </div>
                 )}
-                <p className="mt-3 text-xs text-[#E9F1FF]/55">
+                <p className="mt-3 text-xs text-white/55">
                   {filteredFeed.length} article{filteredFeed.length === 1 ? "" : "s"} found
                 </p>
               </Card>
 
               {filteredFeed.length === 0 ? (
                 <Card className="py-10 text-center">
-                  <p className="text-sm text-[#E9F1FF]/55">No articles match your filters right now.</p>
+                  <p className="text-sm text-white/55">No articles match your filters right now.</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
@@ -1471,10 +1471,10 @@ export default function DashboardClient() {
                 <div className="surface-inset h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto p-3">
                   {chat.length === 0 && (
                     <div className="mx-auto mt-16 max-w-sm text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00F5FF]/20 to-[#7C3CFF]/15 text-lg text-[#E9F1FF]">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7C3CFF]/18 to-[#00FFCC]/12 text-lg text-white">
                         ✦
                       </div>
-                      <p className="text-sm text-[#E9F1FF]/55">
+                      <p className="text-sm text-white/55">
                         Ask about your latest intelligence, storyline timelines, or key risks to watch.
                       </p>
                     </div>
@@ -1484,10 +1484,10 @@ export default function DashboardClient() {
                   ))}
                   {chatBusy && (
                     <div className="mb-3 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#00F5FF] to-[#7C3CFF] text-xs font-bold text-[#0B1020]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#00F5FF] to-[#FF2BD6] text-xs font-bold text-white">
                         J
                       </div>
-                      <div className="rounded-2xl rounded-bl-md border border-white/[0.12] bg-[#111827] px-4 py-3 shadow-sm">
+                      <div className="rounded-2xl rounded-bl-md border border-white/[0.12] bg-[#121a2e] px-4 py-3 shadow-sm">
                         <div className="flex gap-1.5">
                           <span className="dot-typing h-2 w-2 rounded-full bg-[#00F5FF]/55" />
                           <span
@@ -1539,11 +1539,11 @@ export default function DashboardClient() {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-[#E9F1FF]">Personalization profile</h2>
-                    <p className="mt-1 text-sm text-[#E9F1FF]/55">
+                    <h2 className="text-base font-semibold text-white">Personalization profile</h2>
+                    <p className="mt-1 text-sm text-white/55">
                       Tune your briefing logic, topic priorities, and alert sensitivity.
                     </p>
-                    {prefsUserId && <p className="mt-1 text-xs text-[#E9F1FF]/55">Profile: {prefsUserId}</p>}
+                    {prefsUserId && <p className="mt-1 text-xs text-white/55">Profile: {prefsUserId}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -1569,15 +1569,15 @@ export default function DashboardClient() {
 
               {!prefs ? (
                 <Card className="py-8 text-center">
-                  <p className="text-sm text-[#E9F1FF]/55">Loading preferences...</p>
+                  <p className="text-sm text-white/55">Loading preferences...</p>
                 </Card>
               ) : (
                 <>
                   <Card>
                     <SectionHeader title="Alert sensitivity" />
-                    <p className="mb-3 text-sm text-[#E9F1FF]/55">
+                    <p className="mb-3 text-sm text-white/55">
                       Current setting:{" "}
-                      <span className="font-semibold text-[#E9F1FF]">{prefs.alert_sensitivity}/10</span>
+                      <span className="font-semibold text-white">{prefs.alert_sensitivity}/10</span>
                     </p>
                     <input
                       type="range"
@@ -1593,7 +1593,7 @@ export default function DashboardClient() {
                       }
                       className="w-full accent-[#00F5FF]"
                     />
-                    <div className="mt-2 flex justify-between text-xs text-[#E9F1FF]/55">
+                    <div className="mt-2 flex justify-between text-xs text-white/55">
                       <span>Strict</span>
                       <span>Balanced</span>
                       <span>Wide net</span>
@@ -1618,8 +1618,8 @@ export default function DashboardClient() {
                             className={cx(
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                               active
-                                ? "border-[#00F5FF]/45 bg-[#00F5FF]/10 text-[#E9F1FF]"
-                                : "border-white/[0.1] bg-[#111827]/90 text-[#E9F1FF]/80 hover:border-[#00F5FF]/35"
+                                ? "border-[#00F5FF]/45 bg-[#00F5FF]/10 text-white"
+                                : "border-white/[0.1] bg-[#121a2e]/90 text-white/80 hover:border-[#00F5FF]/35"
                             )}
                           >
                             {topic}
@@ -1706,7 +1706,7 @@ export default function DashboardClient() {
                             key={section}
                             className="surface-inset flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <span className="text-sm text-[#E9F1FF]">{section}</span>
+                            <span className="text-sm text-white">{section}</span>
                             <div className="flex gap-2">
                               <button
                                 type="button"
@@ -1714,8 +1714,8 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   boosted
-                                    ? "border-[#00F5FF]/45 bg-[#00F5FF]/10 text-[#E9F1FF]"
-                                    : "border-white/[0.1] bg-[#111827]/90 text-[#E9F1FF]/80 hover:bg-[#00F5FF]/8"
+                                    ? "border-[#00F5FF]/45 bg-[#00F5FF]/10 text-white"
+                                    : "border-white/[0.1] bg-[#121a2e]/90 text-white/80 hover:bg-[#00F5FF]/8"
                                 )}
                               >
                                 Boost
@@ -1726,8 +1726,8 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   muted
-                                    ? "border-[#00F5FF]/40 bg-[#00F5FF]/10 text-[#E9F1FF]"
-                                    : "border-white/[0.1] bg-[#111827]/90 text-[#E9F1FF]/80 hover:bg-[#00F5FF]/8"
+                                    ? "border-[#00F5FF]/40 bg-[#00F5FF]/10 text-white"
+                                    : "border-white/[0.1] bg-[#121a2e]/90 text-white/80 hover:bg-[#00F5FF]/8"
                                 )}
                               >
                                 Mute

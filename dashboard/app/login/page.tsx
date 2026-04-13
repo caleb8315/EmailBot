@@ -44,17 +44,17 @@ export default function LoginPage() {
   if (signupDone) {
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(0,245,255,0.09),transparent_42%),radial-gradient(circle_at_85%_5%,rgba(124,60,255,0.08),transparent_42%)]" />
-        <div className="surface-card relative w-full max-w-md border border-white/[0.08] p-7">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00F5FF] to-[#7C3CFF] text-lg font-bold text-[#0B1020] shadow-lg shadow-[#7C3CFF]/35">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(0,245,255,0.09),transparent_42%),radial-gradient(circle_at_80%_8%,rgba(255,43,214,0.07),transparent_44%),radial-gradient(circle_at_15%_90%,rgba(0,255,204,0.06),transparent_48%)]" />
+        <div className="surface-card relative w-full max-w-md border border-white/[0.07] p-7">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00F5FF] to-[#FF2BD6] text-lg font-bold text-white shadow-lg shadow-[#FF2BD6]/30">
             J
           </div>
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-[#E9F1FF]">
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-white">
             Check your email
           </h1>
-          <p className="mt-3 text-center text-sm text-[#E9F1FF]/70">
+          <p className="mt-3 text-center text-sm text-white/65">
             We sent a confirmation link to{" "}
-            <strong className="text-[#E9F1FF]">{email}</strong>. Confirm your account, then return
+            <strong className="text-white">{email}</strong>. Confirm your account, then return
             here to log in.
           </p>
           <button
@@ -73,15 +73,15 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(0,245,255,0.09),transparent_42%),radial-gradient(circle_at_85%_5%,rgba(124,60,255,0.08),transparent_42%)]" />
-      <div className="surface-card relative w-full max-w-md border border-white/[0.08] p-7">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00F5FF] to-[#7C3CFF] text-lg font-bold text-[#0B1020] shadow-lg shadow-[#7C3CFF]/35">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(0,245,255,0.09),transparent_42%),radial-gradient(circle_at_80%_8%,rgba(255,43,214,0.07),transparent_44%),radial-gradient(circle_at_15%_90%,rgba(0,255,204,0.06),transparent_48%)]" />
+      <div className="surface-card relative w-full max-w-md border border-white/[0.07] p-7">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00F5FF] to-[#FF2BD6] text-lg font-bold text-white shadow-lg shadow-[#FF2BD6]/30">
           J
         </div>
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-[#E9F1FF]">
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-white">
           Jeff Intelligence
         </h1>
-        <p className="mt-2 text-center text-sm text-[#E9F1FF]/55">
+        <p className="mt-2 text-center text-sm text-white/55">
           {mode === "login" ? "Sign in to your command dashboard" : "Create your account"}
         </p>
 
@@ -107,7 +107,7 @@ export default function LoginPage() {
           />
 
           {error && (
-            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+            <p className="rounded-xl border border-rose-400/35 bg-rose-500/12 px-3 py-2 text-sm text-rose-200">
               {error}
             </p>
           )}
@@ -121,12 +121,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-[#E9F1FF]/55">
+        <p className="mt-5 text-center text-sm text-white/55">
           {mode === "login" ? (
             <>
               No account?{" "}
               <button
-                className="font-semibold text-[#00F5FF] transition hover:text-[#7C3CFF]"
+                className="font-semibold text-[#00FFCC] transition hover:text-[#FF2BD6]"
                 onClick={() => {
                   setMode("signup");
                   setError(null);
@@ -139,7 +139,7 @@ export default function LoginPage() {
             <>
               Already have an account?{" "}
               <button
-                className="font-semibold text-[#00F5FF] transition hover:text-[#7C3CFF]"
+                className="font-semibold text-[#00FFCC] transition hover:text-[#FF2BD6]"
                 onClick={() => {
                   setMode("login");
                   setError(null);
