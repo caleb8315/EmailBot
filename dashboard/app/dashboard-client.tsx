@@ -117,10 +117,10 @@ function importanceColor(score: number): string {
 
 function thumbGradient(seed: string): string {
   const hues = [
-    "from-cyan-600 to-indigo-900",
-    "from-indigo-600 to-slate-900",
-    "from-sky-600 to-indigo-800",
-    "from-violet-600 to-indigo-950",
+    "from-fuchsia-600 to-purple-900",
+    "from-rose-600 to-fuchsia-900",
+    "from-orange-500 to-rose-800",
+    "from-pink-600 to-orange-900",
   ];
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 997;
@@ -303,14 +303,14 @@ function SectionHeader({
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+        <h2 className="text-base font-semibold tracking-tight text-zinc-900">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
       </div>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 text-xs font-semibold text-indigo-800 transition hover:text-slate-900"
+          className="shrink-0 text-xs font-semibold text-purple-800 transition hover:text-zinc-900"
         >
           {action.label}
         </button>
@@ -346,7 +346,7 @@ function SearchRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
         />
       </form>
       {filterSlot}
@@ -375,8 +375,8 @@ function TopicPillStrip({
             className={cx(
               "shrink-0 snap-start rounded-full border px-3 py-2 text-xs font-medium transition",
               active
-                ? "border-cyan-400/45 bg-cyan-200/75 text-slate-900"
-                : "border-slate-300/45 bg-white/75 text-slate-700 hover:bg-white"
+                ? "border-fuchsia-400/45 bg-fuchsia-200/70 text-zinc-900"
+                : "border-fuchsia-200/45 bg-white/75 text-zinc-700 hover:bg-white"
             )}
           >
             {topic}
@@ -405,22 +405,22 @@ function ShortcutRow({
       type="button"
       onClick={onClick}
       className={cx(
-        "flex w-full items-center gap-3 rounded-2xl border border-slate-300/45 bg-white/70 text-left shadow-sm transition hover:bg-white",
+        "flex w-full items-center gap-3 rounded-2xl border border-fuchsia-200/45 bg-white/70 text-left shadow-sm transition hover:bg-white",
         dense ? "min-h-[44px] px-2.5 py-2" : "min-h-[48px] px-3 py-2.5"
       )}
     >
       <div
         className={cx(
-          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-sky-200/70 text-slate-700",
+          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-100 to-pink-200/65 text-zinc-700",
           dense ? "h-9 w-9" : "h-10 w-10"
         )}
       >
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
+        <p className="text-sm font-semibold text-zinc-900">{title}</p>
         {!dense && subtitle ? (
-          <p className="truncate text-xs text-slate-500">{subtitle}</p>
+          <p className="truncate text-xs text-zinc-500">{subtitle}</p>
         ) : null}
       </div>
       <ChevronRightIcon />
@@ -444,7 +444,7 @@ function QuickActionsGrid({
   ];
   return (
     <div className="surface-card p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Automations</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Automations</p>
       <div className="grid grid-cols-3 gap-2">
         {actions.map((a) => (
           <button
@@ -452,12 +452,12 @@ function QuickActionsGrid({
             type="button"
             title={a.label}
             onClick={a.onClick}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-slate-300/45 bg-white/65 py-2.5 text-center transition hover:bg-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-fuchsia-200/45 bg-white/65 py-2.5 text-center transition hover:bg-white"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100/88 text-slate-700">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-fuchsia-100/85 text-zinc-700">
               {a.icon}
             </span>
-            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-slate-900">
+            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-zinc-900">
               {a.abbrev}
             </span>
             <span className="sr-only">{a.label}</span>
@@ -476,7 +476,7 @@ function FeaturedArticleCard({ article }: { article: Article }) {
       href={article.url}
       target="_blank"
       rel="noreferrer"
-      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-300/55 bg-white/80 text-left shadow-sm transition hover:border-cyan-400/35 hover:shadow-md"
+      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-fuchsia-200/55 bg-white/80 text-left shadow-sm transition hover:border-fuchsia-400/35 hover:shadow-md"
     >
       <div
         className={cx(
@@ -487,10 +487,10 @@ function FeaturedArticleCard({ article }: { article: Article }) {
         {ini}
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 text-sm font-semibold text-slate-900">{article.title}</p>
-        <p className="mt-1 text-xs text-slate-500">{article.source}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-zinc-900">{article.title}</p>
+        <p className="mt-1 text-xs text-zinc-500">{article.source}</p>
         {article.importance_score != null && (
-          <p className="mt-1 text-[11px] font-medium text-slate-600">Score {article.importance_score}/10</p>
+          <p className="mt-1 text-[11px] font-medium text-zinc-600">Score {article.importance_score}/10</p>
         )}
       </div>
     </a>
@@ -514,7 +514,7 @@ function IntelListRow({
     <article
       className={cx(
         "surface-card flex gap-3 overflow-hidden p-3",
-        accentBorder && "border-l-[4px] border-cyan-200/55"
+        accentBorder && "border-l-[4px] border-fuchsia-200/50"
       )}
       style={accentBorder ? { borderLeftColor: accentBorder } : undefined}
     >
@@ -532,20 +532,20 @@ function IntelListRow({
           {article.alerted && <Badge tone="alert">alert</Badge>}
           {article.emailed && <Badge tone="success">emailed</Badge>}
           {article.importance_score != null && (
-            <span className="text-[11px] text-slate-500">imp {article.importance_score}/10</span>
+            <span className="text-[11px] text-zinc-500">imp {article.importance_score}/10</span>
           )}
           {article.credibility_score != null && (
-            <span className="text-[11px] text-slate-500">cred {article.credibility_score}/10</span>
+            <span className="text-[11px] text-zinc-500">cred {article.credibility_score}/10</span>
           )}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{article.title}</h3>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <h3 className="line-clamp-2 text-sm font-semibold text-zinc-900">{article.title}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           <span>{timeAgo(article.fetched_at)}</span>
           <a
             href={article.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-indigo-800 hover:text-slate-900"
+            className="inline-flex items-center gap-1 font-medium text-purple-800 hover:text-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
             open <OpenIcon />
@@ -556,12 +556,12 @@ function IntelListRow({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="text-xs font-semibold text-indigo-800 hover:text-slate-900"
+              className="text-xs font-semibold text-purple-800 hover:text-zinc-900"
             >
               {expanded ? "Hide summary" : "Show summary"}
             </button>
             {expanded && (
-              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-slate-800">
+              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-zinc-800">
                 {article.summary}
               </p>
             )}
@@ -583,7 +583,7 @@ function Badge({
     <span
       className={cx(
         "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        tone === "default" && "border-cyan-200/65 bg-cyan-50/90 text-slate-900",
+        tone === "default" && "border-fuchsia-200/60 bg-fuchsia-50/90 text-zinc-900",
         tone === "alert" && "border-orange-200 bg-orange-50 text-orange-900",
         tone === "success" && "border-green-200 bg-green-50 text-green-900",
         tone === "warn" && "border-yellow-200 bg-yellow-50 text-yellow-900",
@@ -613,8 +613,8 @@ function TabButton({
       className={cx(
         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
-          ? "bg-cyan-500/18 text-cyan-100"
-          : "text-slate-400/90 hover:bg-slate-950/40 hover:text-slate-50"
+          ? "bg-fuchsia-500/18 text-fuchsia-100"
+          : "text-zinc-400/90 hover:bg-violet-950/40 hover:text-zinc-50"
       )}
     >
       {icon}
@@ -640,11 +640,11 @@ function MobileTabButton({
       onClick={onClick}
       className={cx(
         "relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl px-2 text-[11px] font-semibold transition",
-        active ? "text-cyan-200" : "text-slate-500/80 hover:text-slate-300"
+        active ? "text-fuchsia-200" : "text-zinc-500/80 hover:text-zinc-300"
       )}
     >
       {active && (
-        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500" />
+        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-pink-400 to-orange-400" />
       )}
       <span className={cx("mb-1", active && "mt-1")}>{icon}</span>
       <span>{label}</span>
@@ -654,10 +654,10 @@ function MobileTabButton({
 
 function StatTile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="surface-card border border-slate-300/55 p-2.5 shadow-sm">
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">{value}</p>
-      {hint && <p className="mt-0.5 text-[10px] text-slate-500">{hint}</p>}
+    <div className="surface-card border border-fuchsia-200/55 p-2.5 shadow-sm">
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tracking-tight text-zinc-900">{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-zinc-500">{hint}</p>}
     </div>
   );
 }
@@ -668,7 +668,7 @@ function ChatBubble({ message }: { message: ChatMsg }) {
     <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
         {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-indigo-700 text-xs font-bold text-white shadow-md shadow-slate-950/40">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-600 to-rose-600 text-xs font-bold text-white shadow-md shadow-purple-950/40">
             J
           </div>
         )}
@@ -676,13 +676,13 @@ function ChatBubble({ message }: { message: ChatMsg }) {
           className={cx(
             "rounded-2xl px-4 py-3 shadow-md",
             isUser
-              ? "rounded-br-md border border-cyan-200/48 bg-gradient-to-br from-cyan-100 to-sky-50/88 text-slate-900"
-              : "rounded-bl-md border border-slate-300/55 bg-white/95 text-slate-900"
+              ? "rounded-br-md border border-fuchsia-200/48 bg-gradient-to-br from-fuchsia-100 to-pink-50/88 text-zinc-900"
+              : "rounded-bl-md border border-fuchsia-200/55 bg-white/95 text-zinc-900"
           )}
         >
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
             <span>{isUser ? "You" : "Jeff"}</span>
-            <span className="text-slate-400">{formatClock(message.createdAt)}</span>
+            <span className="text-zinc-400">{formatClock(message.createdAt)}</span>
           </div>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
         </div>
@@ -712,8 +712,8 @@ function ChipEditor({
 }) {
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-      {description && <p className="mt-1 text-xs text-slate-500">{description}</p>}
+      <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+      {description && <p className="mt-1 text-xs text-zinc-500">{description}</p>}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={value}
@@ -727,20 +727,20 @@ function ChipEditor({
           placeholder={placeholder}
           className="input-hybrid h-11 flex-1"
         />
-        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-cyan-200/65 px-4 text-slate-900">
+        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-fuchsia-200/60 px-4 text-zinc-900">
           Add
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length === 0 ? (
-          <p className="text-xs text-slate-500">Nothing added yet.</p>
+          <p className="text-xs text-zinc-500">Nothing added yet.</p>
         ) : (
           items.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => onRemove(item)}
-              className="inline-flex items-center gap-1 rounded-full border border-cyan-200/65 bg-cyan-50/90 px-2.5 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-cyan-100/85"
+              className="inline-flex items-center gap-1 rounded-full border border-fuchsia-200/60 bg-fuchsia-50/90 px-2.5 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-fuchsia-100/82"
               title="Tap to remove"
             >
               <span>{item}</span>
@@ -1092,18 +1092,18 @@ export default function DashboardClient() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(34,211,238,0.07),transparent_46%),radial-gradient(circle_at_78%_10%,rgba(99,102,241,0.08),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(217,70,239,0.07),transparent_46%),radial-gradient(circle_at_78%_10%,rgba(249,115,22,0.06),transparent_50%)]" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-none flex-col xl:max-w-6xl">
-        <header className="sticky top-0 z-40 border-b border-slate-800/40 bg-slate-950/80 px-4 py-3 backdrop-blur-xl md:px-6">
+        <header className="sticky top-0 z-40 border-b border-violet-900/40 bg-violet-950/80 px-4 py-3 backdrop-blur-xl md:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-800 text-sm font-bold text-white shadow-lg shadow-slate-950/40">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-sm font-bold text-white shadow-lg shadow-purple-950/40">
                 J
               </div>
               <div>
-                <p className="text-sm font-semibold tracking-tight text-slate-50">Jeff Intelligence</p>
-                <p className="text-xs text-slate-400/80">AI command dashboard</p>
+                <p className="text-sm font-semibold tracking-tight text-zinc-50">Jeff Intelligence</p>
+                <p className="text-xs text-zinc-400/80">AI command dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1111,7 +1111,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={refreshData}
                 title="Refresh data"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-slate-400/80 transition hover:text-slate-50"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400/80 transition hover:text-zinc-50"
               >
                 <RefreshIcon />
               </button>
@@ -1119,7 +1119,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={handleSignOut}
                 title="Sign out"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-slate-400/80 transition hover:text-slate-50"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400/80 transition hover:text-zinc-50"
               >
                 <LogoutIcon />
               </button>
@@ -1127,7 +1127,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        <nav className="sticky top-[65px] z-30 hidden border-b border-slate-800/40 bg-slate-950/65 px-4 py-2 backdrop-blur-xl md:block md:px-6">
+        <nav className="sticky top-[65px] z-30 hidden border-b border-violet-900/40 bg-violet-950/65 px-4 py-2 backdrop-blur-xl md:block md:px-6">
           <div className="flex items-center gap-2">
             {tabs.map((item) => (
               <TabButton
@@ -1151,9 +1151,9 @@ export default function DashboardClient() {
           {tab === "overview" && (
             <>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-cyan-400/90">{greeting}</p>
-                <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-50">Briefing home</h1>
-                <p className="mt-1 max-w-sm text-sm text-slate-400">Search, then open intel or chat.</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-fuchsia-400/90">{greeting}</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-zinc-50">Briefing home</h1>
+                <p className="mt-1 max-w-sm text-sm text-zinc-400">Search, then open intel or chat.</p>
               </div>
 
               <SearchRow
@@ -1167,7 +1167,7 @@ export default function DashboardClient() {
               />
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400/90">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400/90">
                   Hot topics
                 </p>
                 <TopicPillStrip
@@ -1190,7 +1190,7 @@ export default function DashboardClient() {
                 onDaily={() => dispatch("daily_email.yml")}
                 onWeekly={() => dispatch("weekly_digest.yml")}
               />
-              {dispatchMsg && <p className="text-xs font-medium text-cyan-400/95">{dispatchMsg}</p>}
+              {dispatchMsg && <p className="text-xs font-medium text-fuchsia-400/95">{dispatchMsg}</p>}
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <StatTile
@@ -1204,11 +1204,11 @@ export default function DashboardClient() {
               </div>
 
               <Card className="overflow-hidden p-0">
-                <div className="h-24 bg-gradient-to-br from-indigo-950 via-slate-950 to-slate-950" />
+                <div className="h-24 bg-gradient-to-br from-purple-950 via-violet-950 to-violet-950" />
                 <div className="p-4">
                   <SectionHeader title="Latest digest" />
                   {!latestDigest ? (
-                    <p className="text-sm text-slate-500">No digests yet.</p>
+                    <p className="text-sm text-zinc-500">No digests yet.</p>
                   ) : (
                     <article>
                       <div className="mb-2 flex flex-wrap gap-2">
@@ -1218,16 +1218,16 @@ export default function DashboardClient() {
                           </Badge>
                         ))}
                       </div>
-                      <h3 className="text-sm font-semibold text-slate-900">
+                      <h3 className="text-sm font-semibold text-zinc-900">
                         {latestDigest.subject || "Digest"}
                       </h3>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-zinc-500">
                         {new Date(latestDigest.created_at).toLocaleString()}
                       </p>
                       <div className="surface-inset mt-3 p-3">
                         <p
                           className={cx(
-                            "whitespace-pre-wrap text-sm leading-relaxed text-slate-800",
+                            "whitespace-pre-wrap text-sm leading-relaxed text-zinc-800",
                             showFullDigest && "max-h-80 overflow-y-auto pr-1"
                           )}
                         >
@@ -1238,12 +1238,12 @@ export default function DashboardClient() {
                         <button
                           type="button"
                           onClick={() => setShowFullDigest((current) => !current)}
-                          className="mt-2 text-xs font-semibold text-indigo-800 hover:text-slate-900"
+                          className="mt-2 text-xs font-semibold text-purple-800 hover:text-zinc-900"
                         >
                           {showFullDigest ? "Show shorter preview" : "Read full digest"}
                         </button>
                       )}
-                      <p className="mt-1 text-[11px] text-slate-500">
+                      <p className="mt-1 text-[11px] text-zinc-500">
                         Preview uses saved digest text only (no extra AI calls).
                       </p>
                     </article>
@@ -1254,15 +1254,15 @@ export default function DashboardClient() {
               <details className="surface-card group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Featured picks &amp; activity</p>
-                    <p className="text-xs text-slate-500">Workflow runs, top articles, and logs</p>
+                    <p className="text-sm font-semibold text-zinc-900">Featured picks &amp; activity</p>
+                    <p className="text-xs text-zinc-500">Workflow runs, top articles, and logs</p>
                   </div>
-                  <span className="shrink-0 text-xs font-semibold text-indigo-800 group-open:hidden">Expand</span>
-                  <span className="hidden shrink-0 text-xs font-semibold text-indigo-800 group-open:inline">
+                  <span className="shrink-0 text-xs font-semibold text-purple-800 group-open:hidden">Expand</span>
+                  <span className="hidden shrink-0 text-xs font-semibold text-purple-800 group-open:inline">
                     Collapse
                   </span>
                 </summary>
-                <div className="space-y-4 border-t border-slate-300/45 px-4 pb-4 pt-4">
+                <div className="space-y-4 border-t border-fuchsia-200/45 px-4 pb-4 pt-4">
                   <div>
                     <SectionHeader
                       title="Featured signals"
@@ -1270,7 +1270,7 @@ export default function DashboardClient() {
                       action={{ label: "View all", onClick: () => setTab("intel") }}
                     />
                     {featuredArticles.length === 0 ? (
-                      <p className="text-sm text-slate-500">No articles yet. Run the pipeline to populate.</p>
+                      <p className="text-sm text-zinc-500">No articles yet. Run the pipeline to populate.</p>
                     ) : (
                       <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 pt-1">
                         {featuredArticles.slice(0, 10).map((article) => (
@@ -1285,7 +1285,7 @@ export default function DashboardClient() {
                       <SectionHeader title="Workflow activity" subtitle="Recent GitHub runs" />
                       {runErr && <p className="mb-2 text-xs text-rose-700">{runErr}</p>}
                       {runs.length === 0 ? (
-                        <p className="text-sm text-slate-500">No workflow runs yet.</p>
+                        <p className="text-sm text-zinc-500">No workflow runs yet.</p>
                       ) : (
                         <div className="space-y-2">
                           {runs.slice(0, 8).map((run) => (
@@ -1297,19 +1297,19 @@ export default function DashboardClient() {
                                 className={cx(
                                   "h-2.5 w-2.5 shrink-0 rounded-full",
                                   run.status === "completed" && run.conclusion === "success"
-                                    ? "bg-green-500"
+                                    ? "bg-emerald-500"
                                     : run.conclusion === "failure"
                                       ? "bg-rose-500"
-                                      : "bg-sky-400"
+                                      : "bg-orange-400"
                                 )}
                               />
-                              <p className="min-w-0 flex-1 truncate text-sm text-slate-900">{run.name}</p>
-                              <span className="shrink-0 text-xs text-slate-500">{timeAgo(run.created_at)}</span>
+                              <p className="min-w-0 flex-1 truncate text-sm text-zinc-900">{run.name}</p>
+                              <span className="shrink-0 text-xs text-zinc-500">{timeAgo(run.created_at)}</span>
                               <a
                                 href={run.html_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-300/55 px-2 py-1 text-xs text-indigo-800 hover:bg-white"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-fuchsia-200/55 px-2 py-1 text-xs text-purple-800 hover:bg-white"
                               >
                                 open <OpenIcon />
                               </a>
@@ -1324,7 +1324,7 @@ export default function DashboardClient() {
                         <SectionHeader title="Recent articles" subtitle="Latest in your briefing" />
                         <div className="space-y-2">
                           {articles.slice(0, 6).length === 0 ? (
-                            <p className="text-sm text-slate-500">No articles yet.</p>
+                            <p className="text-sm text-zinc-500">No articles yet.</p>
                           ) : (
                             articles.slice(0, 6).map((article) => (
                               <a
@@ -1332,21 +1332,21 @@ export default function DashboardClient() {
                                 href={article.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="surface-inset block p-3 transition hover:border-cyan-300/50 hover:bg-cyan-50/40"
+                                className="surface-inset block p-3 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-50/38"
                               >
                                 <div className="mb-1 flex flex-wrap items-center gap-2">
                                   <Badge>{article.source}</Badge>
                                   {article.alerted && <Badge tone="alert">alert</Badge>}
                                   {article.importance_score != null && (
-                                    <span className="text-[11px] text-slate-500">
+                                    <span className="text-[11px] text-zinc-500">
                                       imp {article.importance_score}/10
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="line-clamp-2 text-sm font-medium text-slate-900">
+                                <h3 className="line-clamp-2 text-sm font-medium text-zinc-900">
                                   {article.title}
                                 </h3>
-                                <p className="mt-1 text-xs text-slate-500">{timeAgo(article.fetched_at)}</p>
+                                <p className="mt-1 text-xs text-zinc-500">{timeAgo(article.fetched_at)}</p>
                               </a>
                             ))
                           )}
@@ -1356,7 +1356,7 @@ export default function DashboardClient() {
                       <Card>
                         <SectionHeader title="Events & errors" />
                         {events.length === 0 ? (
-                          <p className="text-sm text-slate-500">No events logged yet.</p>
+                          <p className="text-sm text-zinc-500">No events logged yet.</p>
                         ) : (
                           <div className="space-y-2">
                             {events.slice(0, 8).map((event) => (
@@ -1374,9 +1374,9 @@ export default function DashboardClient() {
                                     {event.level}
                                   </Badge>
                                   <Badge>{event.source}</Badge>
-                                  <span className="text-xs text-slate-500">{timeAgo(event.created_at)}</span>
+                                  <span className="text-xs text-zinc-500">{timeAgo(event.created_at)}</span>
                                 </div>
-                                <p className="text-sm text-slate-800">{event.message}</p>
+                                <p className="text-sm text-zinc-800">{event.message}</p>
                               </article>
                             ))}
                           </div>
@@ -1406,8 +1406,8 @@ export default function DashboardClient() {
                       className={cx(
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm transition",
                         showIntelFilters
-                          ? "border-cyan-400 bg-cyan-50 text-slate-800"
-                          : "surface-inset border-slate-300/55 bg-white text-slate-700 hover:bg-cyan-50/40"
+                          ? "border-fuchsia-400 bg-fuchsia-50 text-zinc-800"
+                          : "surface-inset border-fuchsia-200/55 bg-white text-zinc-700 hover:bg-fuchsia-50/38"
                       )}
                     >
                       <FilterIcon />
@@ -1436,14 +1436,14 @@ export default function DashboardClient() {
                     </select>
                   </div>
                 )}
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-zinc-500">
                   {filteredFeed.length} article{filteredFeed.length === 1 ? "" : "s"} found
                 </p>
               </Card>
 
               {filteredFeed.length === 0 ? (
                 <Card className="py-10 text-center">
-                  <p className="text-sm text-slate-500">No articles match your filters right now.</p>
+                  <p className="text-sm text-zinc-500">No articles match your filters right now.</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
@@ -1471,10 +1471,10 @@ export default function DashboardClient() {
                 <div className="surface-inset h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto p-3">
                   {chat.length === 0 && (
                     <div className="mx-auto mt-16 max-w-sm text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-200 to-cyan-200/80 text-lg text-slate-900">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-200 to-fuchsia-200/80 text-lg text-zinc-900">
                         ✦
                       </div>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-zinc-500">
                         Ask about your latest intelligence, storyline timelines, or key risks to watch.
                       </p>
                     </div>
@@ -1484,10 +1484,10 @@ export default function DashboardClient() {
                   ))}
                   {chatBusy && (
                     <div className="mb-3 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-indigo-700 text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-600 to-rose-600 text-xs font-bold text-white">
                         J
                       </div>
-                      <div className="rounded-2xl rounded-bl-md border border-slate-300/55 bg-white px-4 py-3 shadow-sm">
+                      <div className="rounded-2xl rounded-bl-md border border-fuchsia-200/55 bg-white px-4 py-3 shadow-sm">
                         <div className="flex gap-1.5">
                           <span className="dot-typing h-2 w-2 rounded-full bg-zinc-400" />
                           <span
@@ -1539,11 +1539,11 @@ export default function DashboardClient() {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900">Personalization profile</h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <h2 className="text-base font-semibold text-zinc-900">Personalization profile</h2>
+                    <p className="mt-1 text-sm text-zinc-500">
                       Tune your briefing logic, topic priorities, and alert sensitivity.
                     </p>
-                    {prefsUserId && <p className="mt-1 text-xs text-slate-500">Profile: {prefsUserId}</p>}
+                    {prefsUserId && <p className="mt-1 text-xs text-zinc-500">Profile: {prefsUserId}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -1564,20 +1564,20 @@ export default function DashboardClient() {
                     </button>
                   </div>
                 </div>
-                {prefsMsg && <p className="mt-3 text-xs font-medium text-cyan-700">{prefsMsg}</p>}
+                {prefsMsg && <p className="mt-3 text-xs font-medium text-fuchsia-600">{prefsMsg}</p>}
               </Card>
 
               {!prefs ? (
                 <Card className="py-8 text-center">
-                  <p className="text-sm text-slate-500">Loading preferences...</p>
+                  <p className="text-sm text-zinc-500">Loading preferences...</p>
                 </Card>
               ) : (
                 <>
                   <Card>
                     <SectionHeader title="Alert sensitivity" />
-                    <p className="mb-3 text-sm text-slate-500">
+                    <p className="mb-3 text-sm text-zinc-500">
                       Current setting:{" "}
-                      <span className="font-semibold text-slate-900">{prefs.alert_sensitivity}/10</span>
+                      <span className="font-semibold text-zinc-900">{prefs.alert_sensitivity}/10</span>
                     </p>
                     <input
                       type="range"
@@ -1591,9 +1591,9 @@ export default function DashboardClient() {
                           alert_sensitivity: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-cyan-600"
+                      className="w-full accent-fuchsia-500"
                     />
-                    <div className="mt-2 flex justify-between text-xs text-slate-500">
+                    <div className="mt-2 flex justify-between text-xs text-zinc-500">
                       <span>Strict</span>
                       <span>Balanced</span>
                       <span>Wide net</span>
@@ -1618,8 +1618,8 @@ export default function DashboardClient() {
                             className={cx(
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                               active
-                                ? "border-cyan-400/50 bg-cyan-50 text-slate-900"
-                                : "border-slate-300/45 bg-white text-slate-700 hover:border-cyan-200/70"
+                                ? "border-fuchsia-400/50 bg-fuchsia-50 text-zinc-900"
+                                : "border-fuchsia-200/45 bg-white text-zinc-700 hover:border-fuchsia-200/65"
                             )}
                           >
                             {topic}
@@ -1706,7 +1706,7 @@ export default function DashboardClient() {
                             key={section}
                             className="surface-inset flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <span className="text-sm text-slate-900">{section}</span>
+                            <span className="text-sm text-zinc-900">{section}</span>
                             <div className="flex gap-2">
                               <button
                                 type="button"
@@ -1714,8 +1714,8 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   boosted
-                                    ? "border-cyan-400/50 bg-cyan-50 text-slate-900"
-                                    : "border-slate-300/45 bg-white text-slate-700 hover:bg-cyan-50/75"
+                                    ? "border-fuchsia-400/50 bg-fuchsia-50 text-zinc-900"
+                                    : "border-fuchsia-200/45 bg-white text-zinc-700 hover:bg-fuchsia-50/72"
                                 )}
                               >
                                 Boost
@@ -1726,8 +1726,8 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   muted
-                                    ? "border-cyan-400/45 bg-cyan-50 text-slate-900"
-                                    : "border-slate-300/45 bg-white text-slate-700 hover:bg-cyan-50/75"
+                                    ? "border-fuchsia-400/45 bg-fuchsia-50 text-zinc-900"
+                                    : "border-fuchsia-200/45 bg-white text-zinc-700 hover:bg-fuchsia-50/72"
                                 )}
                               >
                                 Mute
@@ -1745,7 +1745,7 @@ export default function DashboardClient() {
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-700/50 bg-slate-950/95 px-4 pt-2 backdrop-blur-2xl md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-violet-800/50 bg-violet-950/95 px-4 pt-2 backdrop-blur-2xl md:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
         >
           <div className="mx-auto grid w-full grid-cols-4 gap-1 xl:max-w-6xl">
