@@ -44,17 +44,17 @@ export default function LoginPage() {
   if (signupDone) {
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(52,211,153,0.1),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(16,185,129,0.08),transparent_40%)]" />
-        <div className="surface-card relative w-full max-w-md border border-emerald-950/15 p-7">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-lg font-bold text-white shadow-lg shadow-emerald-950/30">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(251,191,36,0.08),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(245,158,11,0.06),transparent_40%)]" />
+        <div className="surface-card relative w-full max-w-md border border-stone-300/40 p-7">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-600 to-orange-800 text-lg font-bold text-white shadow-lg shadow-stone-900/25">
             J
           </div>
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-emerald-950">
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-stone-900">
             Check your email
           </h1>
-          <p className="mt-3 text-center text-sm text-emerald-900/60">
+          <p className="mt-3 text-center text-sm text-stone-600">
             We sent a confirmation link to{" "}
-            <strong className="text-emerald-950">{email}</strong>. Confirm your account, then return
+            <strong className="text-stone-900">{email}</strong>. Confirm your account, then return
             here to log in.
           </p>
           <button
@@ -73,15 +73,15 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(52,211,153,0.1),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(16,185,129,0.08),transparent_40%)]" />
-      <div className="surface-card relative w-full max-w-md border border-emerald-950/15 p-7">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-lg font-bold text-white shadow-lg shadow-emerald-950/30">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(251,191,36,0.08),transparent_40%),radial-gradient(circle_at_85%_5%,rgba(245,158,11,0.06),transparent_40%)]" />
+      <div className="surface-card relative w-full max-w-md border border-stone-300/40 p-7">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-600 to-orange-800 text-lg font-bold text-white shadow-lg shadow-stone-900/25">
           J
         </div>
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-emerald-950">
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-stone-900">
           Jeff Intelligence
         </h1>
-        <p className="mt-2 text-center text-sm text-emerald-900/55">
+        <p className="mt-2 text-center text-sm text-stone-500">
           {mode === "login" ? "Sign in to your command dashboard" : "Create your account"}
         </p>
 
@@ -121,12 +121,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-emerald-900/55">
+        <p className="mt-5 text-center text-sm text-stone-500">
           {mode === "login" ? (
             <>
               No account?{" "}
               <button
-                className="font-semibold text-emerald-800 transition hover:text-emerald-950"
+                className="font-semibold text-amber-800 transition hover:text-amber-950"
                 onClick={() => {
                   setMode("signup");
                   setError(null);
@@ -139,7 +139,7 @@ export default function LoginPage() {
             <>
               Already have an account?{" "}
               <button
-                className="font-semibold text-emerald-800 transition hover:text-emerald-950"
+                className="font-semibold text-amber-800 transition hover:text-amber-950"
                 onClick={() => {
                   setMode("login");
                   setError(null);

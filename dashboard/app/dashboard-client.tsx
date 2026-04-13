@@ -117,10 +117,10 @@ function importanceColor(score: number): string {
 
 function thumbGradient(seed: string): string {
   const hues = [
-    "from-emerald-500 to-emerald-900",
-    "from-green-600 to-emerald-800",
-    "from-emerald-600 to-green-900",
-    "from-lime-700 to-emerald-900",
+    "from-amber-600 to-stone-800",
+    "from-orange-700 to-amber-900",
+    "from-amber-700 to-orange-900",
+    "from-yellow-800 to-amber-950",
   ];
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 997;
@@ -303,14 +303,14 @@ function SectionHeader({
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
-        <h2 className="text-base font-semibold tracking-tight text-emerald-950">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-emerald-900/55">{subtitle}</p>}
+        <h2 className="text-base font-semibold tracking-tight text-stone-900">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-stone-500">{subtitle}</p>}
       </div>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 text-xs font-semibold text-emerald-800 transition hover:text-emerald-950"
+          className="shrink-0 text-xs font-semibold text-amber-800 transition hover:text-stone-900"
         >
           {action.label}
         </button>
@@ -346,7 +346,7 @@ function SearchRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-emerald-950 placeholder:text-emerald-900/35 focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-0"
         />
       </form>
       {filterSlot}
@@ -375,8 +375,8 @@ function TopicPillStrip({
             className={cx(
               "shrink-0 snap-start rounded-full border px-3 py-2 text-xs font-medium transition",
               active
-                ? "border-emerald-400/50 bg-emerald-200/90 text-emerald-950"
-                : "border-emerald-950/10 bg-white/75 text-emerald-900 hover:bg-white"
+                ? "border-amber-400/50 bg-amber-200/85 text-stone-900"
+                : "border-stone-300/45 bg-white/75 text-stone-700 hover:bg-white"
             )}
           >
             {topic}
@@ -405,22 +405,22 @@ function ShortcutRow({
       type="button"
       onClick={onClick}
       className={cx(
-        "flex w-full items-center gap-3 rounded-2xl border border-emerald-950/10 bg-white/70 text-left shadow-sm transition hover:bg-white",
+        "flex w-full items-center gap-3 rounded-2xl border border-stone-300/45 bg-white/70 text-left shadow-sm transition hover:bg-white",
         dense ? "min-h-[44px] px-2.5 py-2" : "min-h-[48px] px-3 py-2.5"
       )}
     >
       <div
         className={cx(
-          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200/80 text-emerald-900",
+          "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-200/75 text-stone-700",
           dense ? "h-9 w-9" : "h-10 w-10"
         )}
       >
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-emerald-950">{title}</p>
+        <p className="text-sm font-semibold text-stone-900">{title}</p>
         {!dense && subtitle ? (
-          <p className="truncate text-xs text-emerald-900/50">{subtitle}</p>
+          <p className="truncate text-xs text-stone-500">{subtitle}</p>
         ) : null}
       </div>
       <ChevronRightIcon />
@@ -444,7 +444,7 @@ function QuickActionsGrid({
   ];
   return (
     <div className="surface-card p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-900/50">Automations</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-stone-500">Automations</p>
       <div className="grid grid-cols-3 gap-2">
         {actions.map((a) => (
           <button
@@ -452,12 +452,12 @@ function QuickActionsGrid({
             type="button"
             title={a.label}
             onClick={a.onClick}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-emerald-950/10 bg-white/65 py-2.5 text-center transition hover:bg-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-stone-300/45 bg-white/65 py-2.5 text-center transition hover:bg-white"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100/90 text-emerald-900">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100/90 text-stone-700">
               {a.icon}
             </span>
-            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-emerald-950">
+            <span className="max-w-[4.5rem] text-[10px] font-semibold leading-tight text-stone-900">
               {a.abbrev}
             </span>
             <span className="sr-only">{a.label}</span>
@@ -476,7 +476,7 @@ function FeaturedArticleCard({ article }: { article: Article }) {
       href={article.url}
       target="_blank"
       rel="noreferrer"
-      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-emerald-950/12 bg-white/80 text-left shadow-sm transition hover:border-emerald-400/40 hover:shadow-md"
+      className="w-[196px] shrink-0 snap-start overflow-hidden rounded-2xl border border-stone-300/55 bg-white/80 text-left shadow-sm transition hover:border-amber-400/40 hover:shadow-md"
     >
       <div
         className={cx(
@@ -487,10 +487,10 @@ function FeaturedArticleCard({ article }: { article: Article }) {
         {ini}
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 text-sm font-semibold text-emerald-950">{article.title}</p>
-        <p className="mt-1 text-xs text-emerald-900/50">{article.source}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-stone-900">{article.title}</p>
+        <p className="mt-1 text-xs text-stone-500">{article.source}</p>
         {article.importance_score != null && (
-          <p className="mt-1 text-[11px] font-medium text-emerald-900/80">Score {article.importance_score}/10</p>
+          <p className="mt-1 text-[11px] font-medium text-stone-600">Score {article.importance_score}/10</p>
         )}
       </div>
     </a>
@@ -514,7 +514,7 @@ function IntelListRow({
     <article
       className={cx(
         "surface-card flex gap-3 overflow-hidden p-3",
-        accentBorder && "border-l-[4px] border-emerald-100"
+        accentBorder && "border-l-[4px] border-amber-100"
       )}
       style={accentBorder ? { borderLeftColor: accentBorder } : undefined}
     >
@@ -532,20 +532,20 @@ function IntelListRow({
           {article.alerted && <Badge tone="alert">alert</Badge>}
           {article.emailed && <Badge tone="success">emailed</Badge>}
           {article.importance_score != null && (
-            <span className="text-[11px] text-emerald-900/45">imp {article.importance_score}/10</span>
+            <span className="text-[11px] text-stone-500">imp {article.importance_score}/10</span>
           )}
           {article.credibility_score != null && (
-            <span className="text-[11px] text-emerald-900/45">cred {article.credibility_score}/10</span>
+            <span className="text-[11px] text-stone-500">cred {article.credibility_score}/10</span>
           )}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold text-emerald-950">{article.title}</h3>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-emerald-900/50">
+        <h3 className="line-clamp-2 text-sm font-semibold text-stone-900">{article.title}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-stone-500">
           <span>{timeAgo(article.fetched_at)}</span>
           <a
             href={article.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-emerald-800 hover:text-emerald-950"
+            className="inline-flex items-center gap-1 font-medium text-amber-800 hover:text-stone-900"
             onClick={(e) => e.stopPropagation()}
           >
             open <OpenIcon />
@@ -556,12 +556,12 @@ function IntelListRow({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+              className="text-xs font-semibold text-amber-800 hover:text-stone-900"
             >
               {expanded ? "Hide summary" : "Show summary"}
             </button>
             {expanded && (
-              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-emerald-950/85">
+              <p className="surface-inset mt-2 p-3 text-sm leading-relaxed text-stone-800">
                 {article.summary}
               </p>
             )}
@@ -583,9 +583,9 @@ function Badge({
     <span
       className={cx(
         "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        tone === "default" && "border-emerald-200/80 bg-emerald-50/90 text-emerald-950",
+        tone === "default" && "border-amber-200/70 bg-amber-50/90 text-stone-900",
         tone === "alert" && "border-amber-200 bg-amber-50 text-amber-900",
-        tone === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900",
+        tone === "success" && "border-green-200 bg-green-50 text-green-900",
         tone === "warn" && "border-yellow-200 bg-yellow-50 text-yellow-900",
         tone === "danger" && "border-rose-200 bg-rose-50 text-rose-900"
       )}
@@ -613,8 +613,8 @@ function TabButton({
       className={cx(
         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
-          ? "bg-emerald-500/25 text-emerald-100"
-          : "text-emerald-100/45 hover:bg-emerald-950/40 hover:text-emerald-50"
+          ? "bg-amber-500/20 text-amber-100"
+          : "text-stone-400/90 hover:bg-stone-950/40 hover:text-stone-50"
       )}
     >
       {icon}
@@ -640,11 +640,11 @@ function MobileTabButton({
       onClick={onClick}
       className={cx(
         "relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl px-2 text-[11px] font-semibold transition",
-        active ? "text-emerald-200" : "text-emerald-100/35 hover:text-emerald-100/80"
+        active ? "text-amber-200" : "text-stone-500/80 hover:text-stone-300"
       )}
     >
       {active && (
-        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" />
+        <span className="absolute top-1 h-1 w-8 rounded-full bg-gradient-to-r from-amber-400 to-orange-600" />
       )}
       <span className={cx("mb-1", active && "mt-1")}>{icon}</span>
       <span>{label}</span>
@@ -654,10 +654,10 @@ function MobileTabButton({
 
 function StatTile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="surface-card border border-emerald-950/12 p-2.5 shadow-sm">
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-900/45">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tracking-tight text-emerald-950">{value}</p>
-      {hint && <p className="mt-0.5 text-[10px] text-emerald-900/45">{hint}</p>}
+    <div className="surface-card border border-stone-300/55 p-2.5 shadow-sm">
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tracking-tight text-stone-900">{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-stone-500">{hint}</p>}
     </div>
   );
 }
@@ -668,7 +668,7 @@ function ChatBubble({ message }: { message: ChatMsg }) {
     <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
         {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-800 text-xs font-bold text-white shadow-md shadow-emerald-950/40">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-600 to-orange-800 text-xs font-bold text-white shadow-md shadow-stone-950/40">
             J
           </div>
         )}
@@ -676,13 +676,13 @@ function ChatBubble({ message }: { message: ChatMsg }) {
           className={cx(
             "rounded-2xl px-4 py-3 shadow-md",
             isUser
-              ? "rounded-br-md border border-emerald-200/60 bg-gradient-to-br from-emerald-100 to-emerald-50/80 text-emerald-950"
-              : "rounded-bl-md border border-emerald-950/12 bg-white/95 text-emerald-950"
+              ? "rounded-br-md border border-amber-200/50 bg-gradient-to-br from-amber-100 to-amber-50/85 text-stone-900"
+              : "rounded-bl-md border border-stone-300/55 bg-white/95 text-stone-900"
           )}
         >
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-emerald-900/45">
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-stone-500">
             <span>{isUser ? "You" : "Jeff"}</span>
-            <span className="text-emerald-900/35">{formatClock(message.createdAt)}</span>
+            <span className="text-stone-400">{formatClock(message.createdAt)}</span>
           </div>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
         </div>
@@ -712,8 +712,8 @@ function ChipEditor({
 }) {
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-emerald-950">{title}</h3>
-      {description && <p className="mt-1 text-xs text-emerald-900/50">{description}</p>}
+      <h3 className="text-sm font-semibold text-stone-900">{title}</h3>
+      {description && <p className="mt-1 text-xs text-stone-500">{description}</p>}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={value}
@@ -727,20 +727,20 @@ function ChipEditor({
           placeholder={placeholder}
           className="input-hybrid h-11 flex-1"
         />
-        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-emerald-200/80 px-4 text-emerald-950">
+        <button type="button" onClick={onAdd} className="btn-ghost-dark h-11 border-amber-200/70 px-4 text-stone-900">
           Add
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length === 0 ? (
-          <p className="text-xs text-emerald-900/45">Nothing added yet.</p>
+          <p className="text-xs text-stone-500">Nothing added yet.</p>
         ) : (
           items.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => onRemove(item)}
-              className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50/90 px-2.5 py-1.5 text-xs font-medium text-emerald-950 transition hover:bg-emerald-100/80"
+              className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50/90 px-2.5 py-1.5 text-xs font-medium text-stone-900 transition hover:bg-amber-100/80"
               title="Tap to remove"
             >
               <span>{item}</span>
@@ -1092,18 +1092,18 @@ export default function DashboardClient() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(52,211,153,0.08),transparent_42%),radial-gradient(circle_at_82%_8%,rgba(16,185,129,0.06),transparent_46%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.06),transparent_44%),radial-gradient(circle_at_80%_8%,rgba(245,158,11,0.05),transparent_48%)]" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-none flex-col xl:max-w-6xl">
-        <header className="sticky top-0 z-40 border-b border-emerald-950/25 bg-emerald-950/80 px-4 py-3 backdrop-blur-xl md:px-6">
+        <header className="sticky top-0 z-40 border-b border-stone-800/40 bg-stone-950/80 px-4 py-3 backdrop-blur-xl md:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-800 text-sm font-bold text-white shadow-lg shadow-emerald-950/40">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-800 text-sm font-bold text-white shadow-lg shadow-stone-950/40">
                 J
               </div>
               <div>
-                <p className="text-sm font-semibold tracking-tight text-emerald-50">Jeff Intelligence</p>
-                <p className="text-xs text-emerald-200/55">AI command dashboard</p>
+                <p className="text-sm font-semibold tracking-tight text-stone-50">Jeff Intelligence</p>
+                <p className="text-xs text-stone-400/80">AI command dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1111,7 +1111,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={refreshData}
                 title="Refresh data"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-emerald-100/50 transition hover:text-emerald-50"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-stone-400/80 transition hover:text-stone-50"
               >
                 <RefreshIcon />
               </button>
@@ -1119,7 +1119,7 @@ export default function DashboardClient() {
                 type="button"
                 onClick={handleSignOut}
                 title="Sign out"
-                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-emerald-100/50 transition hover:text-emerald-50"
+                className="glass-panel flex h-9 w-9 items-center justify-center rounded-xl text-stone-400/80 transition hover:text-stone-50"
               >
                 <LogoutIcon />
               </button>
@@ -1127,7 +1127,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        <nav className="sticky top-[65px] z-30 hidden border-b border-emerald-950/25 bg-emerald-950/65 px-4 py-2 backdrop-blur-xl md:block md:px-6">
+        <nav className="sticky top-[65px] z-30 hidden border-b border-stone-800/40 bg-stone-950/65 px-4 py-2 backdrop-blur-xl md:block md:px-6">
           <div className="flex items-center gap-2">
             {tabs.map((item) => (
               <TabButton
@@ -1151,9 +1151,9 @@ export default function DashboardClient() {
           {tab === "overview" && (
             <>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400/90">{greeting}</p>
-                <h1 className="mt-1 text-xl font-bold tracking-tight text-emerald-50">Briefing home</h1>
-                <p className="mt-1 max-w-sm text-sm text-emerald-100/55">Search, then open intel or chat.</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-400/90">{greeting}</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-stone-50">Briefing home</h1>
+                <p className="mt-1 max-w-sm text-sm text-stone-400">Search, then open intel or chat.</p>
               </div>
 
               <SearchRow
@@ -1167,7 +1167,7 @@ export default function DashboardClient() {
               />
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-100/45">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400/90">
                   Hot topics
                 </p>
                 <TopicPillStrip
@@ -1204,11 +1204,11 @@ export default function DashboardClient() {
               </div>
 
               <Card className="overflow-hidden p-0">
-                <div className="h-24 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-950" />
+                <div className="h-24 bg-gradient-to-br from-amber-950 via-stone-900 to-stone-950" />
                 <div className="p-4">
                   <SectionHeader title="Latest digest" />
                   {!latestDigest ? (
-                    <p className="text-sm text-emerald-900/50">No digests yet.</p>
+                    <p className="text-sm text-stone-500">No digests yet.</p>
                   ) : (
                     <article>
                       <div className="mb-2 flex flex-wrap gap-2">
@@ -1218,16 +1218,16 @@ export default function DashboardClient() {
                           </Badge>
                         ))}
                       </div>
-                      <h3 className="text-sm font-semibold text-emerald-950">
+                      <h3 className="text-sm font-semibold text-stone-900">
                         {latestDigest.subject || "Digest"}
                       </h3>
-                      <p className="mt-1 text-xs text-emerald-900/50">
+                      <p className="mt-1 text-xs text-stone-500">
                         {new Date(latestDigest.created_at).toLocaleString()}
                       </p>
                       <div className="surface-inset mt-3 p-3">
                         <p
                           className={cx(
-                            "whitespace-pre-wrap text-sm leading-relaxed text-emerald-950/85",
+                            "whitespace-pre-wrap text-sm leading-relaxed text-stone-800",
                             showFullDigest && "max-h-80 overflow-y-auto pr-1"
                           )}
                         >
@@ -1238,12 +1238,12 @@ export default function DashboardClient() {
                         <button
                           type="button"
                           onClick={() => setShowFullDigest((current) => !current)}
-                          className="mt-2 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+                          className="mt-2 text-xs font-semibold text-amber-800 hover:text-stone-900"
                         >
                           {showFullDigest ? "Show shorter preview" : "Read full digest"}
                         </button>
                       )}
-                      <p className="mt-1 text-[11px] text-emerald-900/45">
+                      <p className="mt-1 text-[11px] text-stone-500">
                         Preview uses saved digest text only (no extra AI calls).
                       </p>
                     </article>
@@ -1254,15 +1254,15 @@ export default function DashboardClient() {
               <details className="surface-card group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                   <div>
-                    <p className="text-sm font-semibold text-emerald-950">Featured picks &amp; activity</p>
-                    <p className="text-xs text-emerald-900/50">Workflow runs, top articles, and logs</p>
+                    <p className="text-sm font-semibold text-stone-900">Featured picks &amp; activity</p>
+                    <p className="text-xs text-stone-500">Workflow runs, top articles, and logs</p>
                   </div>
-                  <span className="shrink-0 text-xs font-semibold text-emerald-800 group-open:hidden">Expand</span>
-                  <span className="hidden shrink-0 text-xs font-semibold text-emerald-800 group-open:inline">
+                  <span className="shrink-0 text-xs font-semibold text-amber-800 group-open:hidden">Expand</span>
+                  <span className="hidden shrink-0 text-xs font-semibold text-amber-800 group-open:inline">
                     Collapse
                   </span>
                 </summary>
-                <div className="space-y-4 border-t border-emerald-950/10 px-4 pb-4 pt-4">
+                <div className="space-y-4 border-t border-stone-300/45 px-4 pb-4 pt-4">
                   <div>
                     <SectionHeader
                       title="Featured signals"
@@ -1270,7 +1270,7 @@ export default function DashboardClient() {
                       action={{ label: "View all", onClick: () => setTab("intel") }}
                     />
                     {featuredArticles.length === 0 ? (
-                      <p className="text-sm text-emerald-900/50">No articles yet. Run the pipeline to populate.</p>
+                      <p className="text-sm text-stone-500">No articles yet. Run the pipeline to populate.</p>
                     ) : (
                       <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 pt-1">
                         {featuredArticles.slice(0, 10).map((article) => (
@@ -1285,7 +1285,7 @@ export default function DashboardClient() {
                       <SectionHeader title="Workflow activity" subtitle="Recent GitHub runs" />
                       {runErr && <p className="mb-2 text-xs text-rose-700">{runErr}</p>}
                       {runs.length === 0 ? (
-                        <p className="text-sm text-emerald-900/50">No workflow runs yet.</p>
+                        <p className="text-sm text-stone-500">No workflow runs yet.</p>
                       ) : (
                         <div className="space-y-2">
                           {runs.slice(0, 8).map((run) => (
@@ -1297,19 +1297,19 @@ export default function DashboardClient() {
                                 className={cx(
                                   "h-2.5 w-2.5 shrink-0 rounded-full",
                                   run.status === "completed" && run.conclusion === "success"
-                                    ? "bg-emerald-500"
+                                    ? "bg-green-500"
                                     : run.conclusion === "failure"
                                       ? "bg-rose-500"
                                       : "bg-amber-400"
                                 )}
                               />
-                              <p className="min-w-0 flex-1 truncate text-sm text-emerald-950">{run.name}</p>
-                              <span className="shrink-0 text-xs text-emerald-900/50">{timeAgo(run.created_at)}</span>
+                              <p className="min-w-0 flex-1 truncate text-sm text-stone-900">{run.name}</p>
+                              <span className="shrink-0 text-xs text-stone-500">{timeAgo(run.created_at)}</span>
                               <a
                                 href={run.html_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-950/12 px-2 py-1 text-xs text-emerald-800 hover:bg-white"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-300/55 px-2 py-1 text-xs text-amber-800 hover:bg-white"
                               >
                                 open <OpenIcon />
                               </a>
@@ -1324,7 +1324,7 @@ export default function DashboardClient() {
                         <SectionHeader title="Recent articles" subtitle="Latest in your briefing" />
                         <div className="space-y-2">
                           {articles.slice(0, 6).length === 0 ? (
-                            <p className="text-sm text-emerald-900/50">No articles yet.</p>
+                            <p className="text-sm text-stone-500">No articles yet.</p>
                           ) : (
                             articles.slice(0, 6).map((article) => (
                               <a
@@ -1332,21 +1332,21 @@ export default function DashboardClient() {
                                 href={article.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="surface-inset block p-3 transition hover:border-emerald-300/60 hover:bg-emerald-50/50"
+                                className="surface-inset block p-3 transition hover:border-amber-300/50 hover:bg-amber-50/50"
                               >
                                 <div className="mb-1 flex flex-wrap items-center gap-2">
                                   <Badge>{article.source}</Badge>
                                   {article.alerted && <Badge tone="alert">alert</Badge>}
                                   {article.importance_score != null && (
-                                    <span className="text-[11px] text-emerald-900/45">
+                                    <span className="text-[11px] text-stone-500">
                                       imp {article.importance_score}/10
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="line-clamp-2 text-sm font-medium text-emerald-950">
+                                <h3 className="line-clamp-2 text-sm font-medium text-stone-900">
                                   {article.title}
                                 </h3>
-                                <p className="mt-1 text-xs text-emerald-900/50">{timeAgo(article.fetched_at)}</p>
+                                <p className="mt-1 text-xs text-stone-500">{timeAgo(article.fetched_at)}</p>
                               </a>
                             ))
                           )}
@@ -1356,7 +1356,7 @@ export default function DashboardClient() {
                       <Card>
                         <SectionHeader title="Events & errors" />
                         {events.length === 0 ? (
-                          <p className="text-sm text-emerald-900/50">No events logged yet.</p>
+                          <p className="text-sm text-stone-500">No events logged yet.</p>
                         ) : (
                           <div className="space-y-2">
                             {events.slice(0, 8).map((event) => (
@@ -1374,9 +1374,9 @@ export default function DashboardClient() {
                                     {event.level}
                                   </Badge>
                                   <Badge>{event.source}</Badge>
-                                  <span className="text-xs text-emerald-900/50">{timeAgo(event.created_at)}</span>
+                                  <span className="text-xs text-stone-500">{timeAgo(event.created_at)}</span>
                                 </div>
-                                <p className="text-sm text-emerald-950/90">{event.message}</p>
+                                <p className="text-sm text-stone-800">{event.message}</p>
                               </article>
                             ))}
                           </div>
@@ -1406,8 +1406,8 @@ export default function DashboardClient() {
                       className={cx(
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm transition",
                         showIntelFilters
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-900"
-                          : "surface-inset border-emerald-950/12 bg-white text-emerald-900 hover:bg-emerald-50/50"
+                          ? "border-amber-400 bg-amber-50 text-stone-700"
+                          : "surface-inset border-stone-300/55 bg-white text-stone-700 hover:bg-amber-50/50"
                       )}
                     >
                       <FilterIcon />
@@ -1436,14 +1436,14 @@ export default function DashboardClient() {
                     </select>
                   </div>
                 )}
-                <p className="mt-3 text-xs text-emerald-900/45">
+                <p className="mt-3 text-xs text-stone-500">
                   {filteredFeed.length} article{filteredFeed.length === 1 ? "" : "s"} found
                 </p>
               </Card>
 
               {filteredFeed.length === 0 ? (
                 <Card className="py-10 text-center">
-                  <p className="text-sm text-emerald-900/50">No articles match your filters right now.</p>
+                  <p className="text-sm text-stone-500">No articles match your filters right now.</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
@@ -1471,10 +1471,10 @@ export default function DashboardClient() {
                 <div className="surface-inset h-[calc(100dvh-18rem)] min-h-[420px] max-h-[760px] overflow-y-auto p-3">
                   {chat.length === 0 && (
                     <div className="mx-auto mt-16 max-w-sm text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-200 to-emerald-300/80 text-lg text-emerald-950">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-orange-200/80 text-lg text-stone-900">
                         ✦
                       </div>
-                      <p className="text-sm text-emerald-900/55">
+                      <p className="text-sm text-stone-500">
                         Ask about your latest intelligence, storyline timelines, or key risks to watch.
                       </p>
                     </div>
@@ -1484,10 +1484,10 @@ export default function DashboardClient() {
                   ))}
                   {chatBusy && (
                     <div className="mb-3 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-800 text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-600 to-orange-800 text-xs font-bold text-white">
                         J
                       </div>
-                      <div className="rounded-2xl rounded-bl-md border border-emerald-950/12 bg-white px-4 py-3 shadow-sm">
+                      <div className="rounded-2xl rounded-bl-md border border-stone-300/55 bg-white px-4 py-3 shadow-sm">
                         <div className="flex gap-1.5">
                           <span className="dot-typing h-2 w-2 rounded-full bg-zinc-400" />
                           <span
@@ -1539,11 +1539,11 @@ export default function DashboardClient() {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-emerald-950">Personalization profile</h2>
-                    <p className="mt-1 text-sm text-emerald-900/55">
+                    <h2 className="text-base font-semibold text-stone-900">Personalization profile</h2>
+                    <p className="mt-1 text-sm text-stone-500">
                       Tune your briefing logic, topic priorities, and alert sensitivity.
                     </p>
-                    {prefsUserId && <p className="mt-1 text-xs text-emerald-900/45">Profile: {prefsUserId}</p>}
+                    {prefsUserId && <p className="mt-1 text-xs text-stone-500">Profile: {prefsUserId}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -1569,15 +1569,15 @@ export default function DashboardClient() {
 
               {!prefs ? (
                 <Card className="py-8 text-center">
-                  <p className="text-sm text-emerald-900/50">Loading preferences...</p>
+                  <p className="text-sm text-stone-500">Loading preferences...</p>
                 </Card>
               ) : (
                 <>
                   <Card>
                     <SectionHeader title="Alert sensitivity" />
-                    <p className="mb-3 text-sm text-emerald-900/55">
+                    <p className="mb-3 text-sm text-stone-500">
                       Current setting:{" "}
-                      <span className="font-semibold text-emerald-950">{prefs.alert_sensitivity}/10</span>
+                      <span className="font-semibold text-stone-900">{prefs.alert_sensitivity}/10</span>
                     </p>
                     <input
                       type="range"
@@ -1591,9 +1591,9 @@ export default function DashboardClient() {
                           alert_sensitivity: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-emerald-600"
+                      className="w-full accent-amber-600"
                     />
-                    <div className="mt-2 flex justify-between text-xs text-emerald-900/45">
+                    <div className="mt-2 flex justify-between text-xs text-stone-500">
                       <span>Strict</span>
                       <span>Balanced</span>
                       <span>Wide net</span>
@@ -1618,8 +1618,8 @@ export default function DashboardClient() {
                             className={cx(
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                               active
-                                ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                                : "border-emerald-950/10 bg-white text-emerald-900 hover:border-emerald-200"
+                                ? "border-amber-400/60 bg-amber-50 text-stone-900"
+                                : "border-stone-300/45 bg-white text-stone-700 hover:border-amber-200"
                             )}
                           >
                             {topic}
@@ -1706,7 +1706,7 @@ export default function DashboardClient() {
                             key={section}
                             className="surface-inset flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <span className="text-sm text-emerald-950">{section}</span>
+                            <span className="text-sm text-stone-900">{section}</span>
                             <div className="flex gap-2">
                               <button
                                 type="button"
@@ -1714,8 +1714,8 @@ export default function DashboardClient() {
                                 className={cx(
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   boosted
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                                    : "border-emerald-950/10 bg-white text-emerald-900 hover:bg-emerald-50/80"
+                                    ? "border-amber-400/60 bg-amber-50 text-stone-900"
+                                    : "border-stone-300/45 bg-white text-stone-700 hover:bg-amber-50/80"
                                 )}
                               >
                                 Boost
@@ -1727,7 +1727,7 @@ export default function DashboardClient() {
                                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                                   muted
                                     ? "border-amber-300 bg-amber-50 text-amber-900"
-                                    : "border-emerald-950/10 bg-white text-emerald-900 hover:bg-emerald-50/80"
+                                    : "border-stone-300/45 bg-white text-stone-700 hover:bg-amber-50/80"
                                 )}
                               >
                                 Mute
@@ -1745,7 +1745,7 @@ export default function DashboardClient() {
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-emerald-950/30 bg-emerald-950/95 px-4 pt-2 backdrop-blur-2xl md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-700/50 bg-stone-950/95 px-4 pt-2 backdrop-blur-2xl md:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
         >
           <div className="mx-auto grid w-full grid-cols-4 gap-1 xl:max-w-6xl">
