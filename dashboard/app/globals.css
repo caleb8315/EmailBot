@@ -1,21 +1,18 @@
 @import "tailwindcss";
 
-/* Wow: #0B1020 base · Grad1 #00F5FF→#FF2BD6 · Grad2 #7C3CFF→#00FFCC · Text #FFFFFF */
+/* Matrix-lite: #050505 · primary #00FF41 · secondary #00C2FF · text #A3A3A3 */
 :root {
   color-scheme: dark;
-  --bg: #0b1020;
-  --bg-elevated: #0a101c;
-  --surface: #121a2e;
-  --surface-deep: #0b1020;
-  --text: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.58);
-  --g1-from: #00f5ff;
-  --g1-to: #ff2bd6;
-  --g2-from: #7c3cff;
-  --g2-to: #00ffcc;
-  --surface-border: rgba(255, 255, 255, 0.07);
-  --accent-ring: rgba(0, 245, 255, 0.35);
-  --shadow-surface: 0 20px 48px -24px rgba(0, 0, 0, 0.72);
+  --bg: #050505;
+  --surface: #0c0c0c;
+  --surface-deep: #050505;
+  --text: #a3a3a3;
+  --text-muted: rgba(163, 163, 163, 0.72);
+  --primary: #00ff41;
+  --secondary: #00c2ff;
+  --surface-border: rgba(255, 255, 255, 0.06);
+  --accent-ring: rgba(0, 255, 65, 0.38);
+  --shadow-surface: 0 20px 48px -24px rgba(0, 0, 0, 0.85);
 }
 
 html,
@@ -26,11 +23,10 @@ body {
 body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial, sans-serif;
-  background: radial-gradient(circle at 18% -2%, rgba(0, 245, 255, 0.11), transparent 48%),
-    radial-gradient(circle at 92% 4%, rgba(255, 43, 214, 0.07), transparent 52%),
-    radial-gradient(circle at 8% 88%, rgba(124, 60, 255, 0.08), transparent 55%),
-    radial-gradient(circle at 88% 96%, rgba(0, 255, 204, 0.06), transparent 58%),
-    linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 55%);
+  background: radial-gradient(circle at 20% -2%, rgba(0, 255, 65, 0.07), transparent 48%),
+    radial-gradient(circle at 85% 6%, rgba(0, 194, 255, 0.09), transparent 52%),
+    radial-gradient(circle at 10% 92%, rgba(0, 255, 65, 0.04), transparent 55%),
+    linear-gradient(180deg, #080808 0%, var(--bg) 52%);
   color: var(--text-muted);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -38,7 +34,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 245, 255, 0.4) transparent;
+  scrollbar-color: rgba(0, 255, 65, 0.45) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -47,7 +43,7 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(0, 245, 255, 0.45), rgba(255, 43, 214, 0.35));
+  background: linear-gradient(180deg, rgba(0, 255, 65, 0.5), rgba(0, 194, 255, 0.4));
   border-radius: 9999px;
 }
 
@@ -78,44 +74,43 @@ body {
   }
 
   .page-shell {
-    @apply text-white/60;
+    @apply text-[#A3A3A3]/75;
   }
 
   .glass-panel {
-    @apply border border-[#00F5FF]/14 bg-[#0B1020]/58 backdrop-blur-xl;
+    @apply border border-[#00FF41]/12 bg-[#050505]/60 backdrop-blur-xl;
   }
 
   .glass-panel-strong {
-    @apply border border-[#7C3CFF]/22 bg-[#0B1020]/68 backdrop-blur-2xl;
+    @apply border border-[#00C2FF]/18 bg-[#050505]/72 backdrop-blur-2xl;
   }
 
-  /* No white fill — dark surface only */
   .surface-card {
-    @apply rounded-2xl border border-white/[0.07] bg-[#121a2e] text-white shadow-[0_20px_48px_-24px_rgba(0,0,0,0.72)];
+    @apply rounded-2xl border border-white/[0.06] bg-[#0c0c0c] text-[#A3A3A3] shadow-[0_20px_48px_-24px_rgba(0,0,0,0.85)];
   }
 
   .surface-inset {
-    @apply rounded-xl border border-[#00F5FF]/12 bg-[#0B1020]/85;
+    @apply rounded-xl border border-[#00FF41]/10 bg-[#050505]/88;
   }
 
   .text-muted {
-    @apply text-sm text-white/58;
+    @apply text-sm text-[#A3A3A3]/72;
   }
 
   .text-on-surface-muted {
-    @apply text-white/58;
+    @apply text-[#A3A3A3]/72;
   }
 
   .input-hybrid {
-    @apply rounded-xl border border-white/[0.09] bg-[#0B1020]/92 px-3 text-sm text-white placeholder:text-white/38 focus:border-[#00F5FF]/50 focus:outline-none focus:ring-2 focus:ring-[#FF2BD6]/15;
+    @apply rounded-xl border border-white/[0.08] bg-[#050505]/95 px-3 text-sm text-[#A3A3A3] placeholder:text-[#A3A3A3]/45 focus:border-[#00FF41]/45 focus:outline-none focus:ring-2 focus:ring-[#00C2FF]/12;
   }
 
   .btn-primary {
-    @apply rounded-xl bg-gradient-to-r from-[#00F5FF] to-[#FF2BD6] font-semibold text-white shadow-lg shadow-[#FF2BD6]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply rounded-xl bg-gradient-to-r from-[#00FF41] to-[#00C2FF] font-semibold text-[#050505] shadow-lg shadow-[#00FF41]/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-ghost-dark {
-    @apply rounded-xl border border-white/[0.09] bg-[#121a2e]/95 text-sm font-medium text-white transition hover:border-[#00F5FF]/28 hover:bg-[#121a2e];
+    @apply rounded-xl border border-white/[0.08] bg-[#0c0c0c]/95 text-sm font-medium text-[#A3A3A3] transition hover:border-[#00FF41]/28 hover:bg-[#0c0c0c];
   }
 
   .dot-typing {
