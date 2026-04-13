@@ -27,28 +27,47 @@ export async function GET(req: Request) {
     const sb = supabaseAdmin();
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-    let query = sb
-      .from("intel_events")
-      .select("id, source, type, severity, confidence, country_code, timestamp, title, summary, tags, location")
-      .gte("timestamp", cutoff)
-      .gte("severity", severityMin)
-      .order("timestamp", { ascending: false })
-      .limit(limit);
+    const fields = "id, source, type, severity, confidence, country_code, timestamp, title, summary, tags, location";
 
-    if (source) query = query.eq("source", source);
-    if (type) query = query.eq("type", type);
-
-    const { data, error } = await query;
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (source) {
+      // Single-source query
+      let query = sb.from("intel_events").select(fields)
+        .eq("source", source)
+        .gte("timestamp", cutoff)
+        .gte("severity", severityMin)
+        .order("timestamp", { ascending: false })
+        .limit(limit);
+      if (type) query = query.eq("type", type);
+      const { data, error } = await query;
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      const events = (data ?? []).map(decodeEvent);
+      return NextResponse.json({ events, count: events.length });
     }
 
-    const events = (data ?? []).map((e) => ({
-      ...e,
-      lat: decodeWKBLat(e.location),
-      lng: decodeWKBLng(e.location),
-    }));
+    // Default: fetch geolocated events first, then fill remaining with non-geo
+    const geoLimit = Math.min(limit, 300);
+    const textLimit = limit - geoLimit;
+
+    const [geoRes, textRes] = await Promise.all([
+      sb.from("intel_events").select(fields)
+        .not("location", "is", null)
+        .gte("timestamp", cutoff)
+        .gte("severity", severityMin)
+        .order("severity", { ascending: false })
+        .limit(geoLimit),
+      sb.from("intel_events").select(fields)
+        .is("location", null)
+        .gte("timestamp", cutoff)
+        .gte("severity", severityMin)
+        .order("timestamp", { ascending: false })
+        .limit(textLimit),
+    ]);
+
+    if (geoRes.error) return NextResponse.json({ error: geoRes.error.message }, { status: 500 });
+
+    const geoEvents = (geoRes.data ?? []).map(decodeEvent);
+    const textEvents = (textRes.data ?? []).map(decodeEvent);
+    const events = [...geoEvents, ...textEvents];
 
     return NextResponse.json({ events, count: events.length });
   } catch (e) {
@@ -57,31 +76,25 @@ export async function GET(req: Request) {
   }
 }
 
+function decodeEvent(e: Record<string, unknown>) {
+  return {
+    ...e,
+    lat: decodeWKBCoord(e.location as string, "lat"),
+    lng: decodeWKBCoord(e.location as string, "lng"),
+  };
+}
+
 /**
- * Decode lat from PostGIS WKB hex (SRID 4326 POINT).
- * Format: 0101000020E6100000 + 8 bytes longitude (little-endian) + 8 bytes latitude (little-endian)
+ * Decode coordinates from PostGIS WKB hex (SRID 4326 POINT).
+ * Format: 0101000020E6100000 (18 hex chars header) + 16 hex longitude + 16 hex latitude
  */
-function decodeWKBLng(wkb: unknown): number | null {
+function decodeWKBCoord(wkb: unknown, which: "lat" | "lng"): number | null {
   if (typeof wkb !== "string" || wkb.length < 50) return null;
   try {
-    const hex = wkb.slice(18, 34); // bytes 9-16: longitude
-    return readFloat64LE(hex);
+    const offset = which === "lng" ? 18 : 34;
+    const buf = Buffer.from(wkb.slice(offset, offset + 16), "hex");
+    return buf.readDoubleLE(0);
   } catch {
     return null;
   }
-}
-
-function decodeWKBLat(wkb: unknown): number | null {
-  if (typeof wkb !== "string" || wkb.length < 50) return null;
-  try {
-    const hex = wkb.slice(34, 50); // bytes 17-24: latitude
-    return readFloat64LE(hex);
-  } catch {
-    return null;
-  }
-}
-
-function readFloat64LE(hex: string): number {
-  const buf = Buffer.from(hex, "hex");
-  return buf.readDoubleLE(0);
 }

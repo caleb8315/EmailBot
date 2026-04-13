@@ -60,7 +60,7 @@ function MapInner() {
   const [enabledLayers, setEnabledLayers] = useState<Set<string>>(
     new Set(Object.keys(LAYER_LABELS))
   );
-  const [hoursBack, setHoursBack] = useState(24);
+  const [hoursBack, setHoursBack] = useState(48);
   const [mapReady, setMapReady] = useState(false);
 
   const fetchEvents = useCallback(async () => {

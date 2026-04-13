@@ -130,12 +130,23 @@ export async function runIngestion(): Promise<{
 
   // Filter to only significant events (severity > 15) to manage row budget
   const significant = allEvents.filter(e => e.severity > 15);
-  console.log(`[ingest] ${allEvents.length} total events, ${significant.length} above severity threshold`);
+
+  // Deduplicate: skip events with titles we already stored in the last 24h
+  const sb = getSupabase();
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentTitles } = await sb
+    .from('intel_events')
+    .select('title')
+    .gte('created_at', oneDayAgo)
+    .limit(2000);
+  const existingTitles = new Set((recentTitles || []).map(r => r.title));
+  const deduped = significant.filter(e => !existingTitles.has(e.title));
+  console.log(`[ingest] ${allEvents.length} total → ${significant.length} significant → ${deduped.length} after dedup`);
 
   // Store to Supabase
   let totalStored = 0;
   try {
-    totalStored = await storeEvents(significant);
+    totalStored = await storeEvents(deduped);
   } catch (err) {
     console.error(`[ingest] Storage failed: ${err instanceof Error ? err.message : String(err)}`);
   }
