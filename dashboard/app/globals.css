@@ -1,20 +1,18 @@
 @import "tailwindcss";
 
-/* Aurora dusk: violet-black chrome, blush-lavender surfaces, fuchsia–sunset accents */
+/* Navy black chrome, surface slate #111827, glow cyan + violet accents, text #E9F1FF */
 :root {
   color-scheme: dark;
-  --page-bg: #0a0612;
-  --page-bg-muted: #12081c;
-  --chrome-fg: #c4b5d4;
-  --surface: #fdf4ff;
-  --surface-muted: #fceeff;
-  --surface-border: rgba(112, 26, 117, 0.14);
-  --on-surface: #1c1033;
-  --on-surface-muted: #5b4279;
-  --accent: #e879f9;
-  --accent-strong: #f97316;
-  --accent-ring: rgba(232, 121, 249, 0.35);
-  --shadow-surface: 0 16px 50px -20px rgba(88, 28, 135, 0.45);
+  --bg: #0b1020;
+  --bg-elevated: #0d1528;
+  --surface: #111827;
+  --text: #e9f1ff;
+  --text-muted: rgba(233, 241, 255, 0.55);
+  --primary: #00f5ff;
+  --secondary: #7c3cff;
+  --surface-border: rgba(233, 241, 255, 0.08);
+  --accent-ring: rgba(0, 245, 255, 0.35);
+  --shadow-surface: 0 20px 48px -24px rgba(0, 0, 0, 0.65);
 }
 
 html,
@@ -25,18 +23,18 @@ body {
 body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial, sans-serif;
-  background: radial-gradient(circle at 20% -4%, rgba(232, 121, 249, 0.12), transparent 48%),
-    radial-gradient(circle at 82% 8%, rgba(249, 115, 22, 0.09), transparent 52%),
-    radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.06), transparent 55%),
-    linear-gradient(180deg, var(--page-bg-muted) 0%, var(--page-bg) 46%);
-  color: var(--chrome-fg);
+  background: radial-gradient(circle at 18% -2%, rgba(0, 245, 255, 0.09), transparent 48%),
+    radial-gradient(circle at 88% 6%, rgba(124, 60, 255, 0.08), transparent 52%),
+    radial-gradient(circle at 50% 105%, rgba(124, 60, 255, 0.05), transparent 58%),
+    linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 52%);
+  color: var(--text-muted);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(232, 121, 249, 0.35) transparent;
+  scrollbar-color: rgba(0, 245, 255, 0.35) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -45,7 +43,7 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(232, 121, 249, 0.35);
+  background: rgba(0, 245, 255, 0.35);
   border-radius: 9999px;
 }
 
@@ -76,43 +74,43 @@ body {
   }
 
   .page-shell {
-    @apply text-fuchsia-200/70;
+    @apply text-[#E9F1FF]/65;
   }
 
   .glass-panel {
-    @apply border border-fuchsia-950/30 bg-violet-950/50 backdrop-blur-xl;
+    @apply border border-[#00F5FF]/12 bg-[#0B1020]/55 backdrop-blur-xl;
   }
 
   .glass-panel-strong {
-    @apply border border-purple-950/35 bg-violet-950/60 backdrop-blur-2xl;
+    @apply border border-[#7C3CFF]/18 bg-[#0B1020]/65 backdrop-blur-2xl;
   }
 
   .surface-card {
-    @apply rounded-2xl border border-fuchsia-200/35 bg-[#fdf4ff] text-zinc-900 shadow-[0_16px_50px_-20px_rgba(88,28,135,0.4)];
+    @apply rounded-2xl border border-white/[0.08] bg-[#111827] text-[#E9F1FF] shadow-[0_20px_48px_-24px_rgba(0,0,0,0.65)];
   }
 
   .surface-inset {
-    @apply rounded-xl border border-fuchsia-100/80 bg-white/88;
+    @apply rounded-xl border border-[#00F5FF]/10 bg-[#0B1020]/80;
   }
 
   .text-muted {
-    @apply text-sm text-zinc-500;
+    @apply text-sm text-[#E9F1FF]/55;
   }
 
   .text-on-surface-muted {
-    @apply text-zinc-500;
+    @apply text-[#E9F1FF]/55;
   }
 
   .input-hybrid {
-    @apply rounded-xl border border-fuchsia-200/60 bg-white/94 px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-fuchsia-500/70 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/25;
+    @apply rounded-xl border border-white/[0.1] bg-[#0B1020]/90 px-3 text-sm text-[#E9F1FF] placeholder:text-[#E9F1FF]/40 focus:border-[#00F5FF]/45 focus:outline-none focus:ring-2 focus:ring-[#00F5FF]/20;
   }
 
   .btn-primary {
-    @apply rounded-xl bg-gradient-to-r from-fuchsia-600 via-pink-500 to-orange-400 font-semibold text-white shadow-md shadow-purple-950/40 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply rounded-xl bg-gradient-to-r from-[#00F5FF] via-cyan-400 to-[#7C3CFF] font-semibold text-[#0B1020] shadow-md shadow-[#7C3CFF]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-ghost-dark {
-    @apply rounded-xl border border-fuchsia-200/55 bg-white/96 text-sm font-medium text-zinc-800 transition hover:bg-white;
+    @apply rounded-xl border border-white/[0.1] bg-[#111827]/90 text-sm font-medium text-[#E9F1FF] transition hover:border-[#00F5FF]/25 hover:bg-[#111827];
   }
 
   .dot-typing {
