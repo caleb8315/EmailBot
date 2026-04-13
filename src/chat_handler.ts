@@ -1,4 +1,5 @@
 import https from "https";
+import { createClient } from "@supabase/supabase-js";
 import { createLogger } from "./logger";
 import {
   getPreferences,
@@ -173,9 +174,93 @@ async function handleSlashCommand(
       }));
       return `Removed keyword: ${word}`;
     }
+    case "believe": {
+      if (!arg) return "Usage: /believe <your belief>\nExample: /believe China will invade Taiwan before 2028";
+      const sb = getIntelSupabase();
+      if (!sb) return "Intel database not configured.";
+      const { error } = await sb.from("user_beliefs").insert({
+        statement: arg,
+        confidence: 0.5,
+        source: "stated",
+        conversation_context: `Telegram /believe command`,
+        status: "active",
+        tags: [],
+      });
+      if (error) return `Failed to save belief: ${error.message}`;
+      return `Belief recorded: "${arg}"\nConfidence set to 50% (default). Jeff will track evidence for and against.`;
+    }
+    case "predict": {
+      if (!arg) return "Usage: /predict <prediction>\nExample: /predict Russia will launch an offensive in Kharkiv by June 2026";
+      const parts = arg.split("|").map(s => s.trim());
+      const statement = parts[0];
+      const confidence = parts[1] ? parseFloat(parts[1]) / 100 : 0.5;
+      const resolveBy = parts[2] || null;
+      const sb = getIntelSupabase();
+      if (!sb) return "Intel database not configured.";
+      const { error } = await sb.from("predictions").insert({
+        predictor: "user",
+        statement,
+        confidence_at_prediction: Math.max(0.02, Math.min(0.98, confidence)),
+        resolve_by: resolveBy ? new Date(resolveBy).toISOString() : null,
+        tags: [],
+        confidence_history: [{ timestamp: new Date().toISOString(), confidence, reason: "initial prediction via Telegram" }],
+      });
+      if (error) return `Failed to save prediction: ${error.message}`;
+      return `Prediction logged: "${statement}"\nYour confidence: ${Math.round(confidence * 100)}%${resolveBy ? `\nResolves by: ${resolveBy}` : ""}\n\nTip: /predict <statement> | <confidence%> | <resolve date>`;
+    }
+    case "calibration": {
+      const sb = getIntelSupabase();
+      if (!sb) return "Intel database not configured.";
+      const { data: profile } = await sb.from("user_profile").select("*").limit(1).single();
+      const { data: resolved } = await sb.from("predictions").select("predictor, outcome, brier_score").not("outcome", "is", null);
+      if (!profile && (!resolved || resolved.length === 0)) return "No predictions resolved yet. Log predictions with /predict and they'll be scored when they resolve.";
+      const total = profile?.total_predictions || 0;
+      const correct = profile?.correct_predictions || 0;
+      const score = profile?.calibration_score;
+      let userBrier = 0, jeffBrier = 0, userCount = 0, jeffCount = 0;
+      for (const p of resolved || []) {
+        if (p.predictor === "user" && p.brier_score != null) { userBrier += p.brier_score; userCount++; }
+        if (p.predictor === "jeff" && p.brier_score != null) { jeffBrier += p.brier_score; jeffCount++; }
+      }
+      return [
+        "📊 CALIBRATION REPORT",
+        `Total predictions: ${total}`,
+        `Correct: ${correct}`,
+        score != null ? `Calibration score: ${(score * 100).toFixed(0)}%` : "",
+        userCount > 0 ? `Your Brier score: ${(userBrier / userCount).toFixed(3)} (lower = better)` : "",
+        jeffCount > 0 ? `Jeff's Brier score: ${(jeffBrier / jeffCount).toFixed(3)}` : "",
+        "",
+        "Log predictions: /predict <statement> | <confidence%> | <date>",
+      ].filter(Boolean).join("\n");
+    }
+    case "beliefs": {
+      const sb = getIntelSupabase();
+      if (!sb) return "Intel database not configured.";
+      const { data } = await sb.from("beliefs").select("statement, confidence, jeff_stake").eq("status", "active").order("confidence", { ascending: false }).limit(10);
+      if (!data || data.length === 0) return "No active beliefs.";
+      return "🧠 JEFF'S TOP BELIEFS\n\n" + data.map((b: { statement: string; confidence: number; jeff_stake: string }) =>
+        `${Math.round(b.confidence * 100)}% — ${b.statement.slice(0, 80)}${b.statement.length > 80 ? "..." : ""}`
+      ).join("\n\n");
+    }
+    case "arcs": {
+      const sb = getIntelSupabase();
+      if (!sb) return "Intel database not configured.";
+      const { data } = await sb.from("narrative_arcs").select("title, current_act, total_acts, next_act_predicted").eq("status", "active").order("last_updated", { ascending: false }).limit(5);
+      if (!data || data.length === 0) return "No active narrative arcs.";
+      return "📖 ACTIVE NARRATIVE ARCS\n\n" + data.map((a: { title: string; current_act: number; total_acts: number; next_act_predicted: string }) =>
+        `Act ${a.current_act}/${a.total_acts || "?"} — ${a.title}${a.next_act_predicted ? `\n   Next: ${a.next_act_predicted}` : ""}`
+      ).join("\n\n");
+    }
     default:
       return `Unknown command /${cmd}. Send /help.`;
   }
+}
+
+function getIntelSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
 }
 
 function formatPrefsSummary(p: UserPreferences): string {
@@ -206,6 +291,13 @@ function handleHelp(): string {
     "/mute <section>",
     "/alert <1-10>",
     "/keyword add/remove <word>",
+    "",
+    "── Intelligence ──",
+    "/beliefs — Jeff's top beliefs about the world",
+    "/believe <statement> — record your own belief",
+    "/predict <text> | <%> | <date> — log prediction",
+    "/calibration — your prediction accuracy",
+    "/arcs — active narrative arcs",
     "",
     "Everything else goes to the AI assistant:",
     "• Discuss any numbered story from your recent digest list",
