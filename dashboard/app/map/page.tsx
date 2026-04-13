@@ -13,7 +13,8 @@ interface MapEvent {
   timestamp: string;
   country_code: string;
   tags: string[];
-  location?: unknown;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 const LAYER_COLORS: Record<string, string> = {
@@ -41,25 +42,11 @@ const LAYER_LABELS: Record<string, string> = {
   rss: "RSS Intel",
 };
 
-function parseLocation(location: unknown): { lat: number; lng: number } | null {
-  if (!location) return null;
-
-  if (typeof location === "string") {
-    // WKB hex from PostGIS — decode POINT
-    const match = location.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-    if (match) return { lng: parseFloat(match[1]), lat: parseFloat(match[2]) };
+function getCoords(evt: MapEvent): { lat: number; lng: number } | null {
+  if (typeof evt.lat === "number" && typeof evt.lng === "number" &&
+      !(evt.lat === 0 && evt.lng === 0)) {
+    return { lat: evt.lat, lng: evt.lng };
   }
-
-  if (typeof location === "object" && location !== null) {
-    const loc = location as Record<string, unknown>;
-    if (loc.coordinates && Array.isArray(loc.coordinates)) {
-      return { lng: loc.coordinates[0] as number, lat: loc.coordinates[1] as number };
-    }
-    if (typeof loc.lat === "number" && typeof loc.lng === "number") {
-      return { lat: loc.lat, lng: loc.lng };
-    }
-  }
-
   return null;
 }
 
@@ -171,8 +158,8 @@ function MapInner() {
     let plotted = 0;
 
     for (const evt of filtered) {
-      const coords = parseLocation(evt.location);
-      if (!coords || (coords.lat === 0 && coords.lng === 0)) continue;
+      const coords = getCoords(evt);
+      if (!coords) continue;
 
       const color = LAYER_COLORS[evt.source] || "#FFFFFF";
       const size = Math.max(8, Math.min(22, evt.severity / 4));

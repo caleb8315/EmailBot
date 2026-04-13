@@ -2,6 +2,42 @@ import { BaseAdapter } from './base-adapter';
 import type { DataSource, IntelEvent, EventType } from '../types';
 import { getCountryFromPosition } from '../geo-utils';
 
+const OPENSKY_TOKEN_URL =
+  'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+const TOKEN_REFRESH_MARGIN_MS = 60_000; // refresh 60s before expiry
+
+let cachedToken: string | null = null;
+let tokenExpiresAt = 0;
+
+async function getOpenSkyToken(): Promise<string | null> {
+  const clientId = process.env.OPENSKY_CLIENT_ID;
+  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  if (cachedToken && Date.now() < tokenExpiresAt) return cachedToken;
+
+  const res = await fetch(OPENSKY_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+
+  if (!res.ok) {
+    cachedToken = null;
+    return null;
+  }
+
+  const data = (await res.json()) as { access_token: string; expires_in?: number };
+  cachedToken = data.access_token;
+  const expiresIn = (data.expires_in ?? 1800) * 1000;
+  tokenExpiresAt = Date.now() + expiresIn - TOKEN_REFRESH_MARGIN_MS;
+  return cachedToken;
+}
+
 interface CallsignPattern {
   pattern: RegExp;
   type: 'isr' | 'doomsday' | 'tanker' | 'special_ops' | 'nato' | 'bomber' | 'transport';
@@ -69,16 +105,16 @@ export class ADSBMilitaryAdapter extends BaseAdapter {
   fetchIntervalMinutes = 5;
 
   async fetch(): Promise<IntelEvent[]> {
-    const auth = process.env.OPENSKY_AUTH;
-    if (!auth) {
-      this.warn('OPENSKY_AUTH not set — skipping');
+    const token = await getOpenSkyToken();
+    if (!token) {
+      this.warn('OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET not set or token fetch failed — skipping');
       return [];
     }
 
     try {
       const res = await this.safeFetch(
         'https://opensky-network.org/api/states/all',
-        { headers: { Authorization: `Basic ${auth}` } },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) {
         this.warn(`OpenSky returned ${res.status}`);

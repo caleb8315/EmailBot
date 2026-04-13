@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createLogger } from "./logger";
 import {
   getRecentArticles,
@@ -604,6 +605,77 @@ function sectionIcon(section: string): string {
   return icons[section] || "📰";
 }
 
+// ── Jeff Intelligence Section for Email ──
+
+async function fetchIntelForEmail(): Promise<string> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return "";
+
+  try {
+    const sb = createSupabaseClient(url, key);
+
+    const [beliefsRes, arcsRes, dreamRes] = await Promise.all([
+      sb.from("beliefs").select("statement, confidence, jeff_stake, region").eq("status", "active").order("confidence", { ascending: false }).limit(8),
+      sb.from("narrative_arcs").select("title, current_act, total_acts, next_act_predicted, region").eq("status", "active").order("last_updated", { ascending: false }).limit(5),
+      sb.from("dreamtime_scenarios").select("title, scenario_type, probability, impact_level, narrative").order("generated_date", { ascending: false }).limit(3),
+    ]);
+
+    const beliefs = beliefsRes.data || [];
+    const arcs = arcsRes.data || [];
+    const dreams = dreamRes.data || [];
+
+    if (beliefs.length === 0 && arcs.length === 0 && dreams.length === 0) return "";
+
+    let html = `<div style="margin-top:24px;padding-top:20px;border-top:1px solid #30363d">`;
+    html += `<div style="font-size:13px;font-weight:800;color:#00FF41;letter-spacing:1.2px;margin-bottom:14px">🧠 JEFF'S WORLD MODEL</div>`;
+
+    if (beliefs.length > 0) {
+      html += `<div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:1px;margin-bottom:8px">TOP BELIEFS</div>`;
+      for (const b of beliefs) {
+        const pct = Math.round(b.confidence * 100);
+        const barColor = pct >= 70 ? "#00FF41" : pct >= 40 ? "#fbbf24" : "#f87171";
+        html += `<div style="margin-bottom:8px;padding:8px 10px;background:#161b22;border-radius:8px;border:1px solid #21262d">`;
+        html += `<div style="font-size:12px;color:#c9d1d9;line-height:1.4">${esc(b.statement)}</div>`;
+        html += `<div style="margin-top:4px;display:flex;align-items:center;gap:6px">`;
+        html += `<div style="flex:1;height:4px;background:#21262d;border-radius:2px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px"></div></div>`;
+        html += `<span style="font-size:10px;font-family:monospace;color:${barColor}">${pct}%</span>`;
+        if (b.jeff_stake) html += `<span style="font-size:9px;color:#6e7681">${b.jeff_stake}</span>`;
+        html += `</div></div>`;
+      }
+    }
+
+    if (arcs.length > 0) {
+      html += `<div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:1px;margin-top:16px;margin-bottom:8px">ACTIVE NARRATIVE ARCS</div>`;
+      for (const a of arcs) {
+        html += `<div style="margin-bottom:6px;padding:6px 10px;background:#161b22;border-radius:8px;border:1px solid #21262d;font-size:12px;color:#c9d1d9">`;
+        html += `<strong>Act ${a.current_act}/${a.total_acts || "?"}</strong> — ${esc(a.title)}`;
+        if (a.next_act_predicted) html += `<div style="font-size:10px;color:#6e7681;margin-top:2px">Next: ${esc(a.next_act_predicted)}</div>`;
+        html += `</div>`;
+      }
+    }
+
+    if (dreams.length > 0) {
+      html += `<div style="font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:1px;margin-top:16px;margin-bottom:8px">OVERNIGHT SCENARIOS (DREAMTIME)</div>`;
+      for (const d of dreams) {
+        const typeLabel = d.scenario_type === "wildcard" ? "🎲 WILDCARD" : d.scenario_type === "underrated" ? "📈 UNDERRATED" : "📉 FADING";
+        const pct = d.probability ? Math.round(d.probability * 100) : null;
+        html += `<div style="margin-bottom:8px;padding:8px 10px;background:#161b22;border-radius:8px;border:1px solid #21262d">`;
+        html += `<div style="font-size:10px;font-weight:700;color:#fbbf24">${typeLabel}${pct !== null ? ` (${pct}%)` : ""} ${d.impact_level ? `— ${d.impact_level.toUpperCase()} IMPACT` : ""}</div>`;
+        html += `<div style="font-size:12px;color:#c9d1d9;margin-top:3px;font-weight:600">${esc(d.title)}</div>`;
+        if (d.narrative) html += `<div style="font-size:11px;color:#8b949e;margin-top:4px;line-height:1.4">${esc(d.narrative.slice(0, 200))}...</div>`;
+        html += `</div>`;
+      }
+    }
+
+    html += `</div>`;
+    return html;
+  } catch (err) {
+    logger.error("Failed to fetch intel for email", { error: err instanceof Error ? err.message : String(err) });
+    return "";
+  }
+}
+
 function buildBriefingHtml(
   briefing: BriefingData,
   allArticles: ArticleHistory[],
@@ -1118,7 +1190,15 @@ async function sendDigest(
       mode
     );
 
-    const html = briefing
+    // Fetch Jeff's intelligence data for the email
+    let intelHtml = "";
+    try {
+      intelHtml = await fetchIntelForEmail();
+    } catch {
+      logger.warn("Could not fetch intel data for email — continuing without it");
+    }
+
+    let html = briefing
       ? buildBriefingHtml(
           briefing,
           topArticles,
@@ -1128,6 +1208,15 @@ async function sendDigest(
           mode
         )
       : buildFallbackHtml(topArticles, usage, enhancements, mode);
+
+    // Inject intelligence section before the footer
+    if (intelHtml) {
+      html = html.replace(
+        /<div style="background:#0d1117;padding:20px 28px;text-align:center;border-top:1px solid #30363d">/,
+        `<div style="background:#0d1117;padding:0 24px 20px">${intelHtml}</div><div style="background:#0d1117;padding:20px 28px;text-align:center;border-top:1px solid #30363d">`,
+      );
+    }
+
     const text = buildPlainText(briefing, topArticles, usage, enhancements, mode);
 
     const subject = digestSubject(mode);
