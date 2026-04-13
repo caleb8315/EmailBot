@@ -17,22 +17,13 @@ interface Hypothesis {
   last_updated: string;
 }
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 export default function HypothesesPage() {
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    const secret = getSecret();
-    const headers: Record<string, string> = {};
-    if (secret) headers["x-dashboard-secret"] = secret;
-
-    fetch("/api/intel/hypotheses", { headers })
+    fetch("/api/intel/hypotheses")
       .then(r => r.ok ? r.json() : { hypotheses: [] })
       .then(d => setHypotheses(d.hypotheses || []))
       .catch(() => {})

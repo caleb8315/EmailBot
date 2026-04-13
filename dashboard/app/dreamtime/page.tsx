@@ -17,11 +17,6 @@ interface DreamtimeScenario {
   user_reaction?: string;
 }
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 const TYPE_CONFIG: Record<string, { label: string; color: string; description: string }> = {
   wildcard: {
     label: "WILDCARD",
@@ -45,11 +40,7 @@ export default function DreamtimePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const secret = getSecret();
-    const headers: Record<string, string> = {};
-    if (secret) headers["x-dashboard-secret"] = secret;
-
-    fetch("/api/intel/dreamtime", { headers })
+    fetch("/api/intel/dreamtime")
       .then(r => r.ok ? r.json() : { scenarios: [] })
       .then(d => setScenarios(d.scenarios || []))
       .catch(() => {})

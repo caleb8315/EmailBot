@@ -38,19 +38,10 @@ interface MindState {
   };
 }
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 async function fetchMind(): Promise<MindState> {
-  const secret = getSecret();
-  const headers: Record<string, string> = {};
-  if (secret) headers["x-dashboard-secret"] = secret;
-
   const [beliefsRes, predsRes] = await Promise.all([
-    fetch("/api/intel/beliefs?" + new URLSearchParams({ limit: "50" }), { headers }),
-    fetch("/api/intel/predictions?" + new URLSearchParams({ limit: "30" }), { headers }),
+    fetch("/api/intel/beliefs?" + new URLSearchParams({ limit: "50" })),
+    fetch("/api/intel/predictions?" + new URLSearchParams({ limit: "30" })),
   ]);
 
   const beliefs = beliefsRes.ok ? (await beliefsRes.json()).beliefs ?? [] : [];

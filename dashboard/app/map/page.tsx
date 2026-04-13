@@ -41,11 +41,6 @@ const LAYER_LABELS: Record<string, string> = {
   rss: "RSS Intel",
 };
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 function parseLocation(location: unknown): { lat: number; lng: number } | null {
   if (!location) return null;
 
@@ -82,14 +77,9 @@ function MapInner() {
   const [mapReady, setMapReady] = useState(false);
 
   const fetchEvents = useCallback(async () => {
-    const secret = getSecret();
-    const headers: Record<string, string> = {};
-    if (secret) headers["x-dashboard-secret"] = secret;
-
     try {
       const res = await fetch(
-        `/api/intel/events?hours=${hoursBack}&limit=500&severity_min=15`,
-        { headers }
+        `/api/intel/events?hours=${hoursBack}&limit=500&severity_min=15`
       );
       if (res.ok) {
         const data = await res.json();

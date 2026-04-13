@@ -25,21 +25,12 @@ interface NarrativeArc {
   last_updated: string;
 }
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 export default function ArcsPage() {
   const [arcs, setArcs] = useState<NarrativeArc[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const secret = getSecret();
-    const headers: Record<string, string> = {};
-    if (secret) headers["x-dashboard-secret"] = secret;
-
-    fetch("/api/intel/arcs", { headers })
+    fetch("/api/intel/arcs")
       .then(r => r.ok ? r.json() : { arcs: [] })
       .then(d => setArcs(d.arcs || []))
       .catch(() => {})

@@ -25,11 +25,6 @@ interface CalibrationReport {
   jeff_vs_user: { jeff_avg: number; user_avg: number };
 }
 
-function getSecret(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("dashboard_secret") || "";
-}
-
 export default function PredictionsPage() {
   const [active, setActive] = useState<Prediction[]>([]);
   const [resolved, setResolved] = useState<Prediction[]>([]);
@@ -38,14 +33,10 @@ export default function PredictionsPage() {
   const [tab, setTab] = useState<"active" | "resolved" | "calibration">("active");
 
   useEffect(() => {
-    const secret = getSecret();
-    const headers: Record<string, string> = {};
-    if (secret) headers["x-dashboard-secret"] = secret;
-
     Promise.all([
-      fetch("/api/intel/predictions?status=active", { headers }).then(r => r.ok ? r.json() : { predictions: [] }),
-      fetch("/api/intel/predictions?status=resolved", { headers }).then(r => r.ok ? r.json() : { predictions: [] }),
-      fetch("/api/intel/predictions?calibration=true", { headers }).then(r => r.ok ? r.json() : { calibration: null }),
+      fetch("/api/intel/predictions?status=active").then(r => r.ok ? r.json() : { predictions: [] }),
+      fetch("/api/intel/predictions?status=resolved").then(r => r.ok ? r.json() : { predictions: [] }),
+      fetch("/api/intel/predictions?calibration=true").then(r => r.ok ? r.json() : { calibration: null }),
     ])
       .then(([a, r, c]) => {
         setActive(a.predictions || []);
