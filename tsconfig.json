@@ -15,6 +15,6 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*.ts", "config/**/*.json"],
+  "include": ["src/**/*.ts", "lib/**/*.ts", "config/**/*.json"],
   "exclude": ["node_modules", "dist"]
 }

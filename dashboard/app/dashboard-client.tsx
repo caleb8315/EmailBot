@@ -1185,6 +1185,28 @@ export default function DashboardClient() {
                 <ShortcutRow dense icon={<ChatIcon />} title="Chat with Jeff" onClick={() => setTab("chat")} />
               </div>
 
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#00C2FF]/70">Jeff Intelligence</p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {[
+                    { href: "/mind", label: "Mind", desc: "Beliefs" },
+                    { href: "/map", label: "Map", desc: "Command" },
+                    { href: "/hypotheses", label: "Hypos", desc: "Competing" },
+                    { href: "/arcs", label: "Arcs", desc: "Stories" },
+                    { href: "/dreamtime", label: "Dream", desc: "3am" },
+                  ].map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="glass-panel flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-3 text-center transition hover:border-[#00FF41]/30"
+                    >
+                      <span className="text-sm font-bold text-[#00FF41]">{item.label}</span>
+                      <span className="text-[9px] text-[#A3A3A3]/50">{item.desc}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+
               <QuickActionsGrid
                 onPipeline={() => dispatch("pipeline.yml")}
                 onDaily={() => dispatch("daily_email.yml")}
