@@ -15,6 +15,8 @@ import { ADSBMilitaryAdapter } from './adapters/adsb-military';
 import { NOTAMAdapter } from './adapters/notam';
 import { OONIAdapter } from './adapters/ooni';
 import { PolymarketAdapter } from './adapters/polymarket';
+import { UCDPAdapter } from './adapters/ucdp';
+import { NASAEONETAdapter } from './adapters/nasa-eonet';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
@@ -38,6 +40,8 @@ function getAllAdapters(): IngestionAdapter[] {
     new GDELTEventsAdapter(),
     new ConflictRSSAdapter(),
     new ACLEDAdapter(),
+    new UCDPAdapter(),
+    new NASAEONETAdapter(),
     new USGSAdapter(),
     new FIRMSAdapter(),
     new ADSBMilitaryAdapter(),

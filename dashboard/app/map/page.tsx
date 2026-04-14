@@ -118,6 +118,14 @@ function MapInner() {
               attribution: "\u00a9 CartoDB \u00a9 OpenStreetMap",
               maxzoom: 19,
             },
+            nasa_gibs: {
+              type: "raster",
+              tiles: [
+                "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/{time}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+              ],
+              tileSize: 256,
+              maxzoom: 9,
+            },
           },
           layers: [{ id: "carto", type: "raster", source: "carto" }],
           glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -191,6 +199,8 @@ function MapInner() {
     console.log(`[map] ${plotted} events plotted on map`);
   }, [events, enabledLayers, mapReady]);
 
+  const [showSatellite, setShowSatellite] = useState(false);
+
   const toggleLayer = (source: string) => {
     setEnabledLayers(prev => {
       const next = new Set(prev);
@@ -198,6 +208,27 @@ function MapInner() {
       else next.add(source);
       return next;
     });
+  };
+
+  const toggleSatellite = () => {
+    if (!mapRef.current) return;
+    const m = mapRef.current;
+    const next = !showSatellite;
+    setShowSatellite(next);
+    try {
+      if (next) {
+        if (!m.getLayer("nasa_sat")) {
+          const today = new Date().toISOString().split("T")[0];
+          (m.getSource("nasa_gibs") as any)?.setTiles?.([
+            `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${today}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+          ]);
+          m.addLayer({ id: "nasa_sat", type: "raster", source: "nasa_gibs", paint: { "raster-opacity": 0.6 } }, "carto");
+        }
+        m.setLayoutProperty("nasa_sat", "visibility", "visible");
+      } else {
+        if (m.getLayer("nasa_sat")) m.setLayoutProperty("nasa_sat", "visibility", "none");
+      }
+    } catch {}
   };
 
   return (
@@ -215,6 +246,16 @@ function MapInner() {
       {/* Layer controls — top left */}
       <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md rounded-xl p-2.5 z-20 max-w-[160px]">
         <p className="text-[9px] text-[#00FF41] font-mono font-bold mb-1.5 px-1">LAYERS</p>
+        <button
+          onClick={toggleSatellite}
+          className={`flex items-center gap-1.5 w-full text-left px-1.5 py-1 rounded text-[10px] mb-1 transition-colors ${
+            showSatellite ? "text-blue-300 bg-blue-500/10" : "text-gray-600"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: showSatellite ? "#60A5FA" : "rgba(255,255,255,0.1)" }} />
+          NASA Satellite
+        </button>
+        <div className="border-t border-white/5 my-1" />
         {Object.entries(LAYER_LABELS).map(([src, label]) => (
           <button
             key={src}

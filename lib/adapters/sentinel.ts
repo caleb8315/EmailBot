@@ -67,41 +67,67 @@ export class SentinelAdapter extends BaseAdapter {
       return this.cachedToken;
     }
 
+    // Method 1: OAuth client credentials (if you have a Sentinel Hub OAuth client)
     const clientId = process.env.SENTINEL_HUB_CLIENT_ID;
     const clientSecret = process.env.SENTINEL_HUB_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return null;
 
-    const authEndpoints = [
-      'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token',
-      'https://services.sentinel-hub.com/oauth/token',
-    ];
-
-    for (const endpoint of authEndpoints) {
+    if (clientId && clientSecret) {
       try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'client_credentials',
-            client_id: clientId,
-            client_secret: clientSecret,
-          }).toString(),
-        });
-
-        if (!res.ok) continue;
-
-        const data = await res.json() as { access_token?: string; expires_in?: number };
-        if (data.access_token) {
-          this.cachedToken = data.access_token;
-          this.tokenExpiresAt = Date.now() + ((data.expires_in || 300) - 30) * 1000;
-          return this.cachedToken;
+        const res = await fetch(
+          'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              grant_type: 'client_credentials',
+              client_id: clientId,
+              client_secret: clientSecret,
+            }).toString(),
+          },
+        );
+        if (res.ok) {
+          const data = await res.json() as { access_token?: string; expires_in?: number };
+          if (data.access_token) {
+            this.cachedToken = data.access_token;
+            this.tokenExpiresAt = Date.now() + ((data.expires_in || 300) - 30) * 1000;
+            return this.cachedToken;
+          }
         }
-      } catch {
-        continue;
-      }
+      } catch {}
     }
 
-    this.warn('Sentinel Hub auth failed on all endpoints — check your Client ID (should be a UUID from sentinel-hub.com dashboard)');
+    // Method 2: Password grant with cdse-public client (Copernicus Data Space account)
+    const cdseUser = process.env.COPERNICUS_EMAIL;
+    const cdsePass = process.env.COPERNICUS_PASSWORD;
+
+    if (cdseUser && cdsePass) {
+      try {
+        const res = await fetch(
+          'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: 'cdse-public',
+              username: cdseUser,
+              password: cdsePass,
+              grant_type: 'password',
+            }).toString(),
+          },
+        );
+        if (res.ok) {
+          const data = await res.json() as { access_token?: string; expires_in?: number };
+          if (data.access_token) {
+            this.cachedToken = data.access_token;
+            this.tokenExpiresAt = Date.now() + ((data.expires_in || 300) - 30) * 1000;
+            this.log('Authenticated via Copernicus Data Space password grant');
+            return this.cachedToken;
+          }
+        }
+      } catch {}
+    }
+
+    this.warn('Sentinel Hub: set SENTINEL_HUB_CLIENT_ID+SECRET or COPERNICUS_EMAIL+PASSWORD — register free at dataspace.copernicus.eu');
     return null;
   }
 
