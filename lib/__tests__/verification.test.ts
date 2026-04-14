@@ -99,7 +99,12 @@ assert(computeVerificationStatus({
 assert(computeVerificationStatus({
   source_count: 1, credible_source_count: 0, distinct_domains: ['a.com'],
   first_seen: '', last_corroborated: '', recheck_count: 0,
-}) === 'quarantined', 'single source = quarantined');
+}) === 'quarantined', 'single unknown source = quarantined');
+
+assert(computeVerificationStatus({
+  source_count: 1, credible_source_count: 1, distinct_domains: ['reuters.com'],
+  first_seen: '', last_corroborated: '', recheck_count: 0,
+}) === 'developing', 'single credible source = developing (not quarantined)');
 
 // ── canAlert ────────────────────────────────────────────────────────────
 

@@ -132,6 +132,10 @@ export function computeVerificationStatus(
   if (corroboration.source_count >= DEVELOPING_MIN_SOURCES) {
     return 'developing';
   }
+  // Single article from a credible/trusted source is "developing" not quarantined
+  if (corroboration.credible_source_count >= 1) {
+    return 'developing';
+  }
   return 'quarantined';
 }
 
