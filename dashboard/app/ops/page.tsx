@@ -206,14 +206,88 @@ function resolveIcon(e: MapEvent): EventIcon {
   return { emoji: "📍", color: "#00FF41", label: e.type || "Intel" };
 }
 
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+function goldsteinLabel(g: number): string {
+  if (g <= -9) return "Extreme hostility";
+  if (g <= -7) return "Very hostile";
+  if (g <= -5) return "Hostile";
+  if (g <= -3) return "Tense";
+  if (g <= -1) return "Mildly negative";
+  if (g <= 1) return "Neutral";
+  return "Cooperative";
+}
+
+interface IntelBreakdown {
+  description: string[];
+  details: string[];
+}
+
+function buildIntel(evt: MapEvent): IntelBreakdown {
+  const rd = evt.raw_data || {};
+  const description: string[] = [];
+  const details: string[] = [];
+
+  if (evt.summary) description.push(evt.summary);
+
+  if (evt.source === "gdelt") {
+    if (rd.location && !evt.summary?.includes(String(rd.location))) description.push(`Location: ${rd.location}`);
+    if (rd.num_articles) details.push(`Sources: ${rd.num_articles} independent report${(rd.num_articles as number) > 1 ? "s" : ""}`);
+    if (typeof rd.goldstein === "number") details.push(`Hostility level: ${goldsteinLabel(rd.goldstein as number)} (${rd.goldstein})`);
+  } else if (evt.source === "adsb") {
+    if (rd.callsign) description.push(`Callsign ${rd.callsign} detected in flight`);
+    if (rd.altitude) description.push(`Flying at ${Math.round((rd.altitude as number) * 3.281).toLocaleString()} ft`);
+    if (rd.velocity) details.push(`Speed: ${Math.round((rd.velocity as number) * 1.944)} knots`);
+    if (rd.heading != null) details.push(`Heading: ${Math.round(rd.heading as number)}°`);
+  } else if (evt.source === "usgs") {
+    if (rd.mag && rd.place) description.push(`Magnitude ${rd.mag} earthquake near ${rd.place}`);
+    else if (rd.mag) description.push(`Magnitude ${rd.mag} earthquake detected`);
+    if (rd.depth) description.push(`Occurred at ${rd.depth} km depth`);
+    if (rd.tsunami) description.push("⚠ Tsunami warning has been issued");
+    if (rd.felt) details.push(`Felt by ${rd.felt} people`);
+    if (rd.alert) details.push(`Alert level: ${rd.alert}`);
+  } else if (evt.source === "ucdp") {
+    if (rd.side_a && rd.side_b) description.push(`Fighting between ${rd.side_a} and ${rd.side_b}`);
+    if (rd.deaths_best) description.push(`Estimated ${rd.deaths_best} casualties reported`);
+    if (rd.region) details.push(`Region: ${rd.region}`);
+    if (rd.country) details.push(`Country: ${rd.country}`);
+  } else if (evt.source === "firms") {
+    if (rd.frp) description.push(`Fire radiative power: ${rd.frp} MW — ${(rd.frp as number) >= 100 ? "major blaze" : (rd.frp as number) >= 30 ? "significant fire" : "active fire"}`);
+    if (rd.brightness) details.push(`Brightness temp: ${rd.brightness}K`);
+    if (rd.confidence) details.push(`Detection confidence: ${rd.confidence}`);
+  } else if (evt.source === "polymarket") {
+    if (rd.question) description.push(`Betting question: "${rd.question}"`);
+    if (rd.current != null && rd.delta) {
+      const dir = (rd.delta as number) > 0 ? "up" : "down";
+      description.push(`Odds moved ${dir} to ${Math.round((rd.current as number) * 100)}% (${(rd.delta as number) > 0 ? "+" : ""}${Math.round((rd.delta as number) * 100)}% swing)`);
+    }
+    if (rd.volume) details.push(`Trading volume: $${Number(rd.volume).toLocaleString()}`);
+  } else if (evt.source === "ais" || evt.type === "vessel_dark") {
+    if (rd.vessel_name) description.push(`Vessel "${rd.vessel_name}" has gone silent`);
+    if (rd.hours_silent) description.push(`No signal for ${rd.hours_silent} hours`);
+    if (rd.near_chokepoint) description.push(`Last seen near ${rd.near_chokepoint}`);
+    if (rd.speed) details.push(`Last speed: ${rd.speed} knots`);
+  } else if (evt.source === "sentinel") {
+    if (rd.location) description.push(`Satellite detected changes at ${rd.location}`);
+    if (rd.change_score) details.push(`Change score: ${rd.change_score}`);
+  } else if (evt.source === "cisa") {
+    description.push("Cybersecurity advisory issued by CISA");
+  } else if (evt.source === "nasa_eonet") {
+    if (rd.geometry_count) details.push(`Tracked across ${rd.geometry_count} data points`);
+    if (rd.first_seen) details.push(`First observed: ${formatTimestamp(rd.first_seen as string)}`);
+  }
+
+  if (evt.tags?.length) {
+    details.push(`Tags: ${evt.tags.slice(0, 6).join(", ")}`);
+  }
+
+  return { description, details };
+}
+
+function intelSourceUrl(evt: MapEvent): string | null {
+  const rd = evt.raw_data || {};
+  if (rd.source_url && typeof rd.source_url === "string" && rd.source_url.startsWith("http")) return rd.source_url as string;
+  if (rd.url && typeof rd.url === "string" && (rd.url as string).startsWith("http")) return rd.url as string;
+  if (rd.link && typeof rd.link === "string" && (rd.link as string).startsWith("http")) return rd.link as string;
+  return null;
 }
 
 function eventAgeHours(evt: MapEvent): number {
@@ -244,6 +318,67 @@ function severityBadge(s: number): { label: string; cls: string } {
   if (s >= 60) return { label: "HIGH", cls: "bg-orange-500/20 text-orange-400" };
   if (s >= 40) return { label: "MEDIUM", cls: "bg-yellow-500/20 text-yellow-400" };
   return { label: "LOW", cls: "bg-green-500/20 text-green-400" };
+}
+
+/* ────── Event Card (expandable) ────── */
+
+function EventCard({ evt }: { evt: MapEvent }) {
+  const [open, setOpen] = useState(false);
+  const icon = resolveIcon(evt);
+  const badge = severityBadge(evt.severity);
+  const intel = buildIntel(evt);
+  const sourceUrl = intelSourceUrl(evt);
+  const hasIntel = intel.description.length > 0 || intel.details.length > 0;
+
+  return (
+    <div className="bg-[#0c0c0c] border border-white/5 rounded-lg overflow-hidden hover:border-white/10 transition">
+      <div className="p-2.5">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span>{icon.emoji}</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: icon.color }}>{icon.label}</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badge.cls}`}>{evt.severity}</span>
+          <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(evt.created_at || evt.timestamp)}</span>
+        </div>
+        <p className="text-xs text-gray-200 leading-snug mb-1">{evt.title}</p>
+        <p className="text-[9px] text-gray-500">🕐 {formatTimestamp(evt.timestamp)}</p>
+      </div>
+      {hasIntel && (
+        <>
+          <button
+            onClick={() => setOpen(!open)}
+            className="w-full px-2.5 py-1.5 text-[9px] font-bold tracking-wider text-[#00C2FF] bg-[#00C2FF]/5 border-t border-white/5 hover:bg-[#00C2FF]/10 transition"
+          >
+            {open ? "HIDE INTEL ▲" : "FULL INTEL ▼"}
+          </button>
+          {open && (
+            <div className="px-2.5 pb-2.5 pt-1.5 border-t border-white/5">
+              {intel.description.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">What happened</p>
+                  {intel.description.map((line, i) => (
+                    <p key={i} className="text-[10px] text-gray-200 leading-relaxed">{line}</p>
+                  ))}
+                </div>
+              )}
+              {intel.details.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Details</p>
+                  {intel.details.map((line, i) => (
+                    <p key={i} className="text-[10px] text-gray-400 leading-relaxed">· {line}</p>
+                  ))}
+                </div>
+              )}
+              {sourceUrl && (
+                <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 px-2 py-1 text-[9px] text-[#00C2FF] bg-[#00C2FF]/5 border border-[#00C2FF]/12 rounded-md hover:bg-[#00C2FF]/10 transition">
+                  Read original source →
+                </a>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 /* ────── Main Component ────── */
@@ -380,7 +515,7 @@ function OpsCenter() {
       el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;opacity:${opacity};filter:drop-shadow(0 0 4px ${icon.color});`;
       el.textContent = icon.emoji;
       const age = evt.created_at ? timeAgo(evt.created_at) : timeAgo(evt.timestamp);
-      el.title = `${icon.label}: ${evt.title} (${age} ago)`;
+      el.title = `${icon.label}: ${evt.title}\n${formatTimestamp(evt.timestamp)} (${age} ago)`;
       el.addEventListener("mouseenter", () => { el.style.filter = `drop-shadow(0 0 8px ${icon.color}) drop-shadow(0 0 12px ${icon.color})`; });
       el.addEventListener("mouseleave", () => { el.style.filter = `drop-shadow(0 0 4px ${icon.color})`; });
       el.addEventListener("click", (e) => {
@@ -390,21 +525,34 @@ function OpsCenter() {
         const badge = severityBadge(evt.severity);
         const badgeBg = badge.label === "CRITICAL" ? "rgba(239,68,68,0.2)" : badge.label === "HIGH" ? "rgba(249,115,22,0.2)" : badge.label === "MEDIUM" ? "rgba(234,179,8,0.2)" : "rgba(34,197,94,0.2)";
         const badgeColor = badge.label === "CRITICAL" ? "#f87171" : badge.label === "HIGH" ? "#fb923c" : badge.label === "MEDIUM" ? "#facc15" : "#4ade80";
-        const html = `<div style="font-family:ui-monospace,monospace;max-width:280px;padding:2px;">
+        const intel = buildIntel(evt);
+        const sourceUrl = intelSourceUrl(evt);
+        const detailId = `intel-detail-${evt.id}`;
+        const eventTime = formatTimestamp(evt.timestamp);
+        const hasIntel = intel.description.length > 0 || intel.details.length > 0;
+        const html = `<div style="font-family:ui-monospace,monospace;max-width:300px;padding:2px;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
             <span style="font-size:14px">${icon.emoji}</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${icon.color}">${icon.label}</span>
             <span style="margin-left:auto;font-size:9px;color:#6b7280">${age} ago</span>
           </div>
           <p style="font-size:12px;font-weight:600;color:#f3f4f6;line-height:1.3;margin:0 0 4px">${evt.title}</p>
-          ${evt.summary ? `<p style="font-size:10px;color:#9ca3af;line-height:1.4;margin:0 0 6px">${evt.summary.slice(0, 200)}</p>` : ""}
-          <div style="display:flex;align-items:center;gap:6px">
+          <p style="font-size:9px;color:#6b7280;margin:0 0 6px;">🕐 ${eventTime}</p>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
             <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:9999px;background:${badgeBg};color:${badgeColor}">${badge.label}</span>
             <span style="font-size:9px;padding:2px 6px;border-radius:9999px;background:rgba(255,255,255,0.06);color:#9ca3af">${evt.source}</span>
             ${evt.country_code && evt.country_code !== "XX" ? `<span style="font-size:9px;color:#6b7280">${evt.country_code}</span>` : ""}
           </div>
+          ${hasIntel ? `<div id="${detailId}" style="display:none;border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:2px;">
+            <p style="font-size:9px;font-weight:700;color:#d1d5db;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.05em;">What happened</p>
+            ${intel.description.map(l => `<p style="font-size:10px;color:#e5e7eb;line-height:1.5;margin:0 0 3px">${l}</p>`).join("")}
+            ${intel.details.length > 0 ? `<p style="font-size:9px;font-weight:700;color:#9ca3af;margin:8px 0 4px 0;text-transform:uppercase;letter-spacing:0.05em;">Details</p>
+            ${intel.details.map(l => `<p style="font-size:10px;color:#9ca3af;line-height:1.5;margin:0 0 3px">· ${l}</p>`).join("")}` : ""}
+            ${sourceUrl ? `<a href="${sourceUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:3px 8px;font-size:9px;color:#00C2FF;background:rgba(0,194,255,0.08);border:1px solid rgba(0,194,255,0.12);border-radius:6px;text-decoration:none;">Read original source →</a>` : ""}
+          </div>
+          <button onclick="var d=document.getElementById('${detailId}');if(d.style.display==='none'){d.style.display='block';this.textContent='Hide Intel ▲'}else{d.style.display='none';this.textContent='Full Intel ▼'}" style="display:block;width:100%;margin-top:6px;padding:4px 0;font-size:9px;font-weight:700;font-family:inherit;color:#00C2FF;background:rgba(0,194,255,0.08);border:1px solid rgba(0,194,255,0.15);border-radius:6px;cursor:pointer;letter-spacing:0.05em;">Full Intel ▼</button>` : ""}
         </div>`;
-        const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "300px", className: "jeff-popup" })
+        const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "340px", className: "jeff-popup" })
           .setLngLat([lng, lat])
           .setHTML(html)
           .addTo(mapRef.current!);
@@ -560,20 +708,9 @@ function OpsCenter() {
               </div>
             </a>
           ))}
-          {feedTab === "events" && events.slice(0, 50).map(e => {
-            const icon = resolveIcon(e);
-            return (
-              <div key={e.id} className="bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5 hover:border-white/10 transition">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span>{icon.emoji}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: icon.color }}>{icon.label}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${severityBadge(e.severity).cls}`}>{e.severity}</span>
-                  <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(e.created_at || e.timestamp)}</span>
-                </div>
-                <p className="text-xs text-gray-200 leading-snug">{e.title}</p>
-              </div>
-            );
-          })}
+          {feedTab === "events" && events.slice(0, 50).map(e => (
+            <EventCard key={e.id} evt={e} />
+          ))}
         </div>
       </div>
 

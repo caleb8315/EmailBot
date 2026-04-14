@@ -255,14 +255,20 @@ export class GDELTEventsAdapter extends BaseAdapter {
       const location = locationName || COUNTRY_NAMES[countryCode] || countryCode;
       const title = `${match.label} in ${location}`;
 
-      const parts: string[] = [];
-      if (actor1Name && actor2Name && actor1Name !== actor2Name) {
-        parts.push(`${COUNTRY_NAMES[actor1Name] || actor1Name} vs ${COUNTRY_NAMES[actor2Name] || actor2Name}`);
+      const actor1 = COUNTRY_NAMES[actor1Name] || actor1Name;
+      const actor2 = COUNTRY_NAMES[actor2Name] || actor2Name;
+      const hasActors = actor1Name && actor2Name && actor1Name !== actor2Name;
+
+      const descParts: string[] = [];
+      if (hasActors) {
+        descParts.push(`${actor1} ${match.type === 'protest' ? 'protesting against' : 'engaged against'} ${actor2}`);
       }
-      parts.push(`Reported by ${numArticles} source${numArticles > 1 ? 's' : ''}`);
-      if (goldstein <= -8) parts.push('Extremely hostile');
-      else if (goldstein <= -5) parts.push('Highly conflictual');
-      else if (goldstein <= -2) parts.push('Tense situation');
+      descParts.push(`${match.label} reported in ${location}`);
+      if (goldstein <= -8) descParts.push('Situation is extremely hostile');
+      else if (goldstein <= -5) descParts.push('Situation is highly conflictual');
+      else if (goldstein <= -2) descParts.push('Tensions are elevated');
+      if (numArticles >= 5) descParts.push(`Confirmed across ${numArticles} independent sources`);
+      else if (numArticles >= 2) descParts.push(`Corroborated by ${numArticles} sources`);
 
       const dateAdded = cols[COL.DATEADDED] || '';
       const timestamp = dateAdded.length >= 14
@@ -279,7 +285,7 @@ export class GDELTEventsAdapter extends BaseAdapter {
         country_code: countryCode,
         timestamp,
         title,
-        summary: parts.join(' · '),
+        summary: descParts.join('. '),
         tags,
         raw_data: {
           event_id: globalEventId,

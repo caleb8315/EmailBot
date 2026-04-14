@@ -85,6 +85,12 @@ body {
   color: #fff;
   background: transparent;
 }
+.jeff-popup button:hover {
+  background: rgba(0, 194, 255, 0.15) !important;
+}
+.jeff-popup a:hover {
+  text-decoration: underline;
+}
 .jeff-popup .maplibregl-popup-tip {
   border-top-color: rgba(5, 5, 5, 0.95);
 }
