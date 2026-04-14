@@ -109,33 +109,11 @@ interface EventIcon {
   label: string;
 }
 
-const CAMEO_ICONS: Record<string, EventIcon> = {
-  "183": { emoji: "💣", color: "#FF2222", label: "Suicide Bombing" },
-  "184": { emoji: "☣️", color: "#BBFF00", label: "Chemical Weapons" },
-  "185": { emoji: "💣", color: "#FF6600", label: "IED / Explosive" },
-  "186": { emoji: "🎯", color: "#FF0055", label: "Assassination" },
-  "190": { emoji: "⚔️", color: "#FF4400", label: "Military Force" },
-  "191": { emoji: "🚧", color: "#FF8800", label: "Blockade" },
-  "192": { emoji: "🏴", color: "#CC3300", label: "Territory Occupied" },
-  "193": { emoji: "🔫", color: "#FF6633", label: "Small Arms Fighting" },
-  "194": { emoji: "💥", color: "#FF3300", label: "Artillery / Tank" },
-  "195": { emoji: "✈️", color: "#FF2200", label: "Aerial Bombing" },
-  "196": { emoji: "⚠️", color: "#FFAA00", label: "Ceasefire Violated" },
-  "200": { emoji: "💀", color: "#FF0000", label: "Mass Violence" },
-  "201": { emoji: "🚶", color: "#CC4400", label: "Mass Expulsion" },
-  "202": { emoji: "💀", color: "#CC0000", label: "Ethnic Cleansing" },
-  "203": { emoji: "☢️", color: "#FF0000", label: "WMD Used" },
-  "145": { emoji: "✊", color: "#FFCC00", label: "Protest / Riot" },
-  "180": { emoji: "👊", color: "#FF7744", label: "Assault" },
-  "181": { emoji: "🔗", color: "#FF5577", label: "Abduction / Hijack" },
-  "182": { emoji: "👊", color: "#FF7744", label: "Physical Assault" },
-};
-
 const ADSB_ICONS: Record<string, EventIcon> = {
-  isr:         { emoji: "🛩️", color: "#FF4444", label: "ISR / Surveillance" },
-  doomsday:    { emoji: "☢️", color: "#FF0000", label: "Nuclear Command" },
+  isr:         { emoji: "🛩️", color: "#FF4444", label: "Spy Plane" },
+  doomsday:    { emoji: "☢️", color: "#FF0000", label: "Nuclear Command Plane" },
   tanker:      { emoji: "⛽", color: "#FFAA44", label: "Aerial Refueler" },
-  special_ops: { emoji: "🦅", color: "#FF3366", label: "Special Ops" },
+  special_ops: { emoji: "🦅", color: "#FF3366", label: "Special Ops Aircraft" },
   nato:        { emoji: "🛡️", color: "#4488FF", label: "NATO Aircraft" },
   bomber:      { emoji: "💣", color: "#FF2222", label: "Strategic Bomber" },
   transport:   { emoji: "🛫", color: "#88AAFF", label: "VIP Transport" },
@@ -144,33 +122,60 @@ const ADSB_ICONS: Record<string, EventIcon> = {
 const SOURCE_ICONS: Record<string, EventIcon> = {
   firms:      { emoji: "🔥", color: "#FF5500", label: "Active Fire" },
   usgs:       { emoji: "🌋", color: "#00BBFF", label: "Earthquake" },
-  ooni:       { emoji: "📡", color: "#AA44FF", label: "Internet Disruption" },
-  cisa:       { emoji: "🛡️", color: "#FF44FF", label: "Cyber Advisory" },
-  polymarket: { emoji: "📊", color: "#44DDAA", label: "Prediction Market" },
-  sentinel:   { emoji: "🛰️", color: "#44AAFF", label: "Satellite Change" },
-  notam:      { emoji: "🚫", color: "#FF8844", label: "Airspace Closure" },
-  ais:        { emoji: "🚢", color: "#2288FF", label: "Dark Vessel" },
-  acled:      { emoji: "⚔️", color: "#FF5533", label: "Armed Conflict" },
-  ucdp:       { emoji: "⚔️", color: "#FF4422", label: "Armed Conflict" },
-  nasa_eonet: { emoji: "🌍", color: "#44CC88", label: "Natural Event" },
+  ooni:       { emoji: "📡", color: "#AA44FF", label: "Internet Shutdown" },
+  cisa:       { emoji: "🛡️", color: "#FF44FF", label: "Cyber Threat Alert" },
+  polymarket: { emoji: "📊", color: "#44DDAA", label: "Betting Market Spike" },
+  sentinel:   { emoji: "🛰️", color: "#44AAFF", label: "Satellite Detection" },
+  notam:      { emoji: "🚫", color: "#FF8844", label: "Airspace Closed" },
+  ais:        { emoji: "🚢", color: "#2288FF", label: "Ship Gone Dark" },
+  acled:      { emoji: "⚔️", color: "#FF5533", label: "Armed Clash" },
+  ucdp:       { emoji: "⚔️", color: "#FF4422", label: "Armed Clash" },
+  nasa_eonet: { emoji: "🌍", color: "#44CC88", label: "Natural Disaster" },
 };
 
 const TYPE_ICONS: Record<string, EventIcon> = {
   earthquake:               { emoji: "🌋", color: "#00BBFF", label: "Earthquake" },
-  fire:                     { emoji: "🔥", color: "#FF5500", label: "Fire" },
-  airstrike:                { emoji: "💥", color: "#FF3300", label: "Airstrike" },
-  conflict:                 { emoji: "⚔️", color: "#FF6633", label: "Conflict" },
+  fire:                     { emoji: "🔥", color: "#FF5500", label: "Wildfire" },
+  airstrike:                { emoji: "💥", color: "#FF3300", label: "Air Strike" },
+  conflict:                 { emoji: "⚔️", color: "#FF6633", label: "Armed Conflict" },
   protest:                  { emoji: "✊", color: "#FFCC00", label: "Protest" },
-  cyber_advisory:           { emoji: "🛡️", color: "#FF44FF", label: "Cyber Advisory" },
-  notam_closure:            { emoji: "🚫", color: "#FF8844", label: "Airspace Closure" },
+  cyber_advisory:           { emoji: "🛡️", color: "#FF44FF", label: "Cyber Threat" },
+  notam_closure:            { emoji: "🚫", color: "#FF8844", label: "Airspace Closed" },
   satellite_change:         { emoji: "🛰️", color: "#44AAFF", label: "Satellite Detection" },
-  prediction_market_spike:  { emoji: "📊", color: "#44DDAA", label: "Market Signal" },
-  vessel_dark:              { emoji: "🚢", color: "#2288FF", label: "Dark Ship" },
-  hospital_ship_movement:   { emoji: "🏥", color: "#FF4488", label: "Hospital Ship" },
-  news_signal:              { emoji: "📰", color: "#00FF41", label: "News Signal" },
+  prediction_market_spike:  { emoji: "📊", color: "#44DDAA", label: "Market Spike" },
+  vessel_dark:              { emoji: "🚢", color: "#2288FF", label: "Ship Gone Dark" },
+  hospital_ship_movement:   { emoji: "🏥", color: "#FF4488", label: "Hospital Ship Moving" },
+  news_signal:              { emoji: "📰", color: "#00FF41", label: "Breaking News" },
 };
 
-const FALLBACK_ICON: EventIcon = { emoji: "📍", color: "#00FF41", label: "Intel" };
+const KEYWORD_EMOJI: [RegExp, string, string][] = [
+  [/missile/i,              "🚀", "#FF2200"],
+  [/drone/i,                "🛸", "#FF3355"],
+  [/air\s*strike|bomb(er|ing)/i, "✈️", "#FF2200"],
+  [/artillery|shell(ing)?/i,"💥", "#FF3300"],
+  [/tank/i,                 "🪖", "#FF4400"],
+  [/nuclear|wmd|radiolog/i, "☢️", "#FF0000"],
+  [/chemical|gas\s*attack|biological/i, "☣️", "#BBFF00"],
+  [/assassination|targeted\s*kill/i, "🎯", "#FF0055"],
+  [/suicide\s*bomb/i,       "💣", "#FF2222"],
+  [/car\s*bomb|ied|explosive/i, "💣", "#FF6600"],
+  [/gunfight|firefight|small\s*arms|ambush/i, "🔫", "#FF6633"],
+  [/kidnap|abduct|hostage|hijack/i, "🔗", "#FF5577"],
+  [/torture|sexual/i,       "⛓️", "#CC4466"],
+  [/riot|mob|lynch/i,       "🔥", "#FF8800"],
+  [/protest|demonstrat|strike|boycott/i, "✊", "#FFCC00"],
+  [/blockade|curfew/i,      "🚧", "#FF8800"],
+  [/territory|occup(ied|ation)/i, "🏴", "#CC3300"],
+  [/ceasefire/i,            "⚠️", "#FFAA00"],
+  [/troops?\s*deploy|buildup/i, "🪖", "#FF5544"],
+  [/mass\s*violen|ethnic\s*cleans|genocide/i, "💀", "#FF0000"],
+  [/displac|expuls|refugee/i,"🚶", "#CC4400"],
+  [/arrest|detain/i,        "🚔", "#FF7744"],
+  [/raid/i,                 "🏚️", "#FF5544"],
+  [/naval|sea\s*block/i,    "⚓", "#4488FF"],
+  [/patrol/i,               "👁️", "#FF8866"],
+  [/assault|attack/i,       "👊", "#FF7744"],
+];
 
 function resolveIcon(e: MapEvent): EventIcon {
   if (e.source === "adsb") {
@@ -179,13 +184,26 @@ function resolveIcon(e: MapEvent): EventIcon {
     return { emoji: "✈️", color: "#FF3333", label: "Military Aircraft" };
   }
 
-  const cameo = e.raw_data?.cameo_code as string | undefined;
-  if (cameo && CAMEO_ICONS[cameo]) return CAMEO_ICONS[cameo];
+  const cameoLabel = e.raw_data?.cameo_label as string | undefined;
+  if (cameoLabel) {
+    for (const [re, emoji, color] of KEYWORD_EMOJI) {
+      if (re.test(cameoLabel)) return { emoji, color, label: cameoLabel };
+    }
+    return { emoji: "⚔️", color: "#FF6633", label: cameoLabel };
+  }
 
   if (TYPE_ICONS[e.type]) return TYPE_ICONS[e.type];
   if (SOURCE_ICONS[e.source]) return SOURCE_ICONS[e.source];
 
-  return FALLBACK_ICON;
+  const title = e.title || "";
+  for (const [re, emoji, color] of KEYWORD_EMOJI) {
+    if (re.test(title)) {
+      const match = title.match(re);
+      return { emoji, color, label: match?.[0] || e.type };
+    }
+  }
+
+  return { emoji: "📍", color: "#00FF41", label: e.type || "Intel" };
 }
 
 function timeAgo(iso: string): string {

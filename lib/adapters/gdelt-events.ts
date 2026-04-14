@@ -13,27 +13,80 @@ import { join } from 'path';
  * 190=military force, 193=small arms, 194=artillery, 195=aerial weapons, etc.
  */
 
-// CAMEO root codes that indicate conflict/military action
+// CAMEO event codes — specific sub-codes first, then root codes as fallback.
+// Match logic tries eventCode first (most specific), then rootCode.
 const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity: number }> = {
-  '183': { type: 'airstrike', label: 'Suicide bombing', severity: 90 },
-  '184': { type: 'airstrike', label: 'Chemical weapons', severity: 95 },
-  '185': { type: 'airstrike', label: 'Explosive device/IED', severity: 80 },
-  '186': { type: 'conflict', label: 'Assassination', severity: 85 },
-  '190': { type: 'conflict', label: 'Military force used', severity: 70 },
-  '191': { type: 'conflict', label: 'Blockade imposed', severity: 60 },
-  '192': { type: 'conflict', label: 'Territory occupied', severity: 75 },
-  '193': { type: 'conflict', label: 'Small arms fighting', severity: 65 },
-  '194': { type: 'airstrike', label: 'Artillery/tank fire', severity: 80 },
-  '195': { type: 'airstrike', label: 'Aerial weapons/bombing', severity: 85 },
-  '196': { type: 'conflict', label: 'Ceasefire violated', severity: 70 },
-  '200': { type: 'conflict', label: 'Mass violence', severity: 90 },
-  '201': { type: 'conflict', label: 'Mass expulsion', severity: 85 },
-  '202': { type: 'conflict', label: 'Ethnic cleansing', severity: 95 },
-  '203': { type: 'airstrike', label: 'WMD used', severity: 100 },
-  '145': { type: 'protest', label: 'Violent protest/riot', severity: 50 },
-  '180': { type: 'conflict', label: 'Assault', severity: 55 },
-  '181': { type: 'conflict', label: 'Abduction/hijacking', severity: 60 },
+  // 14x — Protests
+  '141': { type: 'protest', label: 'Political protest', severity: 40 },
+  '1411': { type: 'protest', label: 'Anti-government protest', severity: 45 },
+  '1414': { type: 'protest', label: 'Pro-rights demonstration', severity: 35 },
+  '142': { type: 'protest', label: 'Hunger strike', severity: 40 },
+  '143': { type: 'protest', label: 'Strike or boycott', severity: 40 },
+  '1431': { type: 'protest', label: 'Workers' strike', severity: 40 },
+  '144': { type: 'protest', label: 'Obstruction / blockade protest', severity: 45 },
+  '145': { type: 'protest', label: 'Violent protest / riot', severity: 50 },
+  '1451': { type: 'protest', label: 'Violent street riot', severity: 55 },
+  '1452': { type: 'protest', label: 'Violent mob attack', severity: 60 },
+
+  // 17x — Coercion
+  '171': { type: 'conflict', label: 'Seized or damaged property', severity: 50 },
+  '1711': { type: 'conflict', label: 'Confiscated property', severity: 50 },
+  '1712': { type: 'conflict', label: 'Destroyed property', severity: 55 },
+  '172': { type: 'conflict', label: 'Military buildup', severity: 55 },
+  '1721': { type: 'conflict', label: 'Troops deployed to border', severity: 60 },
+  '173': { type: 'conflict', label: 'Imposed curfew', severity: 45 },
+  '174': { type: 'conflict', label: 'Arrested or detained', severity: 50 },
+  '1741': { type: 'conflict', label: 'Mass arrests', severity: 55 },
+
+  // 18x — Assault
+  '180': { type: 'conflict', label: 'Violent assault', severity: 55 },
+  '181': { type: 'conflict', label: 'Abduction / hostage taking', severity: 60 },
+  '1811': { type: 'conflict', label: 'Kidnapping', severity: 65 },
+  '1812': { type: 'conflict', label: 'Hostage crisis', severity: 70 },
+  '1813': { type: 'conflict', label: 'Hijacking', severity: 70 },
   '182': { type: 'conflict', label: 'Physical assault', severity: 55 },
+  '1821': { type: 'conflict', label: 'Sexually violent attack', severity: 65 },
+  '1822': { type: 'conflict', label: 'Torture', severity: 70 },
+  '1823': { type: 'conflict', label: 'Attack by mob / lynching', severity: 65 },
+  '183': { type: 'airstrike', label: 'Suicide bombing', severity: 90 },
+  '184': { type: 'airstrike', label: 'Chemical weapons attack', severity: 95 },
+  '1841': { type: 'airstrike', label: 'Chemical gas attack', severity: 95 },
+  '1842': { type: 'airstrike', label: 'Biological weapons attack', severity: 95 },
+  '185': { type: 'airstrike', label: 'Car bomb / IED explosion', severity: 80 },
+  '1851': { type: 'airstrike', label: 'Roadside IED attack', severity: 80 },
+  '1852': { type: 'airstrike', label: 'Car bomb detonated', severity: 85 },
+  '186': { type: 'conflict', label: 'Targeted assassination', severity: 85 },
+
+  // 19x — Military force
+  '190': { type: 'conflict', label: 'Military action', severity: 70 },
+  '1901': { type: 'conflict', label: 'Troops deployed', severity: 65 },
+  '1902': { type: 'conflict', label: 'Naval forces deployed', severity: 70 },
+  '1903': { type: 'conflict', label: 'Military patrol', severity: 55 },
+  '1904': { type: 'conflict', label: 'Military raid', severity: 70 },
+  '191': { type: 'conflict', label: 'Naval blockade', severity: 60 },
+  '1911': { type: 'conflict', label: 'Sea blockade imposed', severity: 65 },
+  '1912': { type: 'conflict', label: 'Land corridor blocked', severity: 60 },
+  '192': { type: 'conflict', label: 'Territory seized', severity: 75 },
+  '1921': { type: 'conflict', label: 'Military occupation', severity: 80 },
+  '193': { type: 'conflict', label: 'Gunfight / small arms clash', severity: 65 },
+  '1931': { type: 'conflict', label: 'Firefight with small arms', severity: 65 },
+  '1932': { type: 'conflict', label: 'Armed ambush', severity: 70 },
+  '194': { type: 'airstrike', label: 'Artillery shelling', severity: 80 },
+  '1941': { type: 'airstrike', label: 'Tank battle', severity: 80 },
+  '1942': { type: 'airstrike', label: 'Artillery barrage', severity: 82 },
+  '195': { type: 'airstrike', label: 'Air strike', severity: 85 },
+  '1951': { type: 'airstrike', label: 'Drone strike', severity: 85 },
+  '1952': { type: 'airstrike', label: 'Bomber air strike', severity: 88 },
+  '1953': { type: 'airstrike', label: 'Missile strike', severity: 90 },
+  '196': { type: 'conflict', label: 'Ceasefire violated', severity: 70 },
+
+  // 20x — Unconventional mass violence
+  '200': { type: 'conflict', label: 'Mass violence', severity: 90 },
+  '201': { type: 'conflict', label: 'Mass forced displacement', severity: 85 },
+  '202': { type: 'conflict', label: 'Ethnic cleansing', severity: 95 },
+  '203': { type: 'airstrike', label: 'Nuclear / WMD attack', severity: 100 },
+  '2031': { type: 'airstrike', label: 'Nuclear detonation', severity: 100 },
+  '2032': { type: 'airstrike', label: 'Radiological weapon', severity: 98 },
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -231,6 +284,7 @@ export class GDELTEventsAdapter extends BaseAdapter {
         raw_data: {
           event_id: globalEventId,
           cameo_code: eventCode,
+          cameo_label: match.label,
           goldstein,
           num_articles: numArticles,
           source_url: sourceUrl,
