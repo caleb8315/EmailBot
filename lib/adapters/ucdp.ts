@@ -116,8 +116,10 @@ export class UCDPAdapter extends BaseAdapter {
           lng: parseFloat(String(e.longitude)),
           country_code: e.country_id || (e.country || '').substring(0, 2).toUpperCase(),
           timestamp: e.date_start ? new Date(e.date_start).toISOString() : new Date().toISOString(),
-          title: `${typeInfo.label}: ${e.side_a || '?'} vs ${e.side_b || '?'} — ${e.where_description || e.country || 'Unknown'}`,
-          summary: `Deaths: ${deaths} (est ${e.low || 0}–${e.high || 0}) | ${e.source_article?.slice(0, 300) || 'No details'}`,
+          title: `${typeInfo.label} in ${e.where_description || e.country || 'Unknown'}`,
+          summary: deaths > 0
+            ? `${e.side_a || 'Unknown'} vs ${e.side_b || 'Unknown'} — ${deaths} reported killed`
+            : `${e.side_a || 'Unknown'} vs ${e.side_b || 'Unknown'}`,
           tags,
           raw_data: {
             ucdp_id: e.id,

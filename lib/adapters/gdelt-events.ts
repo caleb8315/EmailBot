@@ -36,6 +36,24 @@ const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity:
   '182': { type: 'conflict', label: 'Physical assault', severity: 55 },
 };
 
+const COUNTRY_NAMES: Record<string, string> = {
+  US: 'United States', USA: 'United States', GB: 'United Kingdom', GBR: 'United Kingdom',
+  UK: 'United Kingdom', RU: 'Russia', RUS: 'Russia', CN: 'China', CHN: 'China',
+  UA: 'Ukraine', UKR: 'Ukraine', IR: 'Iran', IRN: 'Iran', IL: 'Israel', ISR: 'Israel',
+  SY: 'Syria', SYR: 'Syria', IQ: 'Iraq', IRQ: 'Iraq', AF: 'Afghanistan', AFG: 'Afghanistan',
+  YE: 'Yemen', YEM: 'Yemen', SD: 'Sudan', SDN: 'Sudan', MM: 'Myanmar', MMR: 'Myanmar',
+  KP: 'North Korea', PRK: 'North Korea', TW: 'Taiwan', TWN: 'Taiwan',
+  SA: 'Saudi Arabia', SAU: 'Saudi Arabia', PK: 'Pakistan', PAK: 'Pakistan',
+  LB: 'Lebanon', LBN: 'Lebanon', LY: 'Libya', LBY: 'Libya', ET: 'Ethiopia', ETH: 'Ethiopia',
+  NG: 'Nigeria', NGA: 'Nigeria', SO: 'Somalia', SOM: 'Somalia', CD: 'DR Congo',
+  FR: 'France', FRA: 'France', DE: 'Germany', DEU: 'Germany',
+  JP: 'Japan', JPN: 'Japan', KR: 'South Korea', KOR: 'South Korea',
+  IN: 'India', IND: 'India', BR: 'Brazil', BRA: 'Brazil',
+  PL: 'Poland', POL: 'Poland', EE: 'Estonia', EST: 'Estonia',
+  PSE: 'Palestine', ISL: 'Islamic State', GOV: 'Government', MIL: 'Military',
+  REB: 'Rebels', OPP: 'Opposition', COP: 'Police', CVL: 'Civilians',
+};
+
 // Domains that produce false conflict events (movies, games, sports, fiction)
 const JUNK_DOMAINS = [
   'collider.com', 'imdb.com', 'rottentomatoes.com', 'screenrant.com', 'ign.com',
@@ -166,11 +184,25 @@ export class GDELTEventsAdapter extends BaseAdapter {
       // Boost severity based on number of articles covering this event
       const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
 
-      const actor1 = cols[COL.Actor1CountryCode] || '?';
-      const actor2 = cols[COL.Actor2CountryCode] || '?';
+      const actor1Name = cols[7] || '';
+      const actor2Name = cols[17] || '';
 
       const tags = ['gdelt', 'conflict', 'geocoded', match.type];
       if (countryCode !== 'XX') tags.push(countryCode.toLowerCase());
+
+      // Build a human-readable title
+      const location = locationName || COUNTRY_NAMES[countryCode] || countryCode;
+      const title = `${match.label} in ${location}`;
+
+      // Build a human-readable summary
+      const parts: string[] = [];
+      if (actor1Name && actor2Name && actor1Name !== actor2Name) {
+        parts.push(`${COUNTRY_NAMES[actor1Name] || actor1Name} vs ${COUNTRY_NAMES[actor2Name] || actor2Name}`);
+      }
+      parts.push(`Reported by ${numArticles} source${numArticles > 1 ? 's' : ''}`);
+      if (goldstein <= -8) parts.push('Extremely hostile');
+      else if (goldstein <= -5) parts.push('Highly conflictual');
+      else if (goldstein <= -2) parts.push('Tense situation');
 
       events.push({
         source: 'gdelt',
@@ -183,16 +215,14 @@ export class GDELTEventsAdapter extends BaseAdapter {
         timestamp: dateStr.length === 8
           ? `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T00:00:00Z`
           : new Date().toISOString(),
-        title: `${match.label}: ${locationName || countryCode}`,
-        summary: `${actor1} → ${actor2} | Goldstein: ${goldstein} | Sources: ${numArticles} | ${sourceUrl.slice(0, 200)}`,
+        title,
+        summary: parts.join(' · '),
         tags,
         raw_data: {
           event_id: cols[COL.GLOBALEVENTID],
           cameo_code: eventCode,
           goldstein,
           num_articles: numArticles,
-          actor1: cols[7],
-          actor2: cols[17],
           source_url: sourceUrl,
           location: locationName,
         },

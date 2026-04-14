@@ -103,7 +103,7 @@ export class FIRMSAdapter extends BaseAdapter {
           ? `${date}T${time.padStart(4, '0').substring(0, 2)}:${time.padStart(4, '0').substring(2)}:00Z`
           : new Date().toISOString(),
         title: `Thermal anomaly — FRP ${frp.toFixed(0)}MW`,
-        summary: `Brightness: ${brightness.toFixed(0)}K | FRP: ${frp.toFixed(0)}MW | Confidence: ${conf}`,
+        summary: frp > 200 ? 'Major thermal event — likely large wildfire or industrial fire' : frp > 100 ? 'Significant heat source detected by satellite' : 'Moderate thermal anomaly detected by satellite',
         tags: ['firms', 'thermal', 'fire', frp > 200 ? 'high_frp' : 'moderate_frp'],
         raw_data: { brightness, frp, confidence: conf, date, time },
       });

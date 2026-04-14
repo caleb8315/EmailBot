@@ -46,7 +46,7 @@ export class USGSAdapter extends BaseAdapter {
             : 'XX',
           timestamp: new Date(f.properties.time).toISOString(),
           title: `M${mag.toFixed(1)} — ${f.properties.place || 'Unknown location'}`,
-          summary: `Depth: ${depth.toFixed(1)}km | Mag: ${mag.toFixed(1)} | ${f.properties.type || 'earthquake'}`,
+          summary: mag >= 6 ? `Major earthquake — magnitude ${mag.toFixed(1)}, ${depth.toFixed(0)}km deep` : mag >= 4.5 ? `Moderate earthquake — magnitude ${mag.toFixed(1)}, ${depth.toFixed(0)}km deep` : `Minor earthquake — magnitude ${mag.toFixed(1)}, ${depth.toFixed(0)}km deep`,
           tags: ['usgs', 'earthquake', mag >= 5 ? 'significant' : 'minor'],
           raw_data: {
             mag,

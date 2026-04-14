@@ -116,7 +116,7 @@ export class ADSBMilitaryAdapter extends BaseAdapter {
           country_code: getCountryFromPosition(lat as number, lng as number),
           timestamp: new Date().toISOString(),
           title: `${cs} — ${match?.description || 'Military aircraft'}`,
-          summary: `Alt: ${altitude ?? '?'}m | Spd: ${velocity ?? '?'}m/s | Hdg: ${heading ?? '?'}°`,
+          summary: `Flying at ${altitude ? Math.round((altitude as number) * 3.281).toLocaleString() + 'ft' : 'unknown altitude'}${match ? `. ${match.description}` : ''}`,
           tags: ['adsb', 'military', match?.type || 'unknown'],
           raw_data: {
             icao24,

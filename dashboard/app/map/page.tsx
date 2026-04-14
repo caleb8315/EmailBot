@@ -275,17 +275,22 @@ function MapInner() {
               <p className="text-xs text-gray-400 leading-relaxed mb-3">{selectedEvent.summary.slice(0, 300)}</p>
             )}
 
-            {/* Stats row */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <div className="w-12 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${selectedEvent.severity}%`, background: CAT_CONFIG[categorize(selectedEvent)]?.color }} />
-                </div>
-                <span className="text-[10px] font-mono text-gray-500">{selectedEvent.severity}%</span>
-              </div>
+            {/* Severity + location */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                selectedEvent.severity >= 80 ? "bg-red-500/20 text-red-400" :
+                selectedEvent.severity >= 60 ? "bg-orange-500/20 text-orange-400" :
+                selectedEvent.severity >= 40 ? "bg-yellow-500/20 text-yellow-400" :
+                "bg-green-500/20 text-green-400"
+              }`}>
+                {selectedEvent.severity >= 80 ? "Critical" :
+                 selectedEvent.severity >= 60 ? "High" :
+                 selectedEvent.severity >= 40 ? "Medium" : "Low"}
+              </span>
               {selectedEvent.country_code !== "XX" && (
                 <span className="text-[10px] text-gray-500">{selectedEvent.country_code}</span>
               )}
+              <span className="text-[10px] text-gray-600">{timeAgo(selectedEvent.timestamp)}</span>
             </div>
 
             {/* Tags */}
