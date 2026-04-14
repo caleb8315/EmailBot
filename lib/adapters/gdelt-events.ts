@@ -36,6 +36,29 @@ const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity:
   '182': { type: 'conflict', label: 'Physical assault', severity: 55 },
 };
 
+// Domains that produce false conflict events (movies, games, sports, fiction)
+const JUNK_DOMAINS = [
+  'collider.com', 'imdb.com', 'rottentomatoes.com', 'screenrant.com', 'ign.com',
+  'gamespot.com', 'kotaku.com', 'polygon.com', 'thegamer.com', 'pcgamer.com',
+  'espn.com', 'bleacherreport.com', 'sports.yahoo.com', 'cbssports.com',
+  'people.com', 'tmz.com', 'eonline.com', 'usmagazine.com', 'pagesix.com',
+  'buzzfeed.com', 'boredpanda.com', 'distractify.com', 'ranker.com',
+  'wikipedia.org', 'fandom.com', 'tvtropes.org', 'goodreads.com',
+  'amazon.com', 'ebay.com', 'etsy.com', 'walmart.com',
+  'weather.com', 'accuweather.com',
+  'tiktok.com', 'instagram.com', 'pinterest.com', 'reddit.com',
+  'youtube.com', 'twitch.tv', 'dailymotion.com',
+];
+
+// URL patterns that indicate non-news content
+const JUNK_URL_PATTERNS = [
+  /\/movie/i, /\/film/i, /\/review/i, /\/trailer/i, /\/game/i, /\/gaming/i,
+  /\/recipe/i, /\/horoscope/i, /\/celebrity/i, /\/entertainment/i,
+  /\/sport/i, /\/score/i, /\/fantasy-football/i,
+  /best-.*-movies/i, /top-\d+/i, /listicle/i, /\/gallery/i,
+  /\/book-review/i, /\/tv-show/i, /\/streaming/i,
+];
+
 // GDELT export columns (tab-separated, 58+ columns)
 const COL = {
   GLOBALEVENTID: 0,
@@ -128,8 +151,17 @@ export class GDELTEventsAdapter extends BaseAdapter {
       const goldstein = parseFloat(cols[COL.GoldsteinScale] || '0');
       const numArticles = parseInt(cols[COL.NumArticles] || '1', 10);
       const locationName = cols[COL.ActionGeo_FullName] || '';
-      const sourceUrl = cols[COL.SOURCEURL] || '';
+      const sourceUrl = (cols[COL.SOURCEURL] || '').toLowerCase();
       const dateStr = cols[COL.SQLDATE] || '';
+
+      // Filter out junk sources — entertainment, movies, sports, fiction, listicles
+      const domain = sourceUrl.replace(/^https?:\/\//, '').split('/')[0];
+      if (JUNK_DOMAINS.some(d => domain.includes(d))) continue;
+      if (JUNK_URL_PATTERNS.some(p => p.test(sourceUrl))) continue;
+
+      // Require multiple source articles for high-severity claims to reduce false positives
+      if (match.severity >= 80 && numArticles < 3) continue;
+      if (match.severity >= 70 && numArticles < 2) continue;
 
       // Boost severity based on number of articles covering this event
       const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
