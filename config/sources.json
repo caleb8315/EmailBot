@@ -142,6 +142,14 @@
   "blocked_domains": [
     "buzzfeed.com",
     "dailymail.co.uk",
-    "infowars.com"
+    "infowars.com",
+    "naturalnews.com",
+    "beforeitsnews.com",
+    "thegatewaypundit.com",
+    "worldtruth.tv",
+    "yournewswire.com",
+    "newsmax.com",
+    "oann.com",
+    "sputniknews.com"
   ]
 }

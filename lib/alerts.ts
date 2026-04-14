@@ -1,4 +1,5 @@
 import type { PatternMatch, AlertTier, Anomaly } from './types';
+import { canAlert } from './verification';
 
 const ALERT_CONFIG: Record<AlertTier, {
   description: string;
@@ -69,6 +70,17 @@ export async function dispatchPatternAlert(
 ): Promise<void> {
   const tier = match.pattern.alertTier;
   const config = ALERT_CONFIG[tier];
+
+  // Verification gate: skip alert if any constituent event fails verification
+  const hasUnverified = match.events.some(e => {
+    if (!e.verification) return false;
+    return !canAlert(e.verification, tier);
+  });
+
+  if (hasUnverified) {
+    console.log(`[alerts] ${tier} alert SUPPRESSED for ${match.pattern.name}: contains unverified events`);
+    return;
+  }
 
   if (config.channels.includes('telegram_push') || config.channels.includes('telegram')) {
     await sendTelegramAlert(match, narrative);

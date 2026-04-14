@@ -1,5 +1,10 @@
 import { createLogger } from "./logger";
 import type { RawArticle, FilteredArticle, UserPreferences } from "./types";
+import {
+  extractCanonicalDomain,
+  isDomainMatch,
+  isDomainBlocked,
+} from "../lib/verification";
 
 const logger = createLogger("prefilter");
 
@@ -287,27 +292,17 @@ function computeHeuristicCredibility(
   corroborationCount: number
 ): number {
   const trustScore = article.sourceTrustScore ?? 5;
-  const domain = extractDomain(article.url);
+  const domain = extractCanonicalDomain(article.url);
 
   let cred = trustScore;
 
-  if (
-    prefs.trusted_sources.some(
-      (s) =>
-        domain.includes(s.toLowerCase()) ||
-        article.source.toLowerCase().includes(s.toLowerCase())
-    )
-  ) {
+  if (prefs.trusted_sources.some((s) => isDomainMatch(domain, s))) {
     cred += 1;
   }
 
-  if (
-    prefs.blocked_sources.some(
-      (s) =>
-        domain.includes(s.toLowerCase()) ||
-        article.source.toLowerCase().includes(s.toLowerCase())
-    )
-  ) {
+  // Blocked sources are hard-rejected at prefilter, but downgrade credibility
+  // as a safety net if they somehow reach here.
+  if (isDomainBlocked(domain, prefs.blocked_sources)) {
     cred -= 3;
   }
 
@@ -328,17 +323,20 @@ function computePrefilterScore(
   seenUrls: Set<string>,
   seenTitles: string[]
 ): number {
+  const domain = extractCanonicalDomain(article.url);
+
+  // Hard-block: if the domain is on the blocklist, reject immediately
+  if (isDomainBlocked(domain, prefs.blocked_sources)) {
+    logger.debug("Hard-blocked source", { domain, title: article.title.slice(0, 60) });
+    return 0;
+  }
+
   let score = 50;
-  const domain = extractDomain(article.url);
   const titleLower = article.title.toLowerCase();
   const contentLower = article.content.toLowerCase();
 
   if (
-    prefs.trusted_sources.some(
-      (s) =>
-        domain.includes(s.toLowerCase()) ||
-        article.source.toLowerCase().includes(s.toLowerCase())
-    )
+    prefs.trusted_sources.some((s) => isDomainMatch(domain, s))
   ) {
     score += 20;
   }
@@ -349,16 +347,6 @@ function computePrefilterScore(
   if (matched > 0) score += 15;
 
   if (article.wordCount > 300) score += 10;
-
-  if (
-    prefs.blocked_sources.some(
-      (s) =>
-        domain.includes(s.toLowerCase()) ||
-        article.source.toLowerCase().includes(s.toLowerCase())
-    )
-  ) {
-    score -= 30;
-  }
 
   const noiseHits = matchesAny(titleLower, NOISE_KEYWORDS);
   if (noiseHits.length > 0) score -= 20;

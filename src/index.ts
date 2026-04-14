@@ -8,7 +8,12 @@ import { sendAlertIfNeeded } from "./send_telegram";
 import { sendPlainMessage } from "./send_telegram";
 import { getDailyUsageReport } from "./usage_limiter";
 import { resolvePreferenceUserId } from "./user_identity";
-import type { RawArticle, ArticleHistory } from "./types";
+import type { RawArticle, ArticleHistory, NewsVerificationStatus } from "./types";
+import {
+  extractCanonicalDomain,
+  isDomainCredible,
+  isDomainBlocked,
+} from "../lib/verification";
 
 const logger = createLogger("index");
 
@@ -144,14 +149,49 @@ async function runPipeline(): Promise<void> {
     };
   }
 
-  // Step 6: Check alert thresholds and send Telegram
+  // Step 6: Assign verification status and check alert thresholds
   let alertsSent = 0;
+  let quarantinedCount = 0;
   const alertSensitivity =
     typeof prefs.alert_sensitivity === "number"
       ? prefs.alert_sensitivity
       : 5;
   for (const article of processingResult.processed) {
     try {
+      const domain = extractCanonicalDomain(article.url);
+      const credible = isDomainCredible(domain);
+      const corrobCount = article.corroboration_count ?? 1;
+
+      let vStatus: NewsVerificationStatus;
+      if (isDomainBlocked(domain, prefs.blocked_sources)) {
+        vStatus = 'blocked';
+      } else if (corrobCount >= 2 && credible) {
+        vStatus = 'verified';
+      } else if (corrobCount >= 2) {
+        vStatus = 'developing';
+      } else if (credible) {
+        vStatus = 'developing';
+      } else {
+        vStatus = 'quarantined';
+      }
+
+      article.verification_status = vStatus;
+
+      if (vStatus === 'blocked') {
+        logger.debug("Blocked article skipped", { title: article.title.slice(0, 60), domain });
+        continue;
+      }
+
+      if (vStatus === 'quarantined') {
+        quarantinedCount++;
+        logger.debug("Article quarantined — insufficient verification", {
+          title: article.title.slice(0, 60),
+          corroboration: corrobCount,
+          credible,
+        });
+        continue;
+      }
+
       const sent = await sendAlertIfNeeded(article, alertSensitivity);
       if (sent) alertsSent++;
     } catch (err) {
@@ -160,6 +200,9 @@ async function runPipeline(): Promise<void> {
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  }
+  if (quarantinedCount > 0) {
+    logger.info("Quarantined articles (not alerted)", { count: quarantinedCount });
   }
 
   // Step 7: Log summary

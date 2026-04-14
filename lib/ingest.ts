@@ -33,6 +33,14 @@ import { detectAndUpdateNarrativeArcs } from './narrative-arc';
 import { detectAnomalies } from './anomaly-detector';
 import { dispatchPatternAlert, dispatchAnomalyAlert, buildStructuredPrompt } from './alerts';
 import { callLLM } from './llm';
+import {
+  assignVerificationToEvent,
+  recheckVerification,
+  isQuarantineExpired,
+  canAlert,
+  isDomainCredible,
+  extractCanonicalDomain,
+} from './verification';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -215,26 +223,90 @@ export async function runIngestion(): Promise<{
     if (eidKey) existingEventIds.add(eidKey);
     return true;
   });
-  console.log(`[ingest] ${allEvents.length} total → ${significant.length} significant → ${deduped.length} after dedup`);
+  // ── Verification gate: assign verification status and split into verified vs quarantined ──
+  const verified: IntelEvent[] = [];
+  const quarantined: IntelEvent[] = [];
+  for (const event of deduped) {
+    const checked = assignVerificationToEvent(event);
+    if (checked.verification?.status === 'quarantined') {
+      quarantined.push(checked);
+    } else {
+      verified.push(checked);
+    }
+  }
+  console.log(`[ingest] ${allEvents.length} total → ${significant.length} significant → ${deduped.length} deduped → ${verified.length} verified, ${quarantined.length} quarantined`);
 
-  // Store to Supabase
+  // Store verified events to Supabase
   let totalStored = 0;
   try {
-    totalStored = await storeEvents(deduped);
+    totalStored = await storeEvents(verified);
   } catch (err) {
     console.error(`[ingest] Storage failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // Store quarantined events separately (tagged for recheck)
+  if (quarantined.length > 0) {
+    try {
+      const quarantinedTagged = quarantined.map(e => ({
+        ...e,
+        tags: [...e.tags, 'quarantined'],
+      }));
+      await storeEvents(quarantinedTagged);
+      console.log(`[ingest] Stored ${quarantined.length} quarantined events for later recheck`);
+    } catch (err) {
+      console.error(`[ingest] Quarantine storage failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // ── Quarantine recheck: try to promote previously quarantined events ──
+  try {
+    const { data: pendingRows } = await sb
+      .from('intel_events')
+      .select('id, title, source, type, severity, confidence, country_code, timestamp, summary, tags, raw_data')
+      .contains('tags', ['quarantined'])
+      .gte('created_at', threeDaysAgo)
+      .limit(200);
+
+    if (pendingRows && pendingRows.length > 0) {
+      let promoted = 0;
+      for (const row of pendingRows) {
+        const titleWords = row.title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+        const matchingNew = verified.filter(e =>
+          titleWords.some((w: string) => e.title.toLowerCase().includes(w))
+        );
+        if (matchingNew.length > 0) {
+          const newTags = (row.tags as string[]).filter((t: string) => t !== 'quarantined');
+          newTags.push('promoted_from_quarantine');
+          await sb.from('intel_events').update({ tags: newTags }).eq('id', row.id);
+          promoted++;
+        }
+      }
+      if (promoted > 0) {
+        console.log(`[ingest] Quarantine recheck: promoted ${promoted} events`);
+      }
+    }
+  } catch (err) {
+    console.error(`[ingest] Quarantine recheck failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   // ── Intelligence loop: Rules → Beliefs → Hypotheses → Arcs → Anomalies → Alerts ──
-  if (significant.length > 0) {
+  // Only run intelligence loop on verified/developing events
+  if (verified.length > 0) {
     try {
       // 1. Rules engine: detect patterns
-      const patternMatches = await runRulesEngine(significant);
+      const patternMatches = await runRulesEngine(verified);
       console.log(`[ingest] Rules engine: ${patternMatches.length} pattern matches`);
 
       // 2. Generate narratives and dispatch alerts for pattern matches
       for (const match of patternMatches) {
         try {
+          const allEventsVerified = match.events.every(
+            e => e.verification?.status === 'verified' || e.verification?.status === 'developing'
+          );
+          if (!allEventsVerified) {
+            console.log(`[ingest] Skipping alert for ${match.pattern.name}: contains unverified events`);
+            continue;
+          }
           const prompt = buildStructuredPrompt(match);
           const narrative = await callLLM(prompt, 'narrative');
           await dispatchPatternAlert(match, narrative);
@@ -244,19 +316,19 @@ export async function runIngestion(): Promise<{
       }
 
       // 3. Update beliefs against new events
-      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(significant);
+      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(verified);
       console.log(`[ingest] Beliefs updated: ${beliefResult.updated}, conflicts: ${beliefResult.conflictsFound}`);
 
       // 4. Update hypotheses
-      const hypoUpdated = await updateAllHypotheses(significant);
+      const hypoUpdated = await updateAllHypotheses(verified);
       console.log(`[ingest] Hypotheses updated: ${hypoUpdated}`);
 
       // 5. Check narrative arcs
-      const arcResult = await detectAndUpdateNarrativeArcs(significant);
+      const arcResult = await detectAndUpdateNarrativeArcs(verified);
       console.log(`[ingest] Arcs: ${arcResult.advanced} advanced, ${arcResult.created} created`);
 
       // 6. Anomaly detection
-      const anomalies = await detectAnomalies(significant);
+      const anomalies = await detectAnomalies(verified);
       for (const anomaly of anomalies) {
         await dispatchAnomalyAlert(anomaly);
       }

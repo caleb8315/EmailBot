@@ -1,5 +1,6 @@
 import { BaseAdapter } from './base-adapter';
 import type { DataSource, IntelEvent, EventType } from '../types';
+import { isNonKineticContext } from '../verification';
 
 /**
  * OSINT & Defense Intelligence RSS adapter.
@@ -116,6 +117,12 @@ export class OSINTFeedsAdapter extends BaseAdapter {
             if (sev >= 70) eventType = 'conflict';
             if (/airstrike|bomb|shell|missile|explo|artiller/.test(contentLower)) eventType = 'airstrike';
           }
+        }
+
+        // Context guard: suppress conflict escalation for policy/rights/legal articles
+        if (isNonKineticContext(contentLower)) {
+          severity = Math.min(severity, 30);
+          eventType = 'news_signal';
         }
 
         // Only include articles that are conflict/geopolitical relevant

@@ -39,6 +39,11 @@ DEVELOPING_MIN_SOURCES = 2       # min total sources for DEVELOPING
 LABEL_VERIFIED = "🟢 VERIFIED"
 LABEL_DEVELOPING = "🟡 DEVELOPING"
 LABEL_UNVERIFIED = "🔴 UNVERIFIED"
+LABEL_QUARANTINED = "🟠 QUARANTINED"
+LABEL_BLOCKED = "⛔ BLOCKED"
+
+# Minimum reliability for a source to count as credible in verification
+CREDIBLE_RELIABILITY_THRESHOLD = 0.75
 
 
 @dataclass
@@ -109,24 +114,38 @@ def _merge_entities(articles: List[NormalizedArticle]) -> Dict[str, Set[str]]:
     return merged
 
 
+def _has_credible_sources(cluster: StoryCluster) -> int:
+    """Count sources with reliability above the credible threshold."""
+    count = 0
+    seen: Set[str] = set()
+    for a in cluster.articles:
+        if a.publisher in seen:
+            continue
+        seen.add(a.publisher)
+        if a.source_tier <= 2:
+            count += 1
+    return count
+
+
 def _assign_label(cluster: StoryCluster) -> str:
     """
     Assign verification label based on source diversity and credibility.
 
     Rules:
-      - ALT category always starts as UNVERIFIED unless corroborated by mainstream
+      - ALT category: QUARANTINED unless corroborated by tier-1/2 mainstream
+      - Single-source clusters: QUARANTINED (held for recheck)
       - VERIFIED requires ≥2 distinct credible (tier 1-2) publishers
       - DEVELOPING requires ≥2 total sources but insufficient credible ones
-      - Everything else is UNVERIFIED
+      - Everything else is QUARANTINED until more evidence arrives
     """
     is_alt = cluster.category == CAT_ALT
-    credible = cluster.credible_count
+    credible = _has_credible_sources(cluster)
     total = cluster.distinct_publishers
 
     if is_alt:
         if credible >= VERIFIED_MIN_CREDIBLE:
             return LABEL_DEVELOPING
-        return LABEL_UNVERIFIED
+        return LABEL_QUARANTINED
 
     if credible >= VERIFIED_MIN_CREDIBLE:
         return LABEL_VERIFIED
@@ -134,7 +153,7 @@ def _assign_label(cluster: StoryCluster) -> str:
     if total >= DEVELOPING_MIN_SOURCES:
         return LABEL_DEVELOPING
 
-    return LABEL_UNVERIFIED
+    return LABEL_QUARANTINED
 
 
 def cluster_articles(articles: List[NormalizedArticle]) -> List[StoryCluster]:
@@ -189,6 +208,46 @@ def cluster_articles(articles: List[NormalizedArticle]) -> List[StoryCluster]:
         len(clusters),
     )
     return clusters
+
+
+def recheck_quarantined(
+    quarantined: List[StoryCluster],
+    new_articles: List[NormalizedArticle],
+) -> List[StoryCluster]:
+    """
+    Re-evaluate quarantined clusters against newly arrived articles.
+
+    If new corroboration is found, the cluster absorbs the new articles
+    and its label is recalculated — potentially promoting it to DEVELOPING
+    or VERIFIED.
+    """
+    promoted: List[StoryCluster] = []
+    for cluster in quarantined:
+        if cluster.label not in (LABEL_QUARANTINED, LABEL_UNVERIFIED):
+            promoted.append(cluster)
+            continue
+
+        added = False
+        for article in new_articles:
+            if article.uid in {a.uid for a in cluster.articles}:
+                continue
+            if any(_should_cluster(article, member) for member in cluster.articles):
+                cluster.articles.append(article)
+                cluster.publishers.append(article.publisher)
+                cluster.merged_entities = _merge_entities(cluster.articles)
+                added = True
+
+        if added:
+            cluster.label = _assign_label(cluster)
+            logger.info(
+                "Quarantine recheck: cluster '%s' now %s (%d publishers)",
+                cluster.headline[:60],
+                cluster.label,
+                cluster.distinct_publishers,
+            )
+        promoted.append(cluster)
+
+    return promoted
 
 
 def verify(articles: List[NormalizedArticle]) -> List[StoryCluster]:

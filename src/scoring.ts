@@ -1,5 +1,10 @@
 import { createLogger } from "./logger";
 import type { ArticleHistory, UserPreferences } from "./types";
+import {
+  extractCanonicalDomain,
+  isDomainMatch,
+  isDomainBlocked,
+} from "../lib/verification";
 
 const logger = createLogger("scoring");
 
@@ -102,9 +107,8 @@ function includesSourceHint(
   url: string,
   hints: string[]
 ): boolean {
-  const sourceLc = source.toLowerCase();
-  const urlLc = url.toLowerCase();
-  return hints.some((hint) => sourceLc.includes(hint) || urlLc.includes(hint));
+  const domain = extractCanonicalDomain(url);
+  return hints.some((hint) => isDomainMatch(domain, hint));
 }
 
 function recencyScore(fetchedAtIso: string): number {
@@ -331,6 +335,12 @@ export function shouldAlert(
   article: ArticleHistory,
   alertSensitivity: number = 5
 ): boolean {
+  // Hard gate: never alert quarantined or blocked articles
+  if (article.verification_status === 'quarantined'
+      || article.verification_status === 'blocked') {
+    return false;
+  }
+
   const thresholds = getAlertThresholds(alertSensitivity);
   const meetsImportance =
     article.importance_score !== null &&
@@ -338,6 +348,15 @@ export function shouldAlert(
   const meetsCredibility =
     article.credibility_score !== null &&
     article.credibility_score >= thresholds.credibility;
+
+  // For unverified articles, require even higher thresholds
+  if (!article.verification_status || article.verification_status === 'unverified') {
+    const stricterImportance = (thresholds.importance + 10) / 2;
+    const stricterCredibility = (thresholds.credibility + 10) / 2;
+    return (article.importance_score ?? 0) >= stricterImportance
+        && (article.credibility_score ?? 0) >= stricterCredibility;
+  }
+
   return meetsImportance && meetsCredibility;
 }
 

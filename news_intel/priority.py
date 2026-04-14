@@ -36,6 +36,8 @@ VERIFICATION_MULTIPLIER = {
     "🟢 VERIFIED": 3.0,
     "🟡 DEVELOPING": 2.0,
     "🔴 UNVERIFIED": 1.0,
+    "🟠 QUARANTINED": 0.3,
+    "⛔ BLOCKED": 0.0,
 }
 
 

@@ -88,6 +88,8 @@ function computeConfidence(meta: CorroborationMeta): number {
   if (meta.has_pattern_match) score += 0.1;
   if (meta.contradiction_flags.length > 0) score -= 0.15;
   if (meta.freshness_hours < 4) score += 0.05;
+  // Penalize signals that lack cross-source corroboration
+  if (meta.source_diversity <= 1) score -= 0.2;
   return Math.max(0.1, Math.min(1.0, score));
 }
 

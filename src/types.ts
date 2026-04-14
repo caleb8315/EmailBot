@@ -83,6 +83,13 @@ export interface UserPreferences {
   updated_at: string;
 }
 
+export type NewsVerificationStatus =
+  | 'verified'
+  | 'developing'
+  | 'unverified'
+  | 'quarantined'
+  | 'blocked';
+
 export interface ArticleHistory {
   id: string;
   url: string;
@@ -98,6 +105,8 @@ export interface ArticleHistory {
   emailed: boolean;
   fetched_at: string;
   processed_at: string | null;
+  verification_status?: NewsVerificationStatus;
+  corroboration_count?: number;
 }
 
 export interface SourceRegistry {

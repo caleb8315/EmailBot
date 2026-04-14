@@ -1,5 +1,6 @@
 import { BaseAdapter } from './base-adapter';
 import type { DataSource, IntelEvent, EventType } from '../types';
+import { isNonKineticContext } from '../verification';
 import { execSync } from 'child_process';
 import { readFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -420,15 +421,22 @@ export class GDELTEventsAdapter extends BaseAdapter {
       const actor2 = parseActorCode(actor2Code);
       const hasActors = actor1Code && actor2Code && actor1Code !== actor2Code;
 
+      // Context guard: check if the source article is actually about policy/rights, not kinetic conflict
+      const sourceUrlForContext = (cols[COL.SOURCEURL] || '').toLowerCase();
+      const titleForContext = `${match.label} ${location} ${actor1} ${actor2}`;
+      if (isNonKineticContext(sourceUrlForContext) || isNonKineticContext(titleForContext)) {
+        continue;
+      }
+
       const descParts: string[] = [];
       if (hasActors) {
         const verb = match.type === 'protest' ? 'protesting against' : 'vs';
         descParts.push(`${actor1} ${verb} ${actor2}`);
       }
       descParts.push(`${match.label} reported in ${location}`);
-      if (goldstein <= -8) descParts.push('Situation is extremely hostile');
-      else if (goldstein <= -5) descParts.push('Situation is highly conflictual');
-      else if (goldstein <= -2) descParts.push('Tensions are elevated');
+      if (goldstein <= -8) descParts.push('Goldstein scale: extremely negative (-8 or below)');
+      else if (goldstein <= -5) descParts.push('Goldstein scale: highly negative');
+      else if (goldstein <= -2) descParts.push('Goldstein scale: moderately negative');
       if (numArticles >= 5) descParts.push(`Confirmed across ${numArticles} independent sources`);
       else if (numArticles >= 2) descParts.push(`Corroborated by ${numArticles} sources`);
 

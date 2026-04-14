@@ -201,6 +201,17 @@ def run_pipeline(
         except Exception as exc:
             logger.warning("Could not sync user preferences: %s", exc)
 
+    # ── 5b. Separate quarantined clusters ───────────────────────────────
+    from news_intel.verifier import LABEL_QUARANTINED, LABEL_BLOCKED
+    active_clusters = [c for c in clusters if c.label not in (LABEL_QUARANTINED, LABEL_BLOCKED)]
+    quarantined_clusters = [c for c in clusters if c.label == LABEL_QUARANTINED]
+    blocked_clusters = [c for c in clusters if c.label == LABEL_BLOCKED]
+    logger.info(
+        "Verification gate: %d active, %d quarantined, %d blocked",
+        len(active_clusters), len(quarantined_clusters), len(blocked_clusters),
+    )
+    clusters = active_clusters
+
     # ── 6. Prioritize by user preferences ───────────────────────────────
     logger.info("═══ PHASE 3b: Priority Scoring ═══")
     clusters = prioritize(clusters)

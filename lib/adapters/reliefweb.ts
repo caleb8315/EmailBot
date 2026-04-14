@@ -1,5 +1,6 @@
 import { BaseAdapter } from './base-adapter';
 import type { DataSource, IntelEvent, EventType } from '../types';
+import { isNonKineticContext } from '../verification';
 
 /**
  * ReliefWeb/conflict RSS adapter.
@@ -79,6 +80,13 @@ export class ConflictRSSAdapter extends BaseAdapter {
         if (/iran/.test(title)) tags.push('iran');
         if (/ethiopia|tigray/.test(title)) tags.push('ethiopia');
         if (/congo|drc/.test(title)) tags.push('drc');
+
+        // Context guard: suppress conflict escalation for policy/rights/legal articles
+        const fullText = `${title} ${(item.contentSnippet || item.content || '').toLowerCase()}`;
+        if (isNonKineticContext(fullText)) {
+          severity = Math.min(severity, 30);
+          eventType = 'news_signal';
+        }
 
         // Only include items that are actually conflict-related
         const isConflict = eventType !== 'news_signal' || severity >= 60 || tags.length > 2;

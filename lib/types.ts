@@ -68,9 +68,35 @@ export interface IntelEvent {
   tags: string[];
   related_event_ids?: string[];
   entity_ids?: string[];
+  verification?: VerificationMeta;
 }
 
 export type AlertTier = 'FLASH' | 'PRIORITY' | 'DAILY' | 'WEEKLY';
+
+export type VerificationStatus =
+  | 'verified'
+  | 'developing'
+  | 'unverified'
+  | 'quarantined'
+  | 'blocked';
+
+export interface CorroborationEvidence {
+  source_count: number;
+  credible_source_count: number;
+  distinct_domains: string[];
+  first_seen: string;
+  last_corroborated: string;
+  recheck_count: number;
+}
+
+export interface VerificationMeta {
+  status: VerificationStatus;
+  corroboration: CorroborationEvidence;
+  quarantined_at?: string;
+  promoted_at?: string;
+  blocked_reason?: string;
+  decision_log: string[];
+}
 
 export interface PatternMatch {
   pattern: Pattern;
