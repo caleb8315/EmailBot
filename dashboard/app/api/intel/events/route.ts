@@ -27,10 +27,9 @@ export async function GET(req: Request) {
     const sb = supabaseAdmin();
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-    const fields = "id, source, type, severity, confidence, country_code, timestamp, title, summary, tags, location";
+    const fields = "id, source, type, severity, confidence, country_code, timestamp, created_at, expires_at, title, summary, tags, location";
 
     if (source) {
-      // Single-source query
       let query = sb.from("intel_events").select(fields)
         .eq("source", source)
         .gte("timestamp", cutoff)
@@ -44,7 +43,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ events, count: events.length });
     }
 
-    // Default: fetch geolocated events first, then fill remaining with non-geo
     const geoLimit = Math.min(limit, 300);
     const textLimit = limit - geoLimit;
 
@@ -77,24 +75,81 @@ export async function GET(req: Request) {
 }
 
 function decodeEvent(e: Record<string, unknown>) {
-  return {
-    ...e,
-    lat: decodeWKBCoord(e.location as string, "lat"),
-    lng: decodeWKBCoord(e.location as string, "lng"),
-  };
+  const coords = extractCoords(e);
+  return { ...e, lat: coords.lat, lng: coords.lng, location: undefined };
 }
 
 /**
- * Decode coordinates from PostGIS WKB hex (SRID 4326 POINT).
- * Format: 0101000020E6100000 (18 hex chars header) + 16 hex longitude + 16 hex latitude
+ * Extract lat/lng from the event row, trying multiple strategies:
+ * 1. Direct lat/lng columns (if the migration has been applied)
+ * 2. EWKB hex from the geography column (PostGIS default output)
+ * 3. GeoJSON object (some Supabase configs return this)
  */
-function decodeWKBCoord(wkb: unknown, which: "lat" | "lng"): number | null {
-  if (typeof wkb !== "string" || wkb.length < 50) return null;
+function extractCoords(e: Record<string, unknown>): { lat: number | null; lng: number | null } {
+  if (typeof e.lat === "number" && typeof e.lng === "number" &&
+      isFinite(e.lat) && isFinite(e.lng) &&
+      Math.abs(e.lat) <= 90 && Math.abs(e.lng) <= 180) {
+    return { lat: e.lat, lng: e.lng };
+  }
+
+  const loc = e.location;
+
+  if (typeof loc === "string" && loc.length >= 50) {
+    const coords = decodeEWKB(loc);
+    if (coords) return coords;
+  }
+
+  if (typeof loc === "object" && loc !== null) {
+    const geo = loc as { type?: string; coordinates?: number[] };
+    if (geo.type === "Point" && Array.isArray(geo.coordinates) && geo.coordinates.length >= 2) {
+      const [lng, lat] = geo.coordinates;
+      if (isValidCoord(lat, lng)) return { lat, lng };
+    }
+  }
+
+  return { lat: null, lng: null };
+}
+
+function isValidCoord(lat: number, lng: number): boolean {
+  return isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+function decodeEWKB(hex: string): { lat: number; lng: number } | null {
   try {
-    const offset = which === "lng" ? 18 : 34;
-    const buf = Buffer.from(wkb.slice(offset, offset + 16), "hex");
-    return buf.readDoubleLE(0);
+    const byteOrder = hex.slice(0, 2);
+    const isLE = byteOrder === "01";
+    let offset = 2;
+
+    const typeHex = hex.slice(offset, offset + 8);
+    offset += 8;
+    const typeVal = isLE ? parseInt(reverseHexBytes(typeHex), 16) : parseInt(typeHex, 16);
+    const hasSRID = (typeVal & 0x20000000) !== 0;
+    if (hasSRID) offset += 8;
+
+    const xHex = hex.slice(offset, offset + 16);
+    offset += 16;
+    const yHex = hex.slice(offset, offset + 16);
+
+    if (xHex.length < 16 || yHex.length < 16) return null;
+
+    const lng = hexToDouble(xHex, isLE);
+    const lat = hexToDouble(yHex, isLE);
+
+    if (!isValidCoord(lat, lng)) return null;
+    return { lat, lng };
   } catch {
     return null;
   }
+}
+
+function reverseHexBytes(hex: string): string {
+  const bytes: string[] = [];
+  for (let i = 0; i < hex.length; i += 2) bytes.push(hex.slice(i, i + 2));
+  return bytes.reverse().join("");
+}
+
+function hexToDouble(hex: string, littleEndian: boolean): number {
+  const ordered = littleEndian ? hex : reverseHexBytes(hex);
+  const buf = Buffer.from(ordered, "hex");
+  return buf.readDoubleLE(0);
 }

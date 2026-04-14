@@ -13,6 +13,8 @@ interface MapEvent {
   title: string;
   summary: string;
   timestamp: string;
+  created_at?: string;
+  expires_at?: string | null;
   country_code: string;
   tags: string[];
   lat?: number | null;
@@ -139,6 +141,20 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d`;
 }
 
+function eventAgeHours(evt: MapEvent): number {
+  const ref = evt.created_at || evt.timestamp;
+  return (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60);
+}
+
+function eventOpacity(evt: MapEvent): number {
+  const ageH = eventAgeHours(evt);
+  if (ageH < 1) return 1.0;
+  if (ageH < 6) return 0.9;
+  if (ageH < 12) return 0.7;
+  if (ageH < 24) return 0.5;
+  return 0.3;
+}
+
 function tierColor(tier: string): string {
   switch (tier) {
     case "FLASH": return "#FF3333";
@@ -244,38 +260,66 @@ function OpsCenter() {
           layers: [{ id: "carto", type: "raster", source: "carto" }],
           glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
         },
-        center: [30, 20],
-        zoom: 2,
+        center: [20, 20],
+        zoom: 1.8,
         attributionControl: false,
       });
       m.addControl(new maplibregl.NavigationControl(), "top-right");
-      m.on("load", () => { if (!cancelled) { mapRef.current = m; setMapReady(true); } });
+      m.on("load", () => {
+        if (cancelled) return;
+        m.resize();
+        mapRef.current = m;
+        setMapReady(true);
+      });
     })();
     return () => { cancelled = true; mapRef.current?.remove(); mapRef.current = null; };
   }, []);
 
-  /* ── Plot markers (fixed: anchor center so clicks don't jump) ── */
+  /* ── Plot markers at exact coordinates ── */
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const maplibregl = require("maplibre-gl");
+
     for (const m of markersRef.current) m.remove();
     markersRef.current = [];
+
+    mapRef.current.resize();
+
+    const bounds = new maplibregl.LngLatBounds();
+    let hasGeo = false;
+
     for (const evt of events) {
-      if (typeof evt.lat !== "number" || typeof evt.lng !== "number" || (evt.lat === 0 && evt.lng === 0)) continue;
+      const lat = evt.lat;
+      const lng = evt.lng;
+      if (typeof lat !== "number" || typeof lng !== "number") continue;
+      if (!isFinite(lat) || !isFinite(lng)) continue;
+      if (Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
+      if (lat === 0 && lng === 0) continue;
+
+      hasGeo = true;
       const cat = categorize(evt);
       const color = CAT_COLORS[cat];
+      const opacity = eventOpacity(evt);
       const size = Math.max(18, Math.min(32, evt.severity / 3.5));
       const el = document.createElement("div");
-      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${color});transition:transform 0.15s;position:relative;`;
+      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${color});transition:transform 0.15s;opacity:${opacity};`;
       el.textContent = CAT_EMOJI[cat];
-      el.title = evt.title;
+      const age = evt.created_at ? timeAgo(evt.created_at) : timeAgo(evt.timestamp);
+      el.title = `${evt.title} (${age} ago)`;
       el.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); setSelectedEvent(evt); });
       el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.3)"; });
       el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
       try {
-        const marker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat([evt.lng, evt.lat]).addTo(mapRef.current!);
+        const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+          .setLngLat([lng, lat])
+          .addTo(mapRef.current!);
         markersRef.current.push(marker);
+        bounds.extend([lng, lat]);
       } catch {}
+    }
+
+    if (hasGeo && !bounds.isEmpty()) {
+      mapRef.current.fitBounds(bounds, { padding: 40, maxZoom: 6, duration: 800 });
     }
   }, [events, mapReady]);
 
@@ -373,7 +417,7 @@ function OpsCenter() {
               <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CAT_COLORS[categorize(selectedEvent)] }}>
                 {categorize(selectedEvent)}
               </span>
-              <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(selectedEvent.timestamp)}</span>
+              <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(selectedEvent.created_at || selectedEvent.timestamp)} ago</span>
             </div>
             <p className="text-sm text-gray-100 font-semibold leading-snug mb-1 pr-6">{selectedEvent.title}</p>
             {selectedEvent.summary && <p className="text-xs text-gray-400 leading-relaxed">{selectedEvent.summary.slice(0, 250)}</p>}

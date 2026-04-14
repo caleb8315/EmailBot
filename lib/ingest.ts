@@ -60,6 +60,17 @@ function getAllAdapters(): IngestionAdapter[] {
   ];
 }
 
+function computeExpiry(severity: number, type: string): string {
+  let ttlHours: number;
+  if (severity >= 85) ttlHours = 72;
+  else if (severity >= 70) ttlHours = 48;
+  else if (severity >= 50) ttlHours = 24;
+  else if (severity >= 30) ttlHours = 12;
+  else ttlHours = 6;
+  if (type === 'earthquake' || type === 'fire') ttlHours = Math.max(ttlHours, 24);
+  return new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
+}
+
 async function storeEvents(events: IntelEvent[]): Promise<number> {
   if (events.length === 0) return 0;
 
@@ -68,22 +79,29 @@ async function storeEvents(events: IntelEvent[]): Promise<number> {
 
   // Batch insert in chunks of 200 to stay within Supabase limits
   for (let i = 0; i < events.length; i += 200) {
-    const batch = events.slice(i, i + 200).map(e => ({
-      source: e.source,
-      type: e.type,
-      severity: e.severity,
-      confidence: e.confidence,
-      location: e.lat && e.lng ? `POINT(${e.lng} ${e.lat})` : null,
-      radius_km: e.radius_km ?? null,
-      country_code: e.country_code,
-      timestamp: e.timestamp,
-      expires_at: e.expires_at ?? null,
-      title: e.title.slice(0, 500),
-      summary: (e.summary || '').slice(0, 2000),
-      raw_data: e.raw_data,
-      tags: e.tags,
-      related_event_ids: e.related_event_ids ?? null,
-    }));
+    const batch = events.slice(i, i + 200).map(e => {
+      const hasCoords = typeof e.lat === 'number' && typeof e.lng === 'number' &&
+                        isFinite(e.lat) && isFinite(e.lng) &&
+                        Math.abs(e.lat) <= 90 && Math.abs(e.lng) <= 180 &&
+                        !(e.lat === 0 && e.lng === 0);
+      const expiresAt = e.expires_at ?? computeExpiry(e.severity, e.type);
+      return {
+        source: e.source,
+        type: e.type,
+        severity: e.severity,
+        confidence: e.confidence,
+        location: hasCoords ? `POINT(${e.lng} ${e.lat})` : null,
+        radius_km: e.radius_km ?? null,
+        country_code: e.country_code,
+        timestamp: e.timestamp,
+        expires_at: expiresAt,
+        title: e.title.slice(0, 500),
+        summary: (e.summary || '').slice(0, 2000),
+        raw_data: e.raw_data,
+        tags: e.tags,
+        related_event_ids: e.related_event_ids ?? null,
+      };
+    });
 
     const { error, count } = await sb
       .from('intel_events')
@@ -102,16 +120,23 @@ async function storeEvents(events: IntelEvent[]): Promise<number> {
 
 async function cleanupExpiredEvents(): Promise<void> {
   const sb = getSupabase();
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+  const hardCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { error } = await sb
+  const { error: e1 } = await sb
     .from('intel_events')
     .delete()
-    .lt('created_at', cutoff);
+    .not('expires_at', 'is', null)
+    .lt('expires_at', now);
 
-  if (error) {
-    console.error(`[ingest] Cleanup error: ${error.message}`);
-  }
+  const { error: e2 } = await sb
+    .from('intel_events')
+    .delete()
+    .lt('created_at', hardCutoff);
+
+  if (e1) console.error(`[ingest] Cleanup (expires_at) error: ${e1.message}`);
+  if (e2) console.error(`[ingest] Cleanup (hard cutoff) error: ${e2.message}`);
+  if (!e1 && !e2) console.log(`[ingest] Cleanup: expired and old events removed`);
 }
 
 export async function runIngestion(): Promise<{
@@ -158,16 +183,30 @@ export async function runIngestion(): Promise<{
   // Filter to only significant events (severity > 15) to manage row budget
   const significant = allEvents.filter(e => e.severity > 15);
 
-  // Deduplicate: skip events with titles we already stored in the last 24h
+  // Deduplicate using composite key: source + title + country_code
   const sb = getSupabase();
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: recentTitles } = await sb
+  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const { data: recentRows } = await sb
     .from('intel_events')
-    .select('title')
-    .gte('created_at', oneDayAgo)
-    .limit(2000);
-  const existingTitles = new Set((recentTitles || []).map(r => r.title));
-  const deduped = significant.filter(e => !existingTitles.has(e.title));
+    .select('title, source, country_code, raw_data')
+    .gte('created_at', threeDaysAgo)
+    .limit(5000);
+  const existingKeys = new Set<string>();
+  const existingEventIds = new Set<string>();
+  for (const r of recentRows || []) {
+    existingKeys.add(`${r.source}|${r.title}|${r.country_code ?? ''}`);
+    const eid = (r.raw_data as Record<string, unknown>)?.event_id;
+    if (typeof eid === 'string') existingEventIds.add(`${r.source}|${eid}`);
+  }
+  const deduped = significant.filter(e => {
+    const compositeKey = `${e.source}|${e.title}|${e.country_code ?? ''}`;
+    const eidKey = e.raw_data?.event_id ? `${e.source}|${e.raw_data.event_id}` : '';
+    if (existingKeys.has(compositeKey)) return false;
+    if (eidKey && existingEventIds.has(eidKey)) return false;
+    existingKeys.add(compositeKey);
+    if (eidKey) existingEventIds.add(eidKey);
+    return true;
+  });
   console.log(`[ingest] ${allEvents.length} total → ${significant.length} significant → ${deduped.length} after dedup`);
 
   // Store to Supabase

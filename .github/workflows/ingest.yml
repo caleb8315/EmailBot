@@ -30,6 +30,9 @@ jobs:
           ACLED_EMAIL: ${{ secrets.ACLED_EMAIL }}
           ACLED_PASSWORD: ${{ secrets.ACLED_PASSWORD }}
           OPENSKY_AUTH: ${{ secrets.OPENSKY_AUTH }}
+          OPENSKY_TOKEN_URL: ${{ secrets.OPENSKY_TOKEN_URL }}
+          OPENSKY_CLIENT_ID: ${{ secrets.OPENSKY_CLIENT_ID }}
+          OPENSKY_CLIENT_SECRET: ${{ secrets.OPENSKY_CLIENT_SECRET }}
           SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
           SENTINEL_HUB_CLIENT_ID: ${{ secrets.SENTINEL_HUB_CLIENT_ID }}

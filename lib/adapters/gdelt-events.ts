@@ -77,21 +77,29 @@ const JUNK_URL_PATTERNS = [
   /\/book-review/i, /\/tv-show/i, /\/streaming/i,
 ];
 
-// GDELT export columns (tab-separated, 58+ columns)
+// GDELT v2 export columns (tab-separated, 61 columns 0-60).
+// V2 adds ADM2Code columns for each geo block vs V1.
 const COL = {
   GLOBALEVENTID: 0,
   SQLDATE: 1,
+  Actor1Code: 5,
   Actor1CountryCode: 7,
+  Actor2Code: 15,
   Actor2CountryCode: 17,
   EventCode: 26,
-  EventRootCode: 27,
+  EventBaseCode: 27,
+  EventRootCode: 28,
   GoldsteinScale: 30,
+  NumMentions: 31,
+  NumSources: 32,
   NumArticles: 33,
+  ActionGeo_Type: 51,
+  ActionGeo_FullName: 52,
   ActionGeo_CountryCode: 53,
   ActionGeo_Lat: 56,
   ActionGeo_Long: 57,
+  DATEADDED: 59,
   SOURCEURL: 60,
-  ActionGeo_FullName: 52,
 };
 
 export class GDELTEventsAdapter extends BaseAdapter {
@@ -149,52 +157,51 @@ export class GDELTEventsAdapter extends BaseAdapter {
   private parseEvents(csv: string): IntelEvent[] {
     const lines = csv.trim().split('\n');
     const events: IntelEvent[] = [];
+    const seenIds = new Set<string>();
 
     for (const line of lines) {
       const cols = line.split('\t');
-      if (cols.length < 58) continue;
+      if (cols.length < 61) continue;
+
+      const globalEventId = cols[COL.GLOBALEVENTID] || '';
+      if (seenIds.has(globalEventId)) continue;
+      seenIds.add(globalEventId);
 
       const eventCode = cols[COL.EventCode] || '';
       const rootCode = cols[COL.EventRootCode] || '';
 
-      // Only process conflict/military events
       const match = CONFLICT_CAMEO[eventCode] || CONFLICT_CAMEO[rootCode];
       if (!match) continue;
 
       const lat = parseFloat(cols[COL.ActionGeo_Lat]);
       const lng = parseFloat(cols[COL.ActionGeo_Long]);
       if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) continue;
+      if (Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
 
       const countryCode = (cols[COL.ActionGeo_CountryCode] || 'XX').substring(0, 2);
       const goldstein = parseFloat(cols[COL.GoldsteinScale] || '0');
       const numArticles = parseInt(cols[COL.NumArticles] || '1', 10);
       const locationName = cols[COL.ActionGeo_FullName] || '';
       const sourceUrl = (cols[COL.SOURCEURL] || '').toLowerCase();
-      const dateStr = cols[COL.SQLDATE] || '';
 
-      // Filter out junk sources — entertainment, movies, sports, fiction, listicles
       const domain = sourceUrl.replace(/^https?:\/\//, '').split('/')[0];
       if (JUNK_DOMAINS.some(d => domain.includes(d))) continue;
       if (JUNK_URL_PATTERNS.some(p => p.test(sourceUrl))) continue;
 
-      // Require multiple source articles for high-severity claims to reduce false positives
       if (match.severity >= 80 && numArticles < 3) continue;
       if (match.severity >= 70 && numArticles < 2) continue;
 
-      // Boost severity based on number of articles covering this event
       const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
 
-      const actor1Name = cols[7] || '';
-      const actor2Name = cols[17] || '';
+      const actor1Name = cols[COL.Actor1Code] || '';
+      const actor2Name = cols[COL.Actor2Code] || '';
 
       const tags = ['gdelt', 'conflict', 'geocoded', match.type];
       if (countryCode !== 'XX') tags.push(countryCode.toLowerCase());
 
-      // Build a human-readable title
       const location = locationName || COUNTRY_NAMES[countryCode] || countryCode;
       const title = `${match.label} in ${location}`;
 
-      // Build a human-readable summary
       const parts: string[] = [];
       if (actor1Name && actor2Name && actor1Name !== actor2Name) {
         parts.push(`${COUNTRY_NAMES[actor1Name] || actor1Name} vs ${COUNTRY_NAMES[actor2Name] || actor2Name}`);
@@ -204,6 +211,11 @@ export class GDELTEventsAdapter extends BaseAdapter {
       else if (goldstein <= -5) parts.push('Highly conflictual');
       else if (goldstein <= -2) parts.push('Tense situation');
 
+      const dateAdded = cols[COL.DATEADDED] || '';
+      const timestamp = dateAdded.length >= 14
+        ? `${dateAdded.slice(0, 4)}-${dateAdded.slice(4, 6)}-${dateAdded.slice(6, 8)}T${dateAdded.slice(8, 10)}:${dateAdded.slice(10, 12)}:${dateAdded.slice(12, 14)}Z`
+        : new Date().toISOString();
+
       events.push({
         source: 'gdelt',
         type: match.type,
@@ -212,14 +224,12 @@ export class GDELTEventsAdapter extends BaseAdapter {
         lat,
         lng,
         country_code: countryCode,
-        timestamp: dateStr.length === 8
-          ? `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T00:00:00Z`
-          : new Date().toISOString(),
+        timestamp,
         title,
         summary: parts.join(' · '),
         tags,
         raw_data: {
-          event_id: cols[COL.GLOBALEVENTID],
+          event_id: globalEventId,
           cameo_code: eventCode,
           goldstein,
           num_articles: numArticles,

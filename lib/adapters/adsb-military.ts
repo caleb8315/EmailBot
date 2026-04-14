@@ -67,16 +67,58 @@ function typeFromMatch(match: CallsignPattern | undefined): EventType {
 export class ADSBMilitaryAdapter extends BaseAdapter {
   source: DataSource = 'adsb';
   fetchIntervalMinutes = 5;
+  private cachedToken: { token: string; expiresAt: number } | null = null;
+
+  private async getAccessToken(): Promise<string | null> {
+    const tokenUrl = process.env.OPENSKY_TOKEN_URL;
+    const clientId = process.env.OPENSKY_CLIENT_ID;
+    const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+
+    if (!tokenUrl || !clientId || !clientSecret) {
+      const legacyAuth = process.env.OPENSKY_AUTH;
+      if (legacyAuth) return `Basic:${legacyAuth}`;
+      return null;
+    }
+
+    if (this.cachedToken && Date.now() < this.cachedToken.expiresAt) {
+      return this.cachedToken.token;
+    }
+
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+      });
+      const res = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      if (!res.ok) {
+        this.warn(`OpenSky OAuth token request failed: ${res.status}`);
+        return null;
+      }
+      const data = await res.json() as { access_token: string; expires_in?: number };
+      const expiresIn = (data.expires_in ?? 300) - 30;
+      this.cachedToken = { token: data.access_token, expiresAt: Date.now() + expiresIn * 1000 };
+      return data.access_token;
+    } catch (err) {
+      this.warn(`OpenSky OAuth error: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
+  }
 
   async fetch(): Promise<IntelEvent[]> {
     try {
       const headers: Record<string, string> = {};
-      const auth = process.env.OPENSKY_AUTH;
-      if (auth) {
-        headers['Authorization'] = `Basic ${auth}`;
+      const token = await this.getAccessToken();
+      if (token?.startsWith('Basic:')) {
+        headers['Authorization'] = `Basic ${token.slice(6)}`;
+      } else if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // OpenSky works without auth (400 req/day) or with basic auth (4000 req/day)
       const res = await this.safeFetch(
         'https://opensky-network.org/api/states/all',
         { headers },
