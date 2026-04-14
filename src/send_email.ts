@@ -1190,6 +1190,21 @@ async function sendDigest(
       mode
     );
 
+    // Run synthesis composer to produce fused signals from all engines
+    let synthesisSection = "";
+    try {
+      const { composeSynthesis, formatSynthesisDigestSection } = await import('../lib/synthesis-composer');
+      const fusedSignals = await composeSynthesis();
+      synthesisSection = formatSynthesisDigestSection(fusedSignals);
+      if (synthesisSection) {
+        logger.info("Synthesis composer produced fused signals", { count: fusedSignals.length });
+      }
+    } catch (err) {
+      logger.warn("Synthesis composer failed — continuing without fused signals", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     // Fetch Jeff's intelligence data for the email
     let intelHtml = "";
     try {
@@ -1217,7 +1232,10 @@ async function sendDigest(
       );
     }
 
-    const text = buildPlainText(briefing, topArticles, usage, enhancements, mode);
+    let text = buildPlainText(briefing, topArticles, usage, enhancements, mode);
+    if (synthesisSection) {
+      text += `\n\n━━━ CROSS-ENGINE INTELLIGENCE ━━━\n${synthesisSection}\n`;
+    }
 
     const subject = digestSubject(mode);
 

@@ -40,6 +40,8 @@ async function deduplicateAgainstHistory(
 }
 
 async function runPipeline(): Promise<void> {
+  const { startEngineRun, finishEngineRun } = await import('../lib/shared/engine-run');
+  const engineRunId = await startEngineRun('news_pipeline');
   const startTime = Date.now();
   logger.info("Pipeline started");
 
@@ -182,6 +184,13 @@ async function runPipeline(): Promise<void> {
   }
 
   const elapsed = Date.now() - startTime;
+  await finishEngineRun(engineRunId, {
+    status: 'success',
+    records_in: rawArticles.length,
+    records_out: processingResult.processed.length,
+    ai_calls_used: processingResult.aiCallsMade,
+    meta: { elapsed_ms: elapsed, alerts_sent: alertsSent },
+  });
   logger.info("Pipeline complete", {
     durationMs: elapsed,
     fetched: rawArticles.length,

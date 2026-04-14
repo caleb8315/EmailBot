@@ -4,7 +4,7 @@ import type { UsageReport } from "./types";
 
 const logger = createLogger("usage_limiter");
 
-export type AICallPurpose = "chat" | "pipeline" | "digest" | "other";
+export type AICallPurpose = "chat" | "pipeline" | "digest" | "ingest" | "other";
 
 interface UsageTrackingRow {
   api_calls_used: number;
@@ -18,6 +18,7 @@ const PURPOSE_COLUMNS: Record<AICallPurpose, keyof UsageTrackingRow> = {
   chat: "chat_calls_used",
   pipeline: "pipeline_calls_used",
   digest: "digest_calls_used",
+  ingest: "other_calls_used",
   other: "other_calls_used",
 };
 
@@ -36,6 +37,7 @@ const MAX_DAILY_PIPELINE_AI_CALLS = parseLimit(
   MAX_DAILY_AI_CALLS
 );
 const MAX_DAILY_DIGEST_AI_CALLS = parseLimit("MAX_DAILY_DIGEST_AI_CALLS", 4);
+const MAX_DAILY_INGEST_AI_CALLS = parseLimit("MAX_DAILY_INGEST_AI_CALLS", 15);
 const MAX_DAILY_OTHER_AI_CALLS = parseLimit(
   "MAX_DAILY_OTHER_AI_CALLS",
   MAX_DAILY_AI_CALLS
@@ -88,6 +90,8 @@ function purposeLimit(purpose: AICallPurpose): number {
       return MAX_DAILY_PIPELINE_AI_CALLS;
     case "digest":
       return MAX_DAILY_DIGEST_AI_CALLS;
+    case "ingest":
+      return MAX_DAILY_INGEST_AI_CALLS;
     case "other":
     default:
       return MAX_DAILY_OTHER_AI_CALLS;

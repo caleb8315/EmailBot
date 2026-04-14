@@ -1,10 +1,20 @@
 /**
  * Unified LLM caller for the Jeff Intelligence system.
  * Routes to Gemini (long context) or Groq (speed) based on use case.
- * Wraps existing src/llm_client.ts patterns.
+ * Budget-gated via the shared usage_limiter from src/.
  */
 
+import { canMakeAICall, recordAICall, type AICallPurpose } from '../src/usage_limiter';
+
 type UseCase = 'narrative' | 'dreamtime' | 'brief' | 'conversation' | 'extraction';
+
+const USE_CASE_PURPOSE: Record<UseCase, AICallPurpose> = {
+  narrative: 'ingest',
+  dreamtime: 'ingest',
+  brief: 'digest',
+  conversation: 'chat',
+  extraction: 'ingest',
+};
 
 const USE_CASE_CONFIG: Record<UseCase, {
   preferGroq: boolean;
@@ -25,6 +35,13 @@ export async function callLLM(
   useCase: UseCase,
   opts?: { json?: boolean },
 ): Promise<string> {
+  const purpose = USE_CASE_PURPOSE[useCase];
+  const allowed = await canMakeAICall(purpose);
+  if (!allowed) {
+    console.warn(`[llm] Budget exceeded for purpose=${purpose} (useCase=${useCase}) — skipping`);
+    return '';
+  }
+
   const config = USE_CASE_CONFIG[useCase];
   const groqKey = process.env.GROQ_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -65,5 +82,6 @@ export async function callLLM(
   }
 
   const data = await res.json() as { choices: { message: { content: string } }[] };
+  await recordAICall(purpose);
   return data.choices[0]?.message?.content || '';
 }

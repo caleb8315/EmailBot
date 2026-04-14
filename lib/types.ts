@@ -14,6 +14,7 @@ export type DataSource =
   | 'notam'
   | 'telegram'
   | 'rss'
+  | 'cisa'
   | 'fishing_watch';
 
 export type EventType =
@@ -42,6 +43,7 @@ export type EventType =
   | 'notam_closure'
   | 'rf_anomaly'
   | 'hospital_ship_movement'
+  | 'cyber_advisory'
   | 'news_signal';
 
 export interface IntelEvent {

@@ -123,6 +123,7 @@ export async function updatePreferences(
     logger.error("updatePreferences failed", {
       error: err instanceof Error ? err.message : String(err),
     });
+    throw err;
   }
 }
 

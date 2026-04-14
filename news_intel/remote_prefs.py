@@ -1,7 +1,8 @@
 """
 Fetch briefing_overlay from Supabase REST (same row the Telegram bot updates).
 
-Requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and TELEGRAM_CHAT_ID (used as user_id).
+Uses the same identity resolution chain as src/user_identity.ts:
+  PREFERENCE_USER_ID > TELEGRAM_CHAT_ID > DEFAULT_USER_ID > "default"
 """
 
 from __future__ import annotations
@@ -15,10 +16,19 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def resolve_preference_user_id() -> str:
+    """Mirror the TS resolvePreferenceUserId() priority chain."""
+    for var in ("PREFERENCE_USER_ID", "TELEGRAM_CHAT_ID", "DEFAULT_USER_ID"):
+        val = (os.environ.get(var) or "").strip()
+        if val:
+            return val
+    return "default"
+
+
 def fetch_briefing_overlay() -> Dict[str, Any]:
     url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
-    user_id = os.environ.get("TELEGRAM_CHAT_ID") or os.environ.get("DEFAULT_USER_ID") or "default"
+    user_id = resolve_preference_user_id()
 
     if not url or not key:
         return {}

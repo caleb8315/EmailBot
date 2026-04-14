@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
+  { href: "/ops", label: "Ops", icon: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7Zm10-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" },
   { href: "/mind", label: "Mind", icon: "M12 2a5.5 5.5 0 0 0-4 9.5V15a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3.5A5.5 5.5 0 0 0 12 2ZM9 18h6M10 21h4" },
   { href: "/map", label: "Map", icon: "M12 21c-4.97-4.97-8-8.65-8-12A8 8 0 0 1 20 9c0 3.35-3.03 7.03-8 12Zm0-9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" },
   { href: "/hypotheses", label: "Hypos", icon: "M9 3v2m6-2v2M4 7h16M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7M9 11h6M9 15h4" },

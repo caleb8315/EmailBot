@@ -5,6 +5,8 @@ const ALLOWED = new Set([
   "pipeline.yml",
   "daily_email.yml",
   "weekly_digest.yml",
+  "ingest.yml",
+  "dreamtime.yml",
 ]);
 
 export async function POST(req: Request) {

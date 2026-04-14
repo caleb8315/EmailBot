@@ -936,10 +936,9 @@ export default function DashboardClient() {
   const mutatePrefs = (mutator: (prev: Preferences) => Preferences) => {
     setPrefs((prev) => {
       if (!prev) return prev;
-      const next = normalizePreferences(mutator(prev));
-      setPrefsDirty(true);
-      return next;
+      return normalizePreferences(mutator(prev));
     });
+    setPrefsDirty(true);
   };
 
   const addPrefItem = (
@@ -966,17 +965,23 @@ export default function DashboardClient() {
     field: "interests" | "dislikes" | "trusted_sources" | "blocked_sources" | "tier1_keywords",
     value: string
   ) => {
+    const lower = value.toLowerCase();
     mutatePrefs((prev) => {
       if (field === "tier1_keywords") {
         return {
           ...prev,
           briefing_overlay: {
             ...prev.briefing_overlay,
-            tier1_keywords: prev.briefing_overlay.tier1_keywords.filter((item) => item !== value),
+            tier1_keywords: prev.briefing_overlay.tier1_keywords.filter(
+              (item) => item.toLowerCase() !== lower
+            ),
           },
         };
       }
-      return { ...prev, [field]: (prev[field] as string[]).filter((item) => item !== value) };
+      return {
+        ...prev,
+        [field]: (prev[field] as string[]).filter((item) => item.toLowerCase() !== lower),
+      };
     });
   };
 

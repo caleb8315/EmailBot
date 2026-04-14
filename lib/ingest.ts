@@ -18,6 +18,9 @@ import { PolymarketAdapter } from './adapters/polymarket';
 import { UCDPAdapter } from './adapters/ucdp';
 import { NASAEONETAdapter } from './adapters/nasa-eonet';
 import { OSINTFeedsAdapter } from './adapters/osint-feeds';
+import { AISDarkShipAdapter } from './adapters/ais-dark-ship';
+import { SAMGovAdapter } from './adapters/samgov';
+import { CISAAdapter } from './adapters/cisa';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
@@ -51,6 +54,9 @@ function getAllAdapters(): IngestionAdapter[] {
     new NOTAMAdapter(),
     new OONIAdapter(),
     new PolymarketAdapter(),
+    new AISDarkShipAdapter(),
+    new SAMGovAdapter(),
+    new CISAAdapter(),
   ];
 }
 
@@ -113,6 +119,8 @@ export async function runIngestion(): Promise<{
   totalStored: number;
   adapterResults: { source: string; fetched: number; errors: string[] }[];
 }> {
+  const { startEngineRun, finishEngineRun } = await import('./shared/engine-run');
+  const engineRunId = await startEngineRun('world_ingest');
   const startTime = Date.now();
   console.log(`[ingest] === INGESTION CYCLE STARTING ===`);
 
@@ -221,6 +229,14 @@ export async function runIngestion(): Promise<{
   }
 
   const elapsed = Date.now() - startTime;
+  const allErrors = adapterResults.flatMap(r => r.errors);
+  await finishEngineRun(engineRunId, {
+    status: allErrors.length > 0 ? 'partial' : 'success',
+    records_in: allEvents.length,
+    records_out: totalStored,
+    errors: allErrors,
+    meta: { elapsed_ms: elapsed },
+  });
   console.log(`[ingest] === CYCLE COMPLETE: ${totalStored} stored in ${elapsed}ms ===`);
 
   return { totalFetched: allEvents.length, totalStored, adapterResults };
