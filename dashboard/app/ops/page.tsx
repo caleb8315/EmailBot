@@ -475,6 +475,7 @@ function OpsCenter() {
   const [digestExpanded, setDigestExpanded] = useState(false);
 
   const [feedTab, setFeedTab] = useState<"fused" | "articles" | "events">("fused");
+  const [timeFilter, setTimeFilter] = useState<"all" | "today" | "yesterday">("all");
   const [showActions, setShowActions] = useState(false);
 
   /* ── Data fetching ── */
@@ -507,6 +508,22 @@ function OpsCenter() {
   }, []);
 
   useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 60_000); return () => clearInterval(i); }, [fetchAll]);
+
+  /* ── Time filter logic ── */
+  const matchesTimeFilter = useCallback((iso: string) => {
+    if (timeFilter === "all") return true;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    if (timeFilter === "today") return d >= today;
+    return d >= yesterday && d < today;
+  }, [timeFilter]);
+
+  const filteredEvents = useMemo(() => events.filter(e => matchesTimeFilter(e.created_at || e.timestamp)), [events, matchesTimeFilter]);
+  const filteredFused = useMemo(() => fusedSignals.filter(s => matchesTimeFilter(s.created_at)), [fusedSignals, matchesTimeFilter]);
+  const filteredArticles = useMemo(() => articles.filter(a => matchesTimeFilter(a.fetched_at)), [articles, matchesTimeFilter]);
 
   /* ── Map initialization ── */
   useEffect(() => {
@@ -570,8 +587,8 @@ function OpsCenter() {
     const bounds = new maplibregl.LngLatBounds();
     let hasGeo = false;
 
-    const filteredEvents = events.filter(e => enabledSources.has(e.source));
-    for (const evt of filteredEvents) {
+    const visibleEvents = filteredEvents.filter(e => enabledSources.has(e.source));
+    for (const evt of visibleEvents) {
       const lat = evt.lat;
       const lng = evt.lng;
       if (typeof lat !== "number" || typeof lng !== "number") continue;
@@ -643,7 +660,7 @@ function OpsCenter() {
     if (hasGeo && !bounds.isEmpty()) {
       mapRef.current.fitBounds(bounds, { padding: 40, maxZoom: 6, duration: 800 });
     }
-  }, [events, mapReady, enabledSources]);
+  }, [filteredEvents, mapReady, enabledSources]);
 
   /* ── Dispatch workflow ── */
   const dispatch = async (workflow: string) => {
@@ -659,8 +676,8 @@ function OpsCenter() {
   };
 
   /* ── Derived stats ── */
-  const flashCount = fusedSignals.filter(s => s.alert_tier === "FLASH").length;
-  const priorityCount = fusedSignals.filter(s => s.alert_tier === "PRIORITY").length;
+  const flashCount = filteredFused.filter(s => s.alert_tier === "FLASH").length;
+  const priorityCount = filteredFused.filter(s => s.alert_tier === "PRIORITY").length;
   const lastRun = engineRuns[0];
   const articlesToday = articles.filter(a => new Date(a.fetched_at).toDateString() === new Date().toDateString()).length;
   const latestDigest = digests[0];
@@ -675,7 +692,7 @@ function OpsCenter() {
           <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
             <span className="bg-[#00C2FF]/10 text-[#00C2FF] px-2 py-0.5 rounded font-bold tracking-wider">J.E.F.F.</span>
             <span className="text-gray-600">|</span>
-            <span className="bg-[#00FF41]/10 text-[#00FF41] px-2 py-0.5 rounded-full font-bold">{events.length} SIGNALS</span>
+            <span className="bg-[#00FF41]/10 text-[#00FF41] px-2 py-0.5 rounded-full font-bold">{filteredEvents.length} SIGNALS</span>
             <span className="bg-white/5 text-gray-400 px-2 py-0.5 rounded-full">{articlesToday} INTERCEPTS TODAY</span>
             {flashCount > 0 && <span className="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold animate-pulse">{flashCount} FLASH</span>}
             {priorityCount > 0 && <span className="bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">{priorityCount} PRIORITY</span>}
@@ -774,9 +791,19 @@ function OpsCenter() {
               {t === "fused" ? "Top Alerts" : t === "articles" ? "News Wire" : "Live Events"}
             </button>
           ))}
+          <span className="mx-1 w-px h-4 bg-white/10" />
+          {(["all", "today", "yesterday"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTimeFilter(t)}
+              className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition ${timeFilter === t ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-gray-600 hover:text-gray-400"}`}
+            >
+              {t === "all" ? "48h" : t}
+            </button>
+          ))}
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1.5">
-          {feedTab === "fused" && fusedSignals.map(s => (
+          {feedTab === "fused" && filteredFused.map(s => (
             <div key={s.id} className="bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${tierColor(s.alert_tier)}20`, color: tierColor(s.alert_tier) }}>
@@ -797,10 +824,10 @@ function OpsCenter() {
               </div>
             </div>
           ))}
-          {feedTab === "fused" && fusedSignals.length === 0 && (
+          {feedTab === "fused" && filteredFused.length === 0 && (
             <div className="text-center text-gray-600 text-xs py-8 font-mono">NO FUSED INTEL AVAILABLE — INITIATE DIGEST PROTOCOL</div>
           )}
-          {feedTab === "articles" && articles.map(a => (
+          {feedTab === "articles" && filteredArticles.map(a => (
             <a key={a.url} href={a.url} target="_blank" rel="noopener noreferrer" className="block bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5 hover:border-[#00C2FF]/20 transition">
               <p className="text-xs text-gray-100 font-semibold leading-snug">{a.title}</p>
               <div className="flex items-center gap-2 mt-1">
@@ -810,7 +837,7 @@ function OpsCenter() {
               </div>
             </a>
           ))}
-          {feedTab === "events" && events.slice(0, 50).map(e => (
+          {feedTab === "events" && filteredEvents.slice(0, 50).map(e => (
             <EventCard key={e.id} evt={e} />
           ))}
         </div>

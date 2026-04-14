@@ -50,6 +50,7 @@ export default function IntelPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [minScore, setMinScore] = useState(0);
+  const [timeFilter, setTimeFilter] = useState<"all" | "today" | "yesterday">("all");
   const [showFilters, setShowFilters] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -78,6 +79,17 @@ export default function IntelPage() {
 
   const filteredArticles = useMemo(() => {
     let list = articles;
+    if (timeFilter !== "all") {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+      list = list.filter(a => {
+        const d = new Date(a.fetched_at);
+        if (isNaN(d.getTime())) return false;
+        if (timeFilter === "today") return d >= today;
+        return d >= yesterday && d < today;
+      });
+    }
     if (minScore > 0) list = list.filter(a => (a.importance_score ?? 0) >= minScore);
     if (search) {
       const q = search.toLowerCase();
@@ -85,7 +97,7 @@ export default function IntelPage() {
     }
     if (sortBy === "importance") list = [...list].sort((a, b) => (b.importance_score ?? 0) - (a.importance_score ?? 0));
     return list;
-  }, [articles, search, sortBy, minScore]);
+  }, [articles, search, sortBy, minScore, timeFilter]);
 
   const toggleExpand = (url: string) => setExpanded(prev => { const n = new Set(prev); n.has(url) ? n.delete(url) : n.add(url); return n; });
 
@@ -138,17 +150,31 @@ export default function IntelPage() {
                 </button>
               </div>
               {showFilters && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
-                    <option value="date">Latest first</option>
-                    <option value="importance">Highest priority</option>
-                  </select>
-                  <select value={minScore} onChange={e => setMinScore(Number(e.target.value))} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
-                    <option value="0">All clearance levels</option>
-                    <option value="3">Priority 3+</option>
-                    <option value="5">Priority 5+</option>
-                    <option value="7">Priority 7+</option>
-                  </select>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mr-2">Time</span>
+                    {(["all", "today", "yesterday"] as const).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setTimeFilter(t)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition ${timeFilter === t ? "bg-[#00FF41]/10 text-[#00FF41] border border-[#00FF41]/20" : "bg-[#050505] border border-white/10 text-gray-500 hover:text-gray-300"}`}
+                      >
+                        {t === "all" ? "All" : t}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
+                      <option value="date">Latest first</option>
+                      <option value="importance">Highest priority</option>
+                    </select>
+                    <select value={minScore} onChange={e => setMinScore(Number(e.target.value))} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
+                      <option value="0">All clearance levels</option>
+                      <option value="3">Priority 3+</option>
+                      <option value="5">Priority 5+</option>
+                      <option value="7">Priority 7+</option>
+                    </select>
+                  </div>
                 </div>
               )}
               <p className="mt-2 text-[11px] text-gray-600 font-mono">{filteredArticles.length} INTERCEPT{filteredArticles.length === 1 ? "" : "S"} LOADED</p>
