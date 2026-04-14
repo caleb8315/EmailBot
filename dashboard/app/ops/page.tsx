@@ -420,6 +420,36 @@ function EventCard({ evt }: { evt: MapEvent }) {
   );
 }
 
+/* ────── Source Layer Config ────── */
+
+interface SourceLayerConfig {
+  label: string;
+  emoji: string;
+  color: string;
+  status: "live" | "degraded" | "offline";
+}
+
+const SOURCE_LAYERS: Record<string, SourceLayerConfig> = {
+  gdelt:      { label: "GDELT",      emoji: "⚔️",  color: "#FF6633", status: "live" },
+  firms:      { label: "FIRMS",      emoji: "🔥",  color: "#FF5500", status: "live" },
+  usgs:       { label: "USGS",       emoji: "🌋",  color: "#00BBFF", status: "live" },
+  adsb:       { label: "ADS-B",      emoji: "✈️",  color: "#FF3333", status: "live" },
+  ais:        { label: "AIS",        emoji: "🚢",  color: "#2288FF", status: "live" },
+  ooni:       { label: "OONI",       emoji: "📡",  color: "#AA44FF", status: "live" },
+  sentinel:   { label: "Sentinel",   emoji: "🛰️",  color: "#44AAFF", status: "live" },
+  notam:      { label: "NOTAM",      emoji: "🚫",  color: "#FF8844", status: "live" },
+  cisa:       { label: "CISA",       emoji: "🛡️",  color: "#FF44FF", status: "live" },
+  polymarket: { label: "Polymarket", emoji: "📊",  color: "#44DDAA", status: "live" },
+  acled:      { label: "ACLED",      emoji: "⚔️",  color: "#FF5533", status: "offline" },
+  ucdp:       { label: "UCDP",       emoji: "⚔️",  color: "#FF4422", status: "live" },
+  nasa_eonet: { label: "EONET",      emoji: "🌍",  color: "#44CC88", status: "live" },
+  rss:        { label: "RSS/News",  emoji: "📰",  color: "#00FF41", status: "live" },
+  emsc:       { label: "EMSC",      emoji: "🌋",  color: "#0099DD", status: "live" },
+  gvp:        { label: "GVP",       emoji: "🌋",  color: "#FF4400", status: "live" },
+  reliefweb:  { label: "ReliefWeb", emoji: "🏥",  color: "#CC4488", status: "live" },
+  nhc:        { label: "NHC",       emoji: "🌀",  color: "#6644FF", status: "live" },
+};
+
 /* ────── Main Component ────── */
 
 function OpsCenter() {
@@ -428,6 +458,8 @@ function OpsCenter() {
   const markersRef = useRef<any[]>([]);
   const popupRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [enabledSources, setEnabledSources] = useState<Set<string>>(new Set(Object.keys(SOURCE_LAYERS)));
+  const [showSourcePanel, setShowSourcePanel] = useState(false);
 
   const [events, setEvents] = useState<MapEvent[]>([]);
   const [fusedSignals, setFusedSignals] = useState<FusedSignal[]>([]);
@@ -538,7 +570,8 @@ function OpsCenter() {
     const bounds = new maplibregl.LngLatBounds();
     let hasGeo = false;
 
-    for (const evt of events) {
+    const filteredEvents = events.filter(e => enabledSources.has(e.source));
+    for (const evt of filteredEvents) {
       const lat = evt.lat;
       const lng = evt.lng;
       if (typeof lat !== "number" || typeof lng !== "number") continue;
@@ -610,7 +643,7 @@ function OpsCenter() {
     if (hasGeo && !bounds.isEmpty()) {
       mapRef.current.fitBounds(bounds, { padding: 40, maxZoom: 6, duration: 800 });
     }
-  }, [events, mapReady]);
+  }, [events, mapReady, enabledSources]);
 
   /* ── Dispatch workflow ── */
   const dispatch = async (workflow: string) => {
@@ -695,6 +728,36 @@ function OpsCenter() {
             <div className="bg-black/80 backdrop-blur-md rounded-lg px-2.5 py-1 text-[9px] font-mono text-gray-500">
               LAST SCAN: <span className={lastRun.status === "success" ? "text-green-400" : "text-red-400"}>{lastRun.engine.toUpperCase()} {lastRun.status.toUpperCase()}</span> {timeAgo(lastRun.started_at)} AGO
             </div>
+          </div>
+        )}
+        <button
+          onClick={() => setShowSourcePanel(v => !v)}
+          className="absolute top-2 right-12 z-20 bg-black/80 backdrop-blur-md rounded-lg px-2.5 py-1 text-[9px] font-mono text-[#00C2FF] hover:text-[#00FF41] transition"
+        >
+          {showSourcePanel ? "CLOSE" : "LAYERS"}
+        </button>
+        {showSourcePanel && (
+          <div className="absolute top-9 right-12 z-20 bg-black/90 backdrop-blur-md rounded-xl p-2.5 w-52 max-h-[60vh] overflow-y-auto space-y-0.5">
+            <p className="text-[8px] font-bold uppercase tracking-wider text-gray-600 mb-1">Feed Sources</p>
+            {[...new Set(events.map(e => e.source))].sort().map(src => {
+              const cfg = SOURCE_LAYERS[src] || { label: src, emoji: "📍", color: "#888", status: "live" as const };
+              const count = events.filter(e => e.source === src).length;
+              const enabled = enabledSources.has(src);
+              return (
+                <button
+                  key={src}
+                  onClick={() => setEnabledSources(prev => { const n = new Set(prev); if (n.has(src)) n.delete(src); else n.add(src); return n; })}
+                  className={`flex items-center justify-between w-full text-left px-2 py-1 rounded-md text-[10px] transition ${enabled ? "text-gray-200" : "text-gray-600"}`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>{cfg.emoji}</span>
+                    <span>{cfg.label}</span>
+                    {cfg.status === "offline" && <span className="text-[7px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">OFF</span>}
+                  </span>
+                  <span className="font-mono" style={{ color: enabled ? cfg.color : "transparent" }}>{count}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

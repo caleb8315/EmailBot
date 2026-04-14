@@ -15,7 +15,11 @@ export type DataSource =
   | 'telegram'
   | 'rss'
   | 'cisa'
-  | 'fishing_watch';
+  | 'fishing_watch'
+  | 'emsc'
+  | 'gvp'
+  | 'reliefweb'
+  | 'nhc';
 
 export type EventType =
   | 'military_flight'

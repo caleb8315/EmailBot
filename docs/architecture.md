@@ -69,13 +69,15 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
 
 ## Cost Model
 
-| Component | AI Calls | Frequency |
-|-----------|----------|-----------|
-| Article analysis | 1 per article | 0-3 per pipeline run |
-| Chat intent (AI fallback) | 1 per ambiguous message | Rare |
-| Digest triage + deep briefing | 2 per digest | 0-2 per day |
-| Deeper analysis | 1 per request | On-demand |
-| **Budget** | **env-driven (default 30/day)** | **chat + pipeline + digest buckets** |
+
+| Component                     | AI Calls                        | Frequency                            |
+| ----------------------------- | ------------------------------- | ------------------------------------ |
+| Article analysis              | 1 per article                   | 0-3 per pipeline run                 |
+| Chat intent (AI fallback)     | 1 per ambiguous message         | Rare                                 |
+| Digest triage + deep briefing | 2 per digest                    | 0-2 per day                          |
+| Deeper analysis               | 1 per request                   | On-demand                            |
+| **Budget**                    | **env-driven (default 30/day)** | **chat + pipeline + digest buckets** |
+
 
 ## Key Design Decisions
 
@@ -84,3 +86,4 @@ The Selective Intelligence System is an autonomous news monitoring pipeline that
 3. **Try/catch everywhere** — no single failure stops the pipeline
 4. **Daily digest** — balanced world+interest candidate selection before Groq triage/deep briefing
 5. **Telegram cooldown** — max 1 alert per 2 hours to avoid notification fatigue
+

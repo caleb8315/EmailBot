@@ -17,7 +17,6 @@ interface MapEvent {
   lng?: number | null;
 }
 
-// Human-readable categories with distinct colors and emoji markers
 type Category = "military" | "conflict" | "fire" | "quake" | "internet" | "other";
 
 function categorize(e: MapEvent): Category {
@@ -37,6 +36,34 @@ const CAT_CONFIG: Record<Category, { label: string; color: string; emoji: string
   quake: { label: "Earthquakes", color: "#00BBFF", emoji: "🌊" },
   internet: { label: "Internet Outages", color: "#AA44FF", emoji: "📡" },
   other: { label: "Other Intel", color: "#00FF41", emoji: "📍" },
+};
+
+interface SourceConfig {
+  label: string;
+  emoji: string;
+  color: string;
+  status: "live" | "degraded" | "offline";
+}
+
+const SOURCE_CONFIG: Record<string, SourceConfig> = {
+  gdelt:      { label: "GDELT",           emoji: "⚔️",  color: "#FF6633", status: "live" },
+  firms:      { label: "FIRMS (NASA)",     emoji: "🔥",  color: "#FF5500", status: "live" },
+  usgs:       { label: "USGS Earthquakes", emoji: "🌋",  color: "#00BBFF", status: "live" },
+  adsb:       { label: "ADS-B Military",   emoji: "✈️",  color: "#FF3333", status: "live" },
+  ais:        { label: "AIS Vessels",      emoji: "🚢",  color: "#2288FF", status: "live" },
+  ooni:       { label: "OONI Internet",    emoji: "📡",  color: "#AA44FF", status: "live" },
+  sentinel:   { label: "Sentinel SAT",     emoji: "🛰️",  color: "#44AAFF", status: "live" },
+  notam:      { label: "NOTAMs",           emoji: "🚫",  color: "#FF8844", status: "live" },
+  cisa:       { label: "CISA Cyber",       emoji: "🛡️",  color: "#FF44FF", status: "live" },
+  polymarket: { label: "Polymarket",       emoji: "📊",  color: "#44DDAA", status: "live" },
+  acled:      { label: "ACLED",            emoji: "⚔️",  color: "#FF5533", status: "offline" },
+  ucdp:       { label: "UCDP",            emoji: "⚔️",  color: "#FF4422", status: "live" },
+  nasa_eonet: { label: "NASA EONET",       emoji: "🌍",  color: "#44CC88", status: "live" },
+  rss:        { label: "RSS/News",         emoji: "📰",  color: "#00FF41", status: "live" },
+  emsc:       { label: "EMSC Seismic",    emoji: "🌋",  color: "#0099DD", status: "live" },
+  gvp:        { label: "Volcanic (GVP)",  emoji: "🌋",  color: "#FF4400", status: "live" },
+  reliefweb:  { label: "ReliefWeb",       emoji: "🏥",  color: "#CC4488", status: "live" },
+  nhc:        { label: "NHC Storms",      emoji: "🌀",  color: "#6644FF", status: "live" },
 };
 
 function getCoords(evt: MapEvent): { lat: number; lng: number } | null {
@@ -59,17 +86,21 @@ function timeAgo(iso: string): string {
 function MapInner() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Map<string, any[]>>(new Map());
   const [events, setEvents] = useState<MapEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<MapEvent | null>(null);
   const [enabledCats, setEnabledCats] = useState<Set<Category>>(
     new Set(["military", "conflict", "fire", "quake", "internet", "other"])
   );
+  const [enabledSources, setEnabledSources] = useState<Set<string>>(
+    new Set(Object.keys(SOURCE_CONFIG))
+  );
   const [hoursBack, setHoursBack] = useState(48);
   const [mapReady, setMapReady] = useState(false);
   const [showSatellite, setShowSatellite] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [filterMode, setFilterMode] = useState<"source" | "category">("source");
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -81,7 +112,6 @@ function MapInner() {
 
   useEffect(() => { fetchEvents(); const i = setInterval(fetchEvents, 60_000); return () => clearInterval(i); }, [fetchEvents]);
 
-  // Init map
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
     let cancelled = false;
@@ -116,16 +146,18 @@ function MapInner() {
     return () => { cancelled = true; mapRef.current?.remove(); mapRef.current = null; };
   }, []);
 
-  // Plot markers
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const maplibregl = require("maplibre-gl");
 
-    for (const m of markersRef.current) m.remove();
-    markersRef.current = [];
+    for (const [, markers] of markersRef.current) {
+      for (const m of markers) m.remove();
+    }
+    markersRef.current.clear();
 
-    const filtered = events.filter(e => enabledCats.has(categorize(e)));
-    let plotted = 0;
+    const filtered = events.filter(e =>
+      enabledSources.has(e.source) && enabledCats.has(categorize(e))
+    );
 
     for (const evt of filtered) {
       const coords = getCoords(evt);
@@ -133,11 +165,14 @@ function MapInner() {
 
       const cat = categorize(evt);
       const cfg = CAT_CONFIG[cat];
+      const srcCfg = SOURCE_CONFIG[evt.source];
+      const markerColor = srcCfg?.color || cfg.color;
+      const markerEmoji = srcCfg?.emoji || cfg.emoji;
       const size = Math.max(20, Math.min(36, evt.severity / 3));
 
       const el = document.createElement("div");
-      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${cfg.color});transition:transform 0.15s;`;
-      el.textContent = cfg.emoji;
+      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${markerColor});transition:transform 0.15s;`;
+      el.textContent = markerEmoji;
       el.title = evt.title;
       el.addEventListener("click", (e) => { e.stopPropagation(); setSelectedEvent(evt); });
       el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.4)"; });
@@ -145,11 +180,16 @@ function MapInner() {
 
       try {
         const marker = new maplibregl.Marker({ element: el }).setLngLat([coords.lng, coords.lat]).addTo(mapRef.current!);
-        markersRef.current.push(marker);
-        plotted++;
+        const existing = markersRef.current.get(evt.source) || [];
+        existing.push(marker);
+        markersRef.current.set(evt.source, existing);
       } catch {}
     }
-  }, [events, enabledCats, mapReady]);
+  }, [events, enabledSources, enabledCats, mapReady]);
+
+  const toggleSource = (src: string) => {
+    setEnabledSources(prev => { const next = new Set(prev); if (next.has(src)) next.delete(src); else next.add(src); return next; });
+  };
 
   const toggleCat = (cat: Category) => {
     setEnabledCats(prev => { const next = new Set(prev); if (next.has(cat)) next.delete(cat); else next.add(cat); return next; });
@@ -166,10 +206,14 @@ function MapInner() {
     } catch {}
   };
 
-  // Stats
-  const geoEvents = events.filter(e => getCoords(e) && enabledCats.has(categorize(e)));
+  const geoEvents = events.filter(e => getCoords(e) && enabledSources.has(e.source) && enabledCats.has(categorize(e)));
+
+  const sourceCounts: Record<string, number> = {};
+  for (const e of geoEvents) { sourceCounts[e.source] = (sourceCounts[e.source] || 0) + 1; }
   const catCounts: Record<string, number> = {};
   for (const e of geoEvents) { const c = categorize(e); catCounts[c] = (catCounts[c] || 0) + 1; }
+
+  const discoveredSources = [...new Set(events.map(e => e.source))].sort();
 
   return (
     <div className="fixed inset-0 bg-[#050505]">
@@ -181,29 +225,30 @@ function MapInner() {
         </div>
       )}
 
-      {/* Top bar — stats + filter toggle */}
       <div className="absolute top-3 left-3 right-3 flex items-center gap-2 z-20">
         <div className="bg-black/85 backdrop-blur-md rounded-xl px-3 py-2 flex items-center gap-3 flex-1 min-w-0">
           <span className="text-[#00FF41] font-mono font-bold text-sm">{geoEvents.length}</span>
           <span className="text-gray-500 text-[10px]">events on map</span>
           <div className="flex-1" />
-          {Object.entries(catCounts).slice(0, 4).map(([cat, count]) => (
-            <span key={cat} className="text-[10px] text-gray-500 hidden sm:inline">
-              {CAT_CONFIG[cat as Category]?.emoji} {count}
-            </span>
-          ))}
+          {discoveredSources.slice(0, 6).map(src => {
+            const cfg = SOURCE_CONFIG[src];
+            return (
+              <span key={src} className="text-[10px] text-gray-500 hidden sm:inline-flex items-center gap-0.5">
+                <span>{cfg?.emoji || "📍"}</span> {sourceCounts[src] || 0}
+              </span>
+            );
+          })}
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="bg-black/85 backdrop-blur-md rounded-xl px-3 py-2 text-[10px] text-gray-400 font-mono shrink-0"
         >
-          {showFilters ? "CLOSE" : "FILTER"}
+          {showFilters ? "CLOSE" : "LAYERS"}
         </button>
       </div>
 
-      {/* Filter panel — slides down */}
       {showFilters && (
-        <div className="absolute top-14 left-3 right-3 md:left-auto md:right-3 md:w-64 bg-black/90 backdrop-blur-md rounded-xl p-3 z-20 space-y-1.5">
+        <div className="absolute top-14 left-3 right-3 md:left-auto md:right-3 md:w-72 bg-black/90 backdrop-blur-md rounded-xl p-3 z-20 space-y-1.5 max-h-[70vh] overflow-y-auto">
           <button
             onClick={toggleSatellite}
             className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${
@@ -212,8 +257,49 @@ function MapInner() {
           >
             <span>🛰</span> Satellite Imagery {showSatellite ? "ON" : "OFF"}
           </button>
+
           <div className="border-t border-white/5 my-1" />
-          {(Object.entries(CAT_CONFIG) as [Category, typeof CAT_CONFIG[Category]][]).map(([cat, cfg]) => (
+          <div className="flex gap-1 mb-1.5">
+            <button onClick={() => setFilterMode("source")}
+              className={`flex-1 text-[9px] font-bold uppercase tracking-wider py-1 rounded-md transition ${filterMode === "source" ? "text-[#00C2FF] bg-[#00C2FF]/10" : "text-gray-600"}`}>
+              By Source
+            </button>
+            <button onClick={() => setFilterMode("category")}
+              className={`flex-1 text-[9px] font-bold uppercase tracking-wider py-1 rounded-md transition ${filterMode === "category" ? "text-[#00C2FF] bg-[#00C2FF]/10" : "text-gray-600"}`}>
+              By Type
+            </button>
+          </div>
+
+          {filterMode === "source" && discoveredSources.map(src => {
+            const cfg = SOURCE_CONFIG[src] || { label: src, emoji: "📍", color: "#888", status: "live" as const };
+            const count = sourceCounts[src] || 0;
+            const enabled = enabledSources.has(src);
+            return (
+              <button
+                key={src}
+                onClick={() => toggleSource(src)}
+                className={`flex items-center justify-between w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                  enabled ? "text-gray-200" : "text-gray-600"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span>{cfg.emoji}</span>
+                  <span>{cfg.label}</span>
+                  {cfg.status === "offline" && (
+                    <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 uppercase font-bold">offline</span>
+                  )}
+                  {cfg.status === "degraded" && (
+                    <span className="text-[8px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400 uppercase font-bold">degraded</span>
+                  )}
+                </span>
+                <span className="text-[10px] font-mono" style={{ color: enabled ? cfg.color : "transparent" }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+
+          {filterMode === "category" && (Object.entries(CAT_CONFIG) as [Category, typeof CAT_CONFIG[Category]][]).map(([cat, cfg]) => (
             <button
               key={cat}
               onClick={() => toggleCat(cat)}
@@ -230,6 +316,7 @@ function MapInner() {
               </span>
             </button>
           ))}
+
           <div className="border-t border-white/5 my-1" />
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -247,7 +334,6 @@ function MapInner() {
         </div>
       )}
 
-      {/* Event detail panel */}
       {selectedEvent && (
         <div className="absolute bottom-20 md:bottom-4 left-3 right-3 md:left-auto md:right-3 md:w-96 bg-black/92 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden z-30">
           <div className="p-4">
@@ -258,24 +344,20 @@ function MapInner() {
               &times;
             </button>
 
-            {/* Category badge + time */}
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">{CAT_CONFIG[categorize(selectedEvent)]?.emoji}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CAT_CONFIG[categorize(selectedEvent)]?.color }}>
-                {CAT_CONFIG[categorize(selectedEvent)]?.label}
+              <span className="text-lg">{(SOURCE_CONFIG[selectedEvent.source] || CAT_CONFIG[categorize(selectedEvent)])?.emoji}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: (SOURCE_CONFIG[selectedEvent.source] || CAT_CONFIG[categorize(selectedEvent)])?.color }}>
+                {SOURCE_CONFIG[selectedEvent.source]?.label || CAT_CONFIG[categorize(selectedEvent)]?.label}
               </span>
               <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(selectedEvent.timestamp)}</span>
             </div>
 
-            {/* Title */}
             <p className="text-sm text-gray-100 font-semibold leading-snug mb-2 pr-8">{selectedEvent.title}</p>
 
-            {/* Summary */}
             {selectedEvent.summary && (
               <p className="text-xs text-gray-400 leading-relaxed mb-3">{selectedEvent.summary.slice(0, 300)}</p>
             )}
 
-            {/* Severity + location */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                 selectedEvent.severity >= 80 ? "bg-red-500/20 text-red-400" :
@@ -287,13 +369,12 @@ function MapInner() {
                  selectedEvent.severity >= 60 ? "High" :
                  selectedEvent.severity >= 40 ? "Medium" : "Low"}
               </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500 uppercase">{selectedEvent.source}</span>
               {selectedEvent.country_code !== "XX" && (
                 <span className="text-[10px] text-gray-500">{selectedEvent.country_code}</span>
               )}
-              <span className="text-[10px] text-gray-600">{timeAgo(selectedEvent.timestamp)}</span>
             </div>
 
-            {/* Tags */}
             {selectedEvent.tags?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {selectedEvent.tags.filter(t => !["gdelt", "rss", "firms", "adsb", "ooni", "geocoded", "conflict"].includes(t)).slice(0, 5).map(t => (

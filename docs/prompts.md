@@ -27,6 +27,7 @@ User dislikes: {dislikes}
 ```
 
 ### Parameters
+
 - Model: `gemini-2.5-flash`
 - Temperature: `0.3`
 - Max tokens: `500`
@@ -51,6 +52,7 @@ Parse the user's message and return JSON: { "intent": string, "topic": string, "
 ```
 
 ### Parameters
+
 - Model: `gemini-2.5-flash`
 - Temperature: `0.1`
 - Max tokens: `100`
@@ -100,6 +102,7 @@ Preserve a balanced worldview; keep major global context even when interests are
 ```
 
 ### Parameters
+
 - Model: `GROQ_DIGEST_MODEL` (default `qwen/qwen3-32b`)
 - Temperature: `0.4`
 - Max tokens: `3000` (triage), `4000` (deep briefing)
@@ -128,6 +131,8 @@ User interests: {interests}
 ```
 
 ### Parameters
+
 - Model: `gemini-2.5-flash`
 - Temperature: `0.4`
 - Max tokens: `300`
+

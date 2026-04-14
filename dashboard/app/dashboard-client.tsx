@@ -41,10 +41,18 @@ type Run = {
   html_url: string;
 };
 
+type ChatCitation = {
+  ref: string;
+  source?: string;
+  title?: string;
+  url?: string;
+};
+
 type ChatMsg = {
   role: "user" | "bot";
   text: string;
   createdAt: string;
+  citations?: ChatCitation[];
 };
 
 type Tab = "overview" | "intel" | "chat" | "preferences";
@@ -664,29 +672,57 @@ function StatTile({ label, value, hint }: { label: string; value: ReactNode; hin
 
 function ChatBubble({ message }: { message: ChatMsg }) {
   const isUser = message.role === "user";
+  const citations = message.citations ?? [];
   return (
-    <div className={cx("mb-3 flex", isUser ? "justify-end" : "justify-start")}>
-      <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
-        {!isUser && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00FF41] to-[#00C2FF] text-xs font-bold text-[#050505] shadow-md shadow-[#00FF41]/28">
-            J
-          </div>
-        )}
-        <div
-          className={cx(
-            "rounded-2xl px-4 py-3 shadow-md",
-            isUser
-              ? "rounded-br-md border border-[#00FF41]/25 bg-gradient-to-br from-[#00FF41]/14 to-[#00C2FF]/10 text-[#A3A3A3]"
-              : "rounded-bl-md border border-white/[0.12] bg-[#0c0c0c]/95 text-[#A3A3A3]"
+    <div className="mb-3">
+      <div className={cx("flex", isUser ? "justify-end" : "justify-start")}>
+        <div className={cx("flex max-w-[90%] items-end gap-2", isUser && "flex-row-reverse")}>
+          {!isUser && (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00FF41] to-[#00C2FF] text-xs font-bold text-[#050505] shadow-md shadow-[#00FF41]/28">
+              J
+            </div>
           )}
-        >
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[#A3A3A3]/62">
-            <span>{isUser ? "You" : "Jeff"}</span>
-            <span className="text-[#A3A3A3]/54">{formatClock(message.createdAt)}</span>
+          <div
+            className={cx(
+              "rounded-2xl px-4 py-3 shadow-md",
+              isUser
+                ? "rounded-br-md border border-[#00FF41]/25 bg-gradient-to-br from-[#00FF41]/14 to-[#00C2FF]/10 text-[#A3A3A3]"
+                : "rounded-bl-md border border-white/[0.12] bg-[#0c0c0c]/95 text-[#A3A3A3]"
+            )}
+          >
+            <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[#A3A3A3]/62">
+              <span>{isUser ? "You" : "Jeff"}</span>
+              <span className="text-[#A3A3A3]/54">{formatClock(message.createdAt)}</span>
+            </div>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
           </div>
-          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.text}</p>
         </div>
       </div>
+      {!isUser && citations.length > 0 && (
+        <div className="mt-1.5 ml-10 max-w-[80%]">
+          <div className="rounded-xl border border-white/[0.06] bg-[#080808] px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]/40 mb-1">Sources</p>
+            <div className="space-y-0.5">
+              {citations.map((c, i) => (
+                <div key={i} className="flex items-center gap-2 text-[11px]">
+                  <span className="text-[#00C2FF] font-mono font-bold shrink-0">{c.ref}</span>
+                  {c.url ? (
+                    <a href={c.url} target="_blank" rel="noopener noreferrer"
+                      className="text-[#A3A3A3]/62 hover:text-[#00C2FF] truncate transition">
+                      {c.title || c.source || c.url}
+                    </a>
+                  ) : (
+                    <span className="text-[#A3A3A3]/50 truncate">{c.title || c.source || "intel"}</span>
+                  )}
+                  {c.source && (
+                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-[#A3A3A3]/40 shrink-0 uppercase">{c.source}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -908,7 +944,7 @@ export default function DashboardClient() {
       if (!res.ok) throw new Error(payload.error || res.statusText);
       setChat((curr) => [
         ...curr,
-        { role: "bot", text: payload.reply || "(empty)", createdAt: new Date().toISOString() },
+        { role: "bot", text: payload.reply || "(empty)", createdAt: new Date().toISOString(), citations: payload.citations },
       ]);
     } catch (err) {
       setChat((curr) => [

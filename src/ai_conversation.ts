@@ -7,7 +7,9 @@ import {
   patchBriefingOverlay,
   getRecentArticles,
   getLastAlertedArticle,
+  getRecentIntelEvents,
 } from "./memory";
+import type { IntelEventContext } from "./memory";
 import { rankArticles } from "./scoring";
 import { canMakeAICall, recordAICall } from "./usage_limiter";
 import { matchBriefingSection } from "./briefing_helpers";
@@ -43,6 +45,12 @@ const AssistantActionsSchema = z
 
 const AssistantResponseSchema = z.object({
   reply: z.string(),
+  citations: z.array(z.object({
+    ref: z.string(),
+    source: z.string().optional(),
+    title: z.string().optional(),
+    url: z.string().optional(),
+  })).optional(),
   actions: AssistantActionsSchema,
 });
 
@@ -51,6 +59,20 @@ const AssistantResponseJsonSchema = {
   additionalProperties: false,
   properties: {
     reply: { type: "string" },
+    citations: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          ref: { type: "string" },
+          source: { type: "string" },
+          title: { type: "string" },
+          url: { type: "string" },
+        },
+        required: ["ref"],
+      },
+    },
     actions: {
       type: "object",
       additionalProperties: false,
@@ -75,6 +97,19 @@ const GeminiNativeResponseSchema = {
   type: "OBJECT",
   properties: {
     reply: { type: "STRING" },
+    citations: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          ref: { type: "STRING" },
+          source: { type: "STRING" },
+          title: { type: "STRING" },
+          url: { type: "STRING" },
+        },
+        required: ["ref"],
+      },
+    },
     actions: {
       type: "OBJECT",
       properties: {
@@ -238,7 +273,24 @@ async function applyActions(
   });
 }
 
-function buildSystemPrompt(prefsBlock: string, articlesBlock: string): string {
+function formatIntelEventsBlock(events: IntelEventContext[]): string {
+  if (events.length === 0) return "(No recent intel events found.)";
+  const lines: string[] = [];
+  for (const e of events) {
+    const sum = e.summary.length > 300 ? e.summary.slice(0, 297) + "…" : e.summary;
+    lines.push(
+      `${e.ref} [${e.source}/${e.type}] ${e.title}`,
+      `   severity: ${e.severity} | country: ${e.country_code} | ${e.timestamp}`,
+      sum ? `   summary: ${sum}` : "",
+      e.source_url ? `   url: ${e.source_url}` : "",
+      e.tags.length ? `   tags: ${e.tags.slice(0, 6).join(", ")}` : "",
+      ""
+    );
+  }
+  return lines.filter(Boolean).join("\n");
+}
+
+function buildSystemPrompt(prefsBlock: string, articlesBlock: string, intelEventsBlock?: string): string {
   const sections = BRIEFING_SECTIONS.join(" | ");
   return `You are the user's personal intelligence briefing assistant (Telegram).
 
@@ -266,7 +318,9 @@ Your job:
 - Never say you lack "briefing context" as a final answer. Give your best analysis using web + prior knowledge.
 
 You MUST respond with a single JSON object (no markdown fences) of this shape:
-{"reply":"string shown to the user","actions":{}}
+{"reply":"string shown to the user","citations":[{"ref":"[E1]","source":"gdelt","title":"...","url":"..."}],"actions":{}}
+
+"citations" is an array referencing intel events you used. Use the ref tag (e.g. [E1], [E2]) inline in your reply text when you draw on specific intel events, then list those refs in the citations array so the UI can display source links. Only cite events you actually used.
 
 "actions" is optional. Include it only when applying preference changes. Allowed keys inside actions (all optional arrays except alert_sensitivity):
 - add_interests, remove_interests (short phrases for the RSS pipeline filter)
@@ -281,7 +335,10 @@ User preferences:
 ${prefsBlock}
 
 Recent stories (numbered):
-${articlesBlock}`;
+${articlesBlock}${intelEventsBlock ? `
+
+Live intelligence events (tagged [E1], [E2], etc. — cite with these refs):
+${intelEventsBlock}` : ""}`;
 }
 
 function polishReplyTone(reply: string): string {
@@ -466,28 +523,56 @@ async function requestAssistantJson(
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
+export interface AssistantCitation {
+  ref: string;
+  source?: string;
+  title?: string;
+  url?: string;
+}
+
+export interface AssistantResult {
+  reply: string;
+  citations: AssistantCitation[];
+}
+
 export async function runBriefingAssistant(
   userId: string,
   userMessage: string
-): Promise<string> {
+): Promise<string>;
+export async function runBriefingAssistant(
+  userId: string,
+  userMessage: string,
+  opts: { withCitations: true }
+): Promise<AssistantResult>;
+export async function runBriefingAssistant(
+  userId: string,
+  userMessage: string,
+  opts?: { withCitations?: boolean }
+): Promise<string | AssistantResult> {
+  const wantCitations = opts?.withCitations ?? false;
+  const wrapResult = (reply: string, citations: AssistantCitation[] = []): string | AssistantResult =>
+    wantCitations ? { reply, citations } : reply;
+
   if (!hasLLMCredentials()) {
-    return "I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.";
+    return wrapResult("I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.");
   }
 
   const allowed = await canMakeAICall("chat");
   if (!allowed) {
-    return "We've hit today's AI budget cap for chat, so I can't run a fresh analysis right now. Increase MAX_DAILY_CHAT_CALLS (and MAX_DAILY_AI_CALLS if needed) to resume. /status shows usage.";
+    return wrapResult("We've hit today's AI budget cap for chat, so I can't run a fresh analysis right now. Increase MAX_DAILY_CHAT_CALLS (and MAX_DAILY_AI_CALLS if needed) to resume. /status shows usage.");
   }
 
-  const [prefs, recent, lastAlert] = await Promise.all([
+  const [prefs, recent, lastAlert, intelEvents] = await Promise.all([
     getPreferences(userId),
     getRecentArticles(56),
     getLastAlertedArticle(),
+    getRecentIntelEvents(userMessage, { hours: 72, limit: 20, severityMin: 10 }),
   ]);
 
   const lastUrl = lastAlert?.url ?? null;
   const sorted = sortForBriefingContext(recent.slice(0, 80), lastUrl).slice(0, 18);
   const articlesBlock = formatArticleBlock(sorted, lastUrl);
+  const intelEventsBlock = intelEvents.length > 0 ? formatIntelEventsBlock(intelEvents) : undefined;
 
   const o = prefs.briefing_overlay ?? {};
   const prefsBlock = [
@@ -499,11 +584,11 @@ export async function runBriefingAssistant(
     `breaking_keywords: ${(o.tier1_keywords ?? []).join(", ") || "(defaults)"}`,
   ].join("\n");
 
-  const system = buildSystemPrompt(prefsBlock, articlesBlock);
+  const system = buildSystemPrompt(prefsBlock, articlesBlock, intelEventsBlock);
 
   const openai = createOpenAICompatibleClient();
   if (!openai) {
-    return "I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.";
+    return wrapResult("I can answer as soon as the AI key is connected. Add your configured LLM API key, then ask again and I'll give you a full analysis.");
   }
   let raw: string;
   try {
@@ -512,7 +597,7 @@ export async function runBriefingAssistant(
     logger.error("LLM chat failed", {
       error: err instanceof Error ? err.message : String(err),
     });
-    return "I hit a temporary issue while generating your analysis. Please send that again and I'll take another pass.";
+    return wrapResult("I hit a temporary issue while generating your analysis. Please send that again and I'll take another pass.");
   }
 
   let parsed: z.infer<typeof AssistantResponseSchema>;
@@ -524,13 +609,13 @@ export async function runBriefingAssistant(
     if (replyMatch?.[1]) {
       logger.warn("Assistant JSON parse failed; extracted reply field as fallback");
       await recordAICall("chat");
-      return replyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+      return wrapResult(replyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
     }
     logger.warn("Assistant JSON parse failed and no reply field found", {
       rawSnippet: raw.slice(0, 200),
     });
     await recordAICall("chat");
-    return "I had a formatting hiccup, but I can still answer this. Re-send your question and I'll give a tighter, clearer take.";
+    return wrapResult("I had a formatting hiccup, but I can still answer this. Re-send your question and I'll give a tighter, clearer take.");
   }
 
   await recordAICall("chat");
@@ -550,5 +635,16 @@ export async function runBriefingAssistant(
   if (out.length > TG_MAX) {
     out = out.slice(0, TG_MAX - 12) + "\n…(truncated)";
   }
-  return out;
+
+  const citations: AssistantCitation[] = (parsed.citations ?? []).map(c => {
+    const matched = intelEvents.find(e => e.ref === c.ref);
+    return {
+      ref: c.ref,
+      source: c.source || matched?.source,
+      title: c.title || matched?.title,
+      url: c.url || matched?.source_url || undefined,
+    };
+  });
+
+  return wrapResult(out, citations);
 }

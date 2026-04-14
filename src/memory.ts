@@ -265,6 +265,111 @@ export async function getSources(): Promise<SourceRegistry[]> {
   }
 }
 
+// ── Intel Events (for chat context) ──
+
+export interface IntelEventContext {
+  ref: string;
+  source: string;
+  type: string;
+  severity: number;
+  title: string;
+  summary: string;
+  timestamp: string;
+  country_code: string;
+  tags: string[];
+  source_url: string | null;
+}
+
+function extractSourceUrl(raw: Record<string, unknown> | null): string | null {
+  if (!raw) return null;
+  for (const key of ["source_url", "url", "link"]) {
+    const v = raw[key];
+    if (typeof v === "string" && v.startsWith("http")) return v;
+  }
+  return null;
+}
+
+function textRelevanceScore(query: string, event: { title: string; summary: string | null; tags: string[] }): number {
+  const q = query.toLowerCase();
+  const tokens = q.split(/\s+/).filter(t => t.length > 2);
+  if (tokens.length === 0) return 0;
+  const haystack = [event.title, event.summary ?? "", ...(event.tags ?? [])].join(" ").toLowerCase();
+  let hits = 0;
+  for (const token of tokens) {
+    if (haystack.includes(token)) hits++;
+  }
+  return hits / tokens.length;
+}
+
+export async function getRecentIntelEvents(
+  query: string,
+  opts: { hours?: number; limit?: number; severityMin?: number } = {}
+): Promise<IntelEventContext[]> {
+  const hours = opts.hours ?? 72;
+  const limit = opts.limit ?? 20;
+  const severityMin = opts.severityMin ?? 10;
+
+  try {
+    const sb = getClient();
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await sb
+      .from("intel_events")
+      .select("id, source, type, severity, title, summary, timestamp, country_code, tags, raw_data")
+      .gte("timestamp", cutoff)
+      .gte("severity", severityMin)
+      .order("timestamp", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      logger.error("Failed to fetch intel events for chat", { error: error.message });
+      return [];
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      source: string;
+      type: string;
+      severity: number;
+      title: string;
+      summary: string | null;
+      timestamp: string;
+      country_code: string;
+      tags: string[];
+      raw_data: Record<string, unknown> | null;
+    }>;
+
+    const scored = rows.map(r => {
+      const relevance = textRelevanceScore(query, r);
+      const recencyHours = (Date.now() - new Date(r.timestamp).getTime()) / 3_600_000;
+      const recencyScore = Math.max(0, 1 - recencyHours / hours);
+      const severityNorm = Math.min(r.severity / 100, 1);
+      const composite = relevance * 0.5 + recencyScore * 0.25 + severityNorm * 0.25;
+      return { row: r, composite };
+    });
+
+    scored.sort((a, b) => b.composite - a.composite);
+
+    return scored.slice(0, limit).map((s, i) => ({
+      ref: `[E${i + 1}]`,
+      source: s.row.source,
+      type: s.row.type,
+      severity: s.row.severity,
+      title: s.row.title,
+      summary: s.row.summary ?? "",
+      timestamp: s.row.timestamp,
+      country_code: s.row.country_code,
+      tags: s.row.tags ?? [],
+      source_url: extractSourceUrl(s.row.raw_data),
+    }));
+  } catch (err) {
+    logger.error("getRecentIntelEvents failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
 // ── Alert Cooldown ──
 
 export async function getLastAlertTime(): Promise<Date | null> {

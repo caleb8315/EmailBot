@@ -21,6 +21,10 @@ import { OSINTFeedsAdapter } from './adapters/osint-feeds';
 import { AISDarkShipAdapter } from './adapters/ais-dark-ship';
 import { SAMGovAdapter } from './adapters/samgov';
 import { CISAAdapter } from './adapters/cisa';
+import { EMSCAdapter } from './adapters/emsc';
+import { GVPAdapter } from './adapters/gvp';
+import { ReliefWebDisastersAdapter } from './adapters/reliefweb-disasters';
+import { NHCAdapter } from './adapters/nhc';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
@@ -57,6 +61,10 @@ function getAllAdapters(): IngestionAdapter[] {
     new AISDarkShipAdapter(),
     new SAMGovAdapter(),
     new CISAAdapter(),
+    new EMSCAdapter(),
+    new GVPAdapter(),
+    new ReliefWebDisastersAdapter(),
+    new NHCAdapter(),
   ];
 }
 
