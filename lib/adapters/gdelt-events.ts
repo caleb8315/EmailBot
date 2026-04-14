@@ -22,7 +22,7 @@ const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity:
   '1414': { type: 'protest', label: 'Pro-rights demonstration', severity: 35 },
   '142': { type: 'protest', label: 'Hunger strike', severity: 40 },
   '143': { type: 'protest', label: 'Strike or boycott', severity: 40 },
-  '1431': { type: 'protest', label: 'Workers' strike', severity: 40 },
+  '1431': { type: 'protest', label: "Workers' strike", severity: 40 },
   '144': { type: 'protest', label: 'Obstruction / blockade protest', severity: 45 },
   '145': { type: 'protest', label: 'Violent protest / riot', severity: 50 },
   '1451': { type: 'protest', label: 'Violent street riot', severity: 55 },
