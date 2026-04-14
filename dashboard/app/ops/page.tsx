@@ -230,10 +230,10 @@ function formatTimestamp(iso: string): string {
 }
 
 function goldsteinLabel(g: number): string {
-  if (g <= -9) return "Extreme hostility";
-  if (g <= -7) return "Very hostile";
-  if (g <= -5) return "Hostile";
-  if (g <= -3) return "Tense";
+  if (g <= -9) return "Strongly negative (Goldstein ≤ -9)";
+  if (g <= -7) return "Very negative (Goldstein ≤ -7)";
+  if (g <= -5) return "Negative (Goldstein ≤ -5)";
+  if (g <= -3) return "Moderately negative";
   if (g <= -1) return "Mildly negative";
   if (g <= 1) return "Neutral";
   return "Cooperative";
@@ -263,9 +263,9 @@ function buildIntel(evt: MapEvent): IntelBreakdown {
       // Old events: strip raw codes from summary and show as-is
       description.push(evt.summary);
     }
-    if (typeof rd.goldstein === "number") description.push(`Situation: ${goldsteinLabel(rd.goldstein as number)}`);
-    if (rd.num_articles) details.push(`Corroborated by ${rd.num_articles} independent source${(rd.num_articles as number) > 1 ? "s" : ""}`);
-    if (typeof rd.goldstein === "number") details.push(`Hostility score: ${rd.goldstein} / 10`);
+    if (typeof rd.goldstein === "number") description.push(`Goldstein scale: ${goldsteinLabel(rd.goldstein as number)}`);
+    if (rd.num_articles) details.push(`Reported by ${rd.num_articles} source${(rd.num_articles as number) > 1 ? "s" : ""}`);
+    if (typeof rd.goldstein === "number") details.push(`Goldstein score: ${rd.goldstein}`);
   } else if (evt.source === "adsb") {
     if (rd.callsign) description.push(`Callsign ${rd.callsign} detected in flight`);
     if (rd.altitude) description.push(`Flying at ${Math.round((rd.altitude as number) * 3.281).toLocaleString()} ft`);

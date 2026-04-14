@@ -389,15 +389,21 @@ export class GDELTEventsAdapter extends BaseAdapter {
 
       // ── Geography-based noise filter ──────────────────────────────────────
       // Stable democracies almost never have genuine armed conflict.
-      // For these countries, require both higher source counts AND
-      // identifiable opposing actors — otherwise it's a legal/political story.
+      // GDELT constantly miscodes domestic political/legal/social stories as
+      // "military force" or "assault" in these countries. Be extremely strict.
       if (LOW_CONFLICT_COUNTRIES.has(countryCode)) {
+        // Skip all protest codes — these are political, not security events
+        if (match.type === 'protest') continue;
+        // Skip generic "military action" / "conflict" below severity 80
+        // (arrests, property seizure, curfews, detentions, etc.)
+        if (match.severity < 80) continue;
+        // Even for high-severity codes, require massive corroboration
         const actor1Code = cols[COL.Actor1Code] || '';
         const actor2Code = cols[COL.Actor2Code] || '';
         const hasIdentifiedActors = actor1Code.length >= 3 && actor2Code.length >= 3
           && actor1Code !== actor2Code;
-        if (!hasIdentifiedActors) continue; // No clear parties = almost certainly a misfire
-        if (numArticles < 15) continue; // Require heavy corroboration in these countries
+        if (!hasIdentifiedActors) continue;
+        if (numArticles < 25 || numSources < 8) continue;
       }
 
       // ── Goldstein reality-check ───────────────────────────────────────────
