@@ -89,23 +89,121 @@ const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity:
   '2032': { type: 'airstrike', label: 'Radiological weapon', severity: 98 },
 };
 
+// ISO 3-letter and CAMEO country codes → full names
 const COUNTRY_NAMES: Record<string, string> = {
-  US: 'United States', USA: 'United States', GB: 'United Kingdom', GBR: 'United Kingdom',
-  UK: 'United Kingdom', RU: 'Russia', RUS: 'Russia', CN: 'China', CHN: 'China',
-  UA: 'Ukraine', UKR: 'Ukraine', IR: 'Iran', IRN: 'Iran', IL: 'Israel', ISR: 'Israel',
-  SY: 'Syria', SYR: 'Syria', IQ: 'Iraq', IRQ: 'Iraq', AF: 'Afghanistan', AFG: 'Afghanistan',
-  YE: 'Yemen', YEM: 'Yemen', SD: 'Sudan', SDN: 'Sudan', MM: 'Myanmar', MMR: 'Myanmar',
-  KP: 'North Korea', PRK: 'North Korea', TW: 'Taiwan', TWN: 'Taiwan',
-  SA: 'Saudi Arabia', SAU: 'Saudi Arabia', PK: 'Pakistan', PAK: 'Pakistan',
-  LB: 'Lebanon', LBN: 'Lebanon', LY: 'Libya', LBY: 'Libya', ET: 'Ethiopia', ETH: 'Ethiopia',
-  NG: 'Nigeria', NGA: 'Nigeria', SO: 'Somalia', SOM: 'Somalia', CD: 'DR Congo',
-  FR: 'France', FRA: 'France', DE: 'Germany', DEU: 'Germany',
-  JP: 'Japan', JPN: 'Japan', KR: 'South Korea', KOR: 'South Korea',
-  IN: 'India', IND: 'India', BR: 'Brazil', BRA: 'Brazil',
-  PL: 'Poland', POL: 'Poland', EE: 'Estonia', EST: 'Estonia',
-  PSE: 'Palestine', ISL: 'Islamic State', GOV: 'Government', MIL: 'Military',
-  REB: 'Rebels', OPP: 'Opposition', COP: 'Police', CVL: 'Civilians',
+  // Major conflict zones
+  US: 'United States', USA: 'United States',
+  GB: 'United Kingdom', GBR: 'United Kingdom',
+  RU: 'Russia', RUS: 'Russia',
+  CN: 'China', CHN: 'China',
+  UA: 'Ukraine', UKR: 'Ukraine',
+  IR: 'Iran', IRN: 'Iran',
+  IL: 'Israel', ISR: 'Israel',
+  SY: 'Syria', SYR: 'Syria',
+  IQ: 'Iraq', IRQ: 'Iraq',
+  AF: 'Afghanistan', AFG: 'Afghanistan',
+  YE: 'Yemen', YEM: 'Yemen',
+  SD: 'Sudan', SDN: 'Sudan',
+  MM: 'Myanmar', MMR: 'Myanmar',
+  KP: 'North Korea', PRK: 'North Korea',
+  TW: 'Taiwan', TWN: 'Taiwan',
+  SA: 'Saudi Arabia', SAU: 'Saudi Arabia',
+  PK: 'Pakistan', PAK: 'Pakistan',
+  LB: 'Lebanon', LBN: 'Lebanon',
+  LY: 'Libya', LBY: 'Libya',
+  ET: 'Ethiopia', ETH: 'Ethiopia',
+  NG: 'Nigeria', NGA: 'Nigeria',
+  SO: 'Somalia', SOM: 'Somalia',
+  CD: 'DR Congo', COD: 'DR Congo',
+  ML: 'Mali', MLI: 'Mali',
+  CF: 'Central African Republic', CAF: 'Central African Republic',
+  SS: 'South Sudan', SSD: 'South Sudan',
+  MZ: 'Mozambique', MOZ: 'Mozambique',
+  BF: 'Burkina Faso', BFA: 'Burkina Faso',
+  NE: 'Niger', NER: 'Niger',
+  TD: 'Chad', TCD: 'Chad',
+  // Middle East
+  PS: 'Palestine', PSE: 'Palestine',
+  JO: 'Jordan', JOR: 'Jordan',
+  EG: 'Egypt', EGY: 'Egypt',
+  BH: 'Bahrain', BHR: 'Bahrain',
+  QA: 'Qatar', QAT: 'Qatar',
+  AE: 'UAE', ARE: 'UAE',
+  KW: 'Kuwait', KWT: 'Kuwait',
+  OM: 'Oman', OMN: 'Oman',
+  TR: 'Turkey', TUR: 'Turkey',
+  // Europe
+  FR: 'France', FRA: 'France',
+  DE: 'Germany', DEU: 'Germany',
+  PL: 'Poland', POL: 'Poland',
+  EE: 'Estonia', EST: 'Estonia',
+  LV: 'Latvia', LVA: 'Latvia',
+  LT: 'Lithuania', LTU: 'Lithuania',
+  FI: 'Finland', FIN: 'Finland',
+  NO: 'Norway', NOR: 'Norway',
+  SE: 'Sweden', SWE: 'Sweden',
+  BY: 'Belarus', BLR: 'Belarus',
+  RS: 'Serbia', SRB: 'Serbia',
+  KS: 'Kosovo', XKX: 'Kosovo',
+  // Asia-Pacific
+  JP: 'Japan', JPN: 'Japan',
+  KR: 'South Korea', KOR: 'South Korea',
+  IN: 'India', IND: 'India',
+  PH: 'Philippines', PHL: 'Philippines',
+  VN: 'Vietnam', VNM: 'Vietnam',
+  TH: 'Thailand', THA: 'Thailand',
+  ID: 'Indonesia', IDN: 'Indonesia',
+  // Americas
+  BR: 'Brazil', BRA: 'Brazil',
+  MX: 'Mexico', MEX: 'Mexico',
+  CO: 'Colombia', COL: 'Colombia',
+  VE: 'Venezuela', VEN: 'Venezuela',
+  // Actor type codes (appear at end of CAMEO compound codes)
+  GOV: 'Government', MIL: 'Military', REB: 'Rebel forces',
+  OPP: 'Opposition', COP: 'Police', CVL: 'Civilians',
+  SPY: 'Intelligence', JUD: 'Judiciary', LEG: 'Legislature',
+  // Non-state actors
+  ISL: 'Islamic State', HAM: 'Hamas', HEZ: 'Hezbollah',
+  NTO: 'NATO', UNO: 'UN', EUR: 'EU',
 };
+
+// CAMEO actor role suffixes → plain English
+const ACTOR_ROLES: Record<string, string> = {
+  GOV: 'govt.', MIL: 'military', REB: 'rebels', OPP: 'opposition',
+  COP: 'police', CVL: 'civilians', SPY: 'intelligence', JUD: 'judiciary',
+  LEG: 'legislature', ELI: 'elite', ACT: 'activists', MED: 'media',
+  REF: 'refugees', NGO: 'NGO', IGO: 'int\'l org', BUS: 'business',
+  ETH: 'ethnic group', REL: 'religious group', STU: 'students',
+};
+
+/**
+ * Parse a CAMEO compound actor code like "IRNMIL" or "BHRGOV" into a
+ * human-readable name like "Iran military" or "Bahrain govt."
+ */
+function parseActorCode(code: string): string {
+  if (!code || code.length < 2) return code;
+  // Direct lookup first (handles pure country or actor codes)
+  if (COUNTRY_NAMES[code]) return COUNTRY_NAMES[code];
+  // Try 3-char country prefix + role suffix (e.g. IRNMIL → IRN + MIL)
+  if (code.length >= 6) {
+    const country3 = code.slice(0, 3);
+    const role = code.slice(3);
+    const countryName = COUNTRY_NAMES[country3];
+    const roleName = ACTOR_ROLES[role];
+    if (countryName && roleName) return `${countryName} ${roleName}`;
+    if (countryName) return countryName;
+  }
+  // Try 2-char country prefix (e.g. USGOV → US + GOV)
+  if (code.length >= 4) {
+    const country2 = code.slice(0, 2);
+    const role = code.slice(2);
+    const countryName = COUNTRY_NAMES[country2];
+    const roleName = ACTOR_ROLES[role];
+    if (countryName && roleName) return `${countryName} ${roleName}`;
+    if (countryName) return countryName;
+  }
+  return code;
+}
 
 // Domains that produce false conflict events (movies, games, sports, fiction)
 const JUNK_DOMAINS = [
@@ -246,8 +344,8 @@ export class GDELTEventsAdapter extends BaseAdapter {
 
       const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
 
-      const actor1Name = cols[COL.Actor1Code] || '';
-      const actor2Name = cols[COL.Actor2Code] || '';
+      const actor1Code = cols[COL.Actor1Code] || '';
+      const actor2Code = cols[COL.Actor2Code] || '';
 
       const tags = ['gdelt', 'conflict', 'geocoded', match.type];
       if (countryCode !== 'XX') tags.push(countryCode.toLowerCase());
@@ -255,13 +353,14 @@ export class GDELTEventsAdapter extends BaseAdapter {
       const location = locationName || COUNTRY_NAMES[countryCode] || countryCode;
       const title = `${match.label} in ${location}`;
 
-      const actor1 = COUNTRY_NAMES[actor1Name] || actor1Name;
-      const actor2 = COUNTRY_NAMES[actor2Name] || actor2Name;
-      const hasActors = actor1Name && actor2Name && actor1Name !== actor2Name;
+      const actor1 = parseActorCode(actor1Code);
+      const actor2 = parseActorCode(actor2Code);
+      const hasActors = actor1Code && actor2Code && actor1Code !== actor2Code;
 
       const descParts: string[] = [];
       if (hasActors) {
-        descParts.push(`${actor1} ${match.type === 'protest' ? 'protesting against' : 'engaged against'} ${actor2}`);
+        const verb = match.type === 'protest' ? 'protesting against' : 'vs';
+        descParts.push(`${actor1} ${verb} ${actor2}`);
       }
       descParts.push(`${match.label} reported in ${location}`);
       if (goldstein <= -8) descParts.push('Situation is extremely hostile');
@@ -291,6 +390,8 @@ export class GDELTEventsAdapter extends BaseAdapter {
           event_id: globalEventId,
           cameo_code: eventCode,
           cameo_label: match.label,
+          actor1: hasActors ? actor1 : null,
+          actor2: hasActors ? actor2 : null,
           goldstein,
           num_articles: numArticles,
           source_url: sourceUrl,

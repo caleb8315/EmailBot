@@ -249,12 +249,23 @@ function buildIntel(evt: MapEvent): IntelBreakdown {
   const description: string[] = [];
   const details: string[] = [];
 
-  if (evt.summary) description.push(evt.summary);
-
   if (evt.source === "gdelt") {
-    if (rd.location && !evt.summary?.includes(String(rd.location))) description.push(`Location: ${rd.location}`);
-    if (rd.num_articles) details.push(`Sources: ${rd.num_articles} independent report${(rd.num_articles as number) > 1 ? "s" : ""}`);
-    if (typeof rd.goldstein === "number") details.push(`Hostility level: ${goldsteinLabel(rd.goldstein as number)} (${rd.goldstein})`);
+    // Who's involved — always show this prominently if we have actors
+    if (rd.actor1 && rd.actor2) {
+      description.push(`${rd.actor1} vs ${rd.actor2}`);
+    } else if (rd.actor1) {
+      description.push(`Actor: ${rd.actor1}`);
+    }
+    // What happened — use the stored label + location for clarity
+    if (rd.cameo_label && rd.location) {
+      description.push(`${rd.cameo_label} in ${rd.location}`);
+    } else if (evt.summary) {
+      // Old events: strip raw codes from summary and show as-is
+      description.push(evt.summary);
+    }
+    if (typeof rd.goldstein === "number") description.push(`Situation: ${goldsteinLabel(rd.goldstein as number)}`);
+    if (rd.num_articles) details.push(`Corroborated by ${rd.num_articles} independent source${(rd.num_articles as number) > 1 ? "s" : ""}`);
+    if (typeof rd.goldstein === "number") details.push(`Hostility score: ${rd.goldstein} / 10`);
   } else if (evt.source === "adsb") {
     if (rd.callsign) description.push(`Callsign ${rd.callsign} detected in flight`);
     if (rd.altitude) description.push(`Flying at ${Math.round((rd.altitude as number) * 3.281).toLocaleString()} ft`);
@@ -292,14 +303,19 @@ function buildIntel(evt: MapEvent): IntelBreakdown {
     if (rd.location) description.push(`Satellite detected changes at ${rd.location}`);
     if (rd.change_score) details.push(`Change score: ${rd.change_score}`);
   } else if (evt.source === "cisa") {
-    description.push("Cybersecurity advisory issued by CISA");
+    if (evt.summary) description.push(evt.summary);
+    else description.push("Cybersecurity advisory issued by CISA");
   } else if (evt.source === "nasa_eonet") {
+    if (evt.summary) description.push(evt.summary);
     if (rd.geometry_count) details.push(`Tracked across ${rd.geometry_count} data points`);
     if (rd.first_seen) details.push(`First observed: ${formatTimestamp(rd.first_seen as string)}`);
+  } else {
+    // Fallback for any other source
+    if (evt.summary) description.push(evt.summary);
   }
 
   if (evt.tags?.length) {
-    details.push(`Tags: ${evt.tags.slice(0, 6).join(", ")}`);
+    details.push(`Tags: ${evt.tags.filter((t: string) => !["gdelt", "conflict", "geocoded"].includes(t)).slice(0, 5).join(", ")}`);
   }
 
   return { description, details };
