@@ -17,6 +17,7 @@ import { OONIAdapter } from './adapters/ooni';
 import { PolymarketAdapter } from './adapters/polymarket';
 import { UCDPAdapter } from './adapters/ucdp';
 import { NASAEONETAdapter } from './adapters/nasa-eonet';
+import { OSINTFeedsAdapter } from './adapters/osint-feeds';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
@@ -42,6 +43,7 @@ function getAllAdapters(): IngestionAdapter[] {
     new ACLEDAdapter(),
     new UCDPAdapter(),
     new NASAEONETAdapter(),
+    new OSINTFeedsAdapter(),
     new USGSAdapter(),
     new FIRMSAdapter(),
     new ADSBMilitaryAdapter(),
