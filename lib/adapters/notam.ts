@@ -11,21 +11,27 @@ export class NOTAMAdapter extends BaseAdapter {
   fetchIntervalMinutes = 30;
 
   async fetch(): Promise<IntelEvent[]> {
+    const clientId = process.env.FAA_CLIENT_ID;
+    const clientSecret = process.env.FAA_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      // NOTAMs require FAA API registration — skip silently
+      return [];
+    }
+
     try {
-      // FAA NOTAM API — free but limited
       const res = await this.safeFetch(
         'https://external-api.faa.gov/notamapi/v1/notams?' +
         'responseFormat=geoJson&notamType=N&classification=INTL',
         {
           headers: {
-            'client_id': process.env.FAA_CLIENT_ID || '',
-            'client_secret': process.env.FAA_CLIENT_SECRET || '',
+            'client_id': clientId,
+            'client_secret': clientSecret,
           },
         },
       );
 
       if (!res.ok) {
-        // Fallback: try the ICAO format endpoint
         this.warn(`FAA API returned ${res.status} — falling back`);
         return this.fetchFallback();
       }
