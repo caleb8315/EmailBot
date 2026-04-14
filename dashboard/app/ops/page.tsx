@@ -19,6 +19,7 @@ interface MapEvent {
   tags: string[];
   lat?: number | null;
   lng?: number | null;
+  raw_data?: Record<string, unknown>;
 }
 
 interface FusedSignal {
@@ -102,34 +103,90 @@ interface GHRun {
 
 /* ────── Helpers ────── */
 
-type Category = "military" | "conflict" | "fire" | "quake" | "internet" | "other";
-
-function categorize(e: MapEvent): Category {
-  if (e.source === "adsb") return "military";
-  if (["airstrike", "conflict", "protest"].includes(e.type)) return "conflict";
-  if (e.source === "firms" || e.type === "fire") return "fire";
-  if (e.type === "earthquake") return "quake";
-  if (e.source === "ooni" || e.type?.includes("internet")) return "internet";
-  return "other";
+interface EventIcon {
+  emoji: string;
+  color: string;
+  label: string;
 }
 
-const CAT_COLORS: Record<Category, string> = {
-  military: "#FF3333",
-  conflict: "#FF8800",
-  fire: "#FF5500",
-  quake: "#00BBFF",
-  internet: "#AA44FF",
-  other: "#00FF41",
+const CAMEO_ICONS: Record<string, EventIcon> = {
+  "183": { emoji: "💣", color: "#FF2222", label: "Suicide Bombing" },
+  "184": { emoji: "☣️", color: "#BBFF00", label: "Chemical Weapons" },
+  "185": { emoji: "💣", color: "#FF6600", label: "IED / Explosive" },
+  "186": { emoji: "🎯", color: "#FF0055", label: "Assassination" },
+  "190": { emoji: "⚔️", color: "#FF4400", label: "Military Force" },
+  "191": { emoji: "🚧", color: "#FF8800", label: "Blockade" },
+  "192": { emoji: "🏴", color: "#CC3300", label: "Territory Occupied" },
+  "193": { emoji: "🔫", color: "#FF6633", label: "Small Arms Fighting" },
+  "194": { emoji: "💥", color: "#FF3300", label: "Artillery / Tank" },
+  "195": { emoji: "✈️", color: "#FF2200", label: "Aerial Bombing" },
+  "196": { emoji: "⚠️", color: "#FFAA00", label: "Ceasefire Violated" },
+  "200": { emoji: "💀", color: "#FF0000", label: "Mass Violence" },
+  "201": { emoji: "🚶", color: "#CC4400", label: "Mass Expulsion" },
+  "202": { emoji: "💀", color: "#CC0000", label: "Ethnic Cleansing" },
+  "203": { emoji: "☢️", color: "#FF0000", label: "WMD Used" },
+  "145": { emoji: "✊", color: "#FFCC00", label: "Protest / Riot" },
+  "180": { emoji: "👊", color: "#FF7744", label: "Assault" },
+  "181": { emoji: "🔗", color: "#FF5577", label: "Abduction / Hijack" },
+  "182": { emoji: "👊", color: "#FF7744", label: "Physical Assault" },
 };
 
-const CAT_EMOJI: Record<Category, string> = {
-  military: "✈",
-  conflict: "💥",
-  fire: "🔥",
-  quake: "🌊",
-  internet: "📡",
-  other: "📍",
+const ADSB_ICONS: Record<string, EventIcon> = {
+  isr:         { emoji: "🛩️", color: "#FF4444", label: "ISR / Surveillance" },
+  doomsday:    { emoji: "☢️", color: "#FF0000", label: "Nuclear Command" },
+  tanker:      { emoji: "⛽", color: "#FFAA44", label: "Aerial Refueler" },
+  special_ops: { emoji: "🦅", color: "#FF3366", label: "Special Ops" },
+  nato:        { emoji: "🛡️", color: "#4488FF", label: "NATO Aircraft" },
+  bomber:      { emoji: "💣", color: "#FF2222", label: "Strategic Bomber" },
+  transport:   { emoji: "🛫", color: "#88AAFF", label: "VIP Transport" },
 };
+
+const SOURCE_ICONS: Record<string, EventIcon> = {
+  firms:      { emoji: "🔥", color: "#FF5500", label: "Active Fire" },
+  usgs:       { emoji: "🌋", color: "#00BBFF", label: "Earthquake" },
+  ooni:       { emoji: "📡", color: "#AA44FF", label: "Internet Disruption" },
+  cisa:       { emoji: "🛡️", color: "#FF44FF", label: "Cyber Advisory" },
+  polymarket: { emoji: "📊", color: "#44DDAA", label: "Prediction Market" },
+  sentinel:   { emoji: "🛰️", color: "#44AAFF", label: "Satellite Change" },
+  notam:      { emoji: "🚫", color: "#FF8844", label: "Airspace Closure" },
+  ais:        { emoji: "🚢", color: "#2288FF", label: "Dark Vessel" },
+  acled:      { emoji: "⚔️", color: "#FF5533", label: "Armed Conflict" },
+  ucdp:       { emoji: "⚔️", color: "#FF4422", label: "Armed Conflict" },
+  nasa_eonet: { emoji: "🌍", color: "#44CC88", label: "Natural Event" },
+};
+
+const TYPE_ICONS: Record<string, EventIcon> = {
+  earthquake:               { emoji: "🌋", color: "#00BBFF", label: "Earthquake" },
+  fire:                     { emoji: "🔥", color: "#FF5500", label: "Fire" },
+  airstrike:                { emoji: "💥", color: "#FF3300", label: "Airstrike" },
+  conflict:                 { emoji: "⚔️", color: "#FF6633", label: "Conflict" },
+  protest:                  { emoji: "✊", color: "#FFCC00", label: "Protest" },
+  cyber_advisory:           { emoji: "🛡️", color: "#FF44FF", label: "Cyber Advisory" },
+  notam_closure:            { emoji: "🚫", color: "#FF8844", label: "Airspace Closure" },
+  satellite_change:         { emoji: "🛰️", color: "#44AAFF", label: "Satellite Detection" },
+  prediction_market_spike:  { emoji: "📊", color: "#44DDAA", label: "Market Signal" },
+  vessel_dark:              { emoji: "🚢", color: "#2288FF", label: "Dark Ship" },
+  hospital_ship_movement:   { emoji: "🏥", color: "#FF4488", label: "Hospital Ship" },
+  news_signal:              { emoji: "📰", color: "#00FF41", label: "News Signal" },
+};
+
+const FALLBACK_ICON: EventIcon = { emoji: "📍", color: "#00FF41", label: "Intel" };
+
+function resolveIcon(e: MapEvent): EventIcon {
+  if (e.source === "adsb") {
+    const milType = e.raw_data?.military_type as string | undefined;
+    if (milType && ADSB_ICONS[milType]) return ADSB_ICONS[milType];
+    return { emoji: "✈️", color: "#FF3333", label: "Military Aircraft" };
+  }
+
+  const cameo = e.raw_data?.cameo_code as string | undefined;
+  if (cameo && CAMEO_ICONS[cameo]) return CAMEO_ICONS[cameo];
+
+  if (TYPE_ICONS[e.type]) return TYPE_ICONS[e.type];
+  if (SOURCE_ICONS[e.source]) return SOURCE_ICONS[e.source];
+
+  return FALLBACK_ICON;
+}
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -177,6 +234,7 @@ function OpsCenter() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const popupRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
 
   const [events, setEvents] = useState<MapEvent[]>([]);
@@ -186,7 +244,6 @@ function OpsCenter() {
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   const [arcs, setArcs] = useState<NarrativeArc[]>([]);
   const [dreams, setDreams] = useState<DreamScenario[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<MapEvent | null>(null);
 
   const [digests, setDigests] = useState<Digest[]>([]);
   const [ghRuns, setGhRuns] = useState<GHRun[]>([]);
@@ -282,6 +339,7 @@ function OpsCenter() {
 
     for (const m of markersRef.current) m.remove();
     markersRef.current = [];
+    if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
 
     mapRef.current.resize();
 
@@ -297,18 +355,44 @@ function OpsCenter() {
       if (lat === 0 && lng === 0) continue;
 
       hasGeo = true;
-      const cat = categorize(evt);
-      const color = CAT_COLORS[cat];
+      const icon = resolveIcon(evt);
       const opacity = eventOpacity(evt);
       const size = Math.max(18, Math.min(32, evt.severity / 3.5));
       const el = document.createElement("div");
-      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${color});transition:transform 0.15s;opacity:${opacity};`;
-      el.textContent = CAT_EMOJI[cat];
+      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;opacity:${opacity};filter:drop-shadow(0 0 4px ${icon.color});`;
+      el.textContent = icon.emoji;
       const age = evt.created_at ? timeAgo(evt.created_at) : timeAgo(evt.timestamp);
-      el.title = `${evt.title} (${age} ago)`;
-      el.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); setSelectedEvent(evt); });
-      el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.3)"; });
-      el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
+      el.title = `${icon.label}: ${evt.title} (${age} ago)`;
+      el.addEventListener("mouseenter", () => { el.style.filter = `drop-shadow(0 0 8px ${icon.color}) drop-shadow(0 0 12px ${icon.color})`; });
+      el.addEventListener("mouseleave", () => { el.style.filter = `drop-shadow(0 0 4px ${icon.color})`; });
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+        const badge = severityBadge(evt.severity);
+        const badgeBg = badge.label === "CRITICAL" ? "rgba(239,68,68,0.2)" : badge.label === "HIGH" ? "rgba(249,115,22,0.2)" : badge.label === "MEDIUM" ? "rgba(234,179,8,0.2)" : "rgba(34,197,94,0.2)";
+        const badgeColor = badge.label === "CRITICAL" ? "#f87171" : badge.label === "HIGH" ? "#fb923c" : badge.label === "MEDIUM" ? "#facc15" : "#4ade80";
+        const html = `<div style="font-family:ui-monospace,monospace;max-width:280px;padding:2px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span style="font-size:14px">${icon.emoji}</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${icon.color}">${icon.label}</span>
+            <span style="margin-left:auto;font-size:9px;color:#6b7280">${age} ago</span>
+          </div>
+          <p style="font-size:12px;font-weight:600;color:#f3f4f6;line-height:1.3;margin:0 0 4px">${evt.title}</p>
+          ${evt.summary ? `<p style="font-size:10px;color:#9ca3af;line-height:1.4;margin:0 0 6px">${evt.summary.slice(0, 200)}</p>` : ""}
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:9999px;background:${badgeBg};color:${badgeColor}">${badge.label}</span>
+            <span style="font-size:9px;padding:2px 6px;border-radius:9999px;background:rgba(255,255,255,0.06);color:#9ca3af">${evt.source}</span>
+            ${evt.country_code && evt.country_code !== "XX" ? `<span style="font-size:9px;color:#6b7280">${evt.country_code}</span>` : ""}
+          </div>
+        </div>`;
+        const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "300px", className: "jeff-popup" })
+          .setLngLat([lng, lat])
+          .setHTML(html)
+          .addTo(mapRef.current!);
+        popupRef.current = popup;
+        popup.on("close", () => { popupRef.current = null; });
+      });
       try {
         const marker = new maplibregl.Marker({ element: el, anchor: "center" })
           .setLngLat([lng, lat])
@@ -408,25 +492,6 @@ function OpsCenter() {
             </div>
           </div>
         )}
-        {/* Selected event detail - fixed positioning to prevent jump */}
-        {selectedEvent && (
-          <div className="absolute bottom-2 left-2 right-2 md:left-auto md:right-2 md:w-80 bg-black/92 backdrop-blur-md border border-[#00C2FF]/20 rounded-xl p-3 z-30 pointer-events-auto">
-            <button onClick={() => setSelectedEvent(null)} className="absolute top-2 right-2 text-gray-500 hover:text-white text-sm">&times;</button>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-base">{CAT_EMOJI[categorize(selectedEvent)]}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CAT_COLORS[categorize(selectedEvent)] }}>
-                {categorize(selectedEvent)}
-              </span>
-              <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(selectedEvent.created_at || selectedEvent.timestamp)} ago</span>
-            </div>
-            <p className="text-sm text-gray-100 font-semibold leading-snug mb-1 pr-6">{selectedEvent.title}</p>
-            {selectedEvent.summary && <p className="text-xs text-gray-400 leading-relaxed">{selectedEvent.summary.slice(0, 250)}</p>}
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${severityBadge(selectedEvent.severity).cls}`}>{severityBadge(selectedEvent.severity).label}</span>
-              {selectedEvent.country_code && selectedEvent.country_code !== "XX" && <span className="text-[10px] text-gray-500">{selectedEvent.country_code}</span>}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ════ MIDDLE: LIVE FEED ════ */}
@@ -438,7 +503,7 @@ function OpsCenter() {
               onClick={() => setFeedTab(t)}
               className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition ${feedTab === t ? "bg-[#00C2FF]/10 text-[#00C2FF]" : "text-gray-500 hover:text-gray-300"}`}
             >
-              {t === "fused" ? "Threat Matrix" : t === "articles" ? "Intercepts" : "Raw Signals"}
+              {t === "fused" ? "Top Alerts" : t === "articles" ? "News Wire" : "Live Events"}
             </button>
           ))}
         </div>
@@ -477,20 +542,20 @@ function OpsCenter() {
               </div>
             </a>
           ))}
-          {feedTab === "events" && events.slice(0, 50).map(e => (
-            <div
-              key={e.id}
-              onClick={() => setSelectedEvent(e)}
-              className="bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5 cursor-pointer hover:border-white/10 transition"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span>{CAT_EMOJI[categorize(e)]}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${severityBadge(e.severity).cls}`}>{e.severity}</span>
-                <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(e.timestamp)}</span>
+          {feedTab === "events" && events.slice(0, 50).map(e => {
+            const icon = resolveIcon(e);
+            return (
+              <div key={e.id} className="bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5 hover:border-white/10 transition">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span>{icon.emoji}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: icon.color }}>{icon.label}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${severityBadge(e.severity).cls}`}>{e.severity}</span>
+                  <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(e.created_at || e.timestamp)}</span>
+                </div>
+                <p className="text-xs text-gray-200 leading-snug">{e.title}</p>
               </div>
-              <p className="text-xs text-gray-200 leading-snug">{e.title}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

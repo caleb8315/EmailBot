@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const sb = supabaseAdmin();
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-    const fields = "id, source, type, severity, confidence, country_code, timestamp, created_at, expires_at, title, summary, tags, location";
+    const fields = "id, source, type, severity, confidence, country_code, timestamp, created_at, expires_at, title, summary, tags, location, raw_data";
 
     if (source) {
       let query = sb.from("intel_events").select(fields)

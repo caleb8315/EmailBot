@@ -64,6 +64,31 @@ body {
   }
 }
 
+/* MapLibre popup – dark theme */
+.jeff-popup .maplibregl-popup-content {
+  background: rgba(5, 5, 5, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 194, 255, 0.2);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  color: #a3a3a3;
+}
+.jeff-popup .maplibregl-popup-close-button {
+  color: #6b7280;
+  font-size: 18px;
+  padding: 2px 6px;
+  right: 4px;
+  top: 4px;
+}
+.jeff-popup .maplibregl-popup-close-button:hover {
+  color: #fff;
+  background: transparent;
+}
+.jeff-popup .maplibregl-popup-tip {
+  border-top-color: rgba(5, 5, 5, 0.95);
+}
+
 @layer utilities {
   .no-scrollbar {
     -ms-overflow-style: none;

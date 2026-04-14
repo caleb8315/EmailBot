@@ -90,12 +90,12 @@ export default function IntelPage() {
   const toggleExpand = (url: string) => setExpanded(prev => { const n = new Set(prev); n.has(url) ? n.delete(url) : n.add(url); return n; });
 
   const sections: { id: Section; label: string; count: number }[] = [
-    { id: "articles", label: "Intercepts", count: articles.length },
-    { id: "beliefs", label: "Convictions", count: beliefs.length },
-    { id: "hypos", label: "Hypotheses", count: hypotheses.length },
-    { id: "arcs", label: "Story Arcs", count: arcs.length },
-    { id: "dream", label: "Projections", count: dreams.length },
-    { id: "predictions", label: "Forecasts", count: predictions.length },
+    { id: "articles", label: "News Wire", count: articles.length },
+    { id: "beliefs", label: "Verified Intel", count: beliefs.length },
+    { id: "hypos", label: "Under Investigation", count: hypotheses.length },
+    { id: "arcs", label: "Developing Stories", count: arcs.length },
+    { id: "dream", label: "What-If Scenarios", count: dreams.length },
+    { id: "predictions", label: "Predictions", count: predictions.length },
   ];
 
   return (
@@ -154,7 +154,7 @@ export default function IntelPage() {
               <p className="mt-2 text-[11px] text-gray-600 font-mono">{filteredArticles.length} INTERCEPT{filteredArticles.length === 1 ? "" : "S"} LOADED</p>
             </div>
             {filteredArticles.length === 0 ? (
-              <Empty label="NO INTERCEPTS MATCH CURRENT FILTERS" />
+              <Empty label="NO NEWS ARTICLES MATCH CURRENT FILTERS" />
             ) : filteredArticles.map(article => (
               <article key={article.url} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4" style={{ borderLeftWidth: "3px", borderLeftColor: importanceColor(article.importance_score ?? 0) }}>
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -207,7 +207,7 @@ export default function IntelPage() {
             </div>
           );
         })}
-        {section === "beliefs" && beliefs.length === 0 && <Empty label="NO ACTIVE CONVICTIONS — SYSTEM STILL FORMING ASSESSMENTS" />}
+        {section === "beliefs" && beliefs.length === 0 && <Empty label="NO VERIFIED INTEL YET — SYSTEM STILL CROSS-CHECKING SOURCES" />}
 
         {/* ─── Hypotheses ─── */}
         {section === "hypos" && hypotheses.map(h => (
@@ -228,7 +228,7 @@ export default function IntelPage() {
             </div>
           </div>
         ))}
-        {section === "hypos" && hypotheses.length === 0 && <Empty label="NO ACTIVE HYPOTHESES — ANALYSIS ENGINE IDLE" />}
+        {section === "hypos" && hypotheses.length === 0 && <Empty label="NOTHING UNDER INVESTIGATION — WAITING FOR CONFLICTING SIGNALS" />}
 
         {/* ─── Story Arcs ─── */}
         {section === "arcs" && arcs.map(a => (
@@ -243,7 +243,7 @@ export default function IntelPage() {
             )}
           </div>
         ))}
-        {section === "arcs" && arcs.length === 0 && <Empty label="NO ACTIVE NARRATIVE ARCS DETECTED" />}
+        {section === "arcs" && arcs.length === 0 && <Empty label="NO DEVELOPING STORIES DETECTED — MONITORING FOR PATTERNS" />}
 
         {/* ─── Projections (Dreamtime) ─── */}
         {section === "dream" && dreams.map(d => {
@@ -260,7 +260,7 @@ export default function IntelPage() {
             </div>
           );
         })}
-        {section === "dream" && dreams.length === 0 && <Empty label="NO SCENARIO PROJECTIONS GENERATED — INITIATE DREAMTIME PROTOCOL" />}
+        {section === "dream" && dreams.length === 0 && <Empty label="NO WHAT-IF SCENARIOS GENERATED — RUN DREAMTIME TO SIMULATE" />}
 
         {/* ─── Forecasts (Predictions) ─── */}
         {section === "predictions" && predictions.map(p => (
@@ -277,7 +277,7 @@ export default function IntelPage() {
             </div>
           </div>
         ))}
-        {section === "predictions" && predictions.length === 0 && <Empty label="NO FORECASTS RECORDED — PREDICTION ENGINE AWAITING DATA" />}
+        {section === "predictions" && predictions.length === 0 && <Empty label="NO PREDICTIONS YET — NEEDS MORE DATA TO PROJECT OUTCOMES" />}
       </div>
     </div>
   );
