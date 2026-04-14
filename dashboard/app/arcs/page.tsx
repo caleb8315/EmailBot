@@ -50,10 +50,10 @@ export default function ArcsPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            NARRATIVE ARC TRACKER
+            DEVELOPING STORIES
           </h1>
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            Events are chapters. Jeff tracks the story.
+            Wars, crises, and escalations Jeff is tracking &middot; Each has acts like a story
           </p>
         </header>
 

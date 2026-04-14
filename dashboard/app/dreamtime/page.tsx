@@ -68,10 +68,10 @@ export default function DreamtimePage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            DREAMTIME ENGINE
+            WHAT YOU MISSED OVERNIGHT
           </h1>
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            Jeff thinks while you sleep. Generated at 3am every night.
+            Every night at 3am, Jeff looks at all the data and asks: what is everyone missing?
           </p>
         </header>
 

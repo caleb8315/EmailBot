@@ -1189,11 +1189,11 @@ export default function DashboardClient() {
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#00C2FF]/70">Jeff Intelligence</p>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {[
-                    { href: "/mind", label: "Mind", desc: "Beliefs" },
-                    { href: "/map", label: "Map", desc: "Command" },
-                    { href: "/hypotheses", label: "Hypos", desc: "Competing" },
-                    { href: "/arcs", label: "Arcs", desc: "Stories" },
-                    { href: "/dreamtime", label: "Dream", desc: "3am" },
+                    { href: "/mind", label: "Mind", desc: "What Jeff thinks" },
+                    { href: "/map", label: "Map", desc: "Live world map" },
+                    { href: "/hypotheses", label: "Why?", desc: "Competing theories" },
+                    { href: "/arcs", label: "Stories", desc: "Wars & crises" },
+                    { href: "/dreamtime", label: "3AM", desc: "What you missed" },
                   ].map((item) => (
                     <a
                       key={item.href}

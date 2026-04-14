@@ -43,10 +43,10 @@ export default function HypothesesPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            BAYESIAN HYPOTHESIS BOARD
+            WHY IS THIS HAPPENING?
           </h1>
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            {hypotheses.length} active competing explanations
+            {hypotheses.length} competing theories Jeff is weighing &middot; Evidence shifts the odds
           </p>
         </header>
 

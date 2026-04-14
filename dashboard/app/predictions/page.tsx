@@ -59,10 +59,9 @@ export default function PredictionsPage() {
     <div className="min-h-screen bg-[#050505] text-gray-200">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8">
-          <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">PREDICTION LEDGER</h1>
+          <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">YOUR PREDICTIONS</h1>
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            {active.length} active &middot; {resolved.length} resolved
-            {calibration && ` &middot; Overall Brier: ${calibration.overall_brier_score.toFixed(3)}`}
+            Track what you think will happen &middot; Jeff scores your accuracy over time
           </p>
         </header>
 

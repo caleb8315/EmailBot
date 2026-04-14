@@ -171,11 +171,10 @@ export default function MindPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            JEFF&apos;S WORLD MODEL
+            WHAT JEFF THINKS
           </h1>
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            {beliefs.length} active beliefs &middot; {activePreds.length} open predictions
-            &middot; Calibration: {profile.calibration_score ? (profile.calibration_score * 100).toFixed(0) + "%" : "N/A"}
+            {beliefs.length} opinions about the world &middot; Updated every 15 min with real evidence
           </p>
         </header>
 

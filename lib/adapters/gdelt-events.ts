@@ -1,54 +1,56 @@
 import { BaseAdapter } from './base-adapter';
 import type { DataSource, IntelEvent, EventType } from '../types';
-import { getCountryFromPosition } from '../geo-utils';
+import { execSync } from 'child_process';
+import { readFileSync, unlinkSync, existsSync } from 'fs';
+import { join } from 'path';
 
 /**
- * GDELT Events 2.0 adapter — structured geocoded conflict events.
- * Different from the GDELT article API: this pulls actual events
- * with CAMEO codes, actor info, and precise lat/lng.
- * 
- * Free, no API key. Updates every 15 minutes.
- * http://data.gdeltproject.org/gdeltv2/lastupdate.txt
+ * GDELT Events 2.0 raw export adapter.
+ * Downloads the 15-minute CSV export, parses it for conflict/military events
+ * with exact lat/lng coordinates. Free, no API key, no registration.
+ *
+ * CAMEO codes: https://www.gdeltproject.org/data/lookups/CAMEO.eventcodes.txt
+ * 190=military force, 193=small arms, 194=artillery, 195=aerial weapons, etc.
  */
 
-// CAMEO event codes that indicate military/conflict actions
-// Full list: https://www.gdeltproject.org/data/lookups/CAMEO.eventcodes.txt
-const CAMEO_CONFLICT_CODES: Record<string, { type: EventType; label: string; severity_base: number }> = {
-  // Use conventional military force
-  '190': { type: 'conflict', label: 'Military force', severity_base: 70 },
-  '191': { type: 'conflict', label: 'Impose blockade', severity_base: 60 },
-  '192': { type: 'conflict', label: 'Occupy territory', severity_base: 75 },
-  '193': { type: 'conflict', label: 'Fight with small arms', severity_base: 65 },
-  '194': { type: 'conflict', label: 'Fight with artillery/tanks', severity_base: 80 },
-  '195': { type: 'airstrike', label: 'Employ aerial weapons', severity_base: 85 },
-  '196': { type: 'conflict', label: 'Violate ceasefire', severity_base: 70 },
-  // Use unconventional mass violence
-  '200': { type: 'conflict', label: 'Mass violence', severity_base: 90 },
-  '201': { type: 'conflict', label: 'Engage in mass expulsion', severity_base: 85 },
-  '202': { type: 'conflict', label: 'Engage in ethnic cleansing', severity_base: 95 },
-  '203': { type: 'airstrike', label: 'Use WMD', severity_base: 100 },
-  // Coerce
-  '170': { type: 'conflict', label: 'Coerce', severity_base: 45 },
-  '171': { type: 'conflict', label: 'Seize/damage property', severity_base: 50 },
-  '172': { type: 'conflict', label: 'Impose sanctions', severity_base: 40 },
-  '173': { type: 'conflict', label: 'Arrest/detain', severity_base: 45 },
-  '174': { type: 'conflict', label: 'Expel/deport', severity_base: 50 },
-  '175': { type: 'conflict', label: 'Use tactics of coercion', severity_base: 55 },
-  // Assault
-  '180': { type: 'conflict', label: 'Assault', severity_base: 55 },
-  '181': { type: 'conflict', label: 'Abduct/hijack', severity_base: 60 },
-  '182': { type: 'conflict', label: 'Physically assault', severity_base: 55 },
-  '183': { type: 'conflict', label: 'Conduct suicide bombing', severity_base: 90 },
-  '184': { type: 'conflict', label: 'Use chemical weapons', severity_base: 95 },
-  '185': { type: 'airstrike', label: 'Use explosive device', severity_base: 80 },
-  '186': { type: 'conflict', label: 'Assassinate', severity_base: 85 },
-  // Protest
-  '140': { type: 'protest', label: 'Protest', severity_base: 30 },
-  '141': { type: 'protest', label: 'Demonstrate', severity_base: 25 },
-  '142': { type: 'protest', label: 'Hunger strike', severity_base: 30 },
-  '143': { type: 'protest', label: 'Strike/boycott', severity_base: 35 },
-  '144': { type: 'protest', label: 'Obstruct passage', severity_base: 35 },
-  '145': { type: 'protest', label: 'Protest violently/riot', severity_base: 50 },
+// CAMEO root codes that indicate conflict/military action
+const CONFLICT_CAMEO: Record<string, { type: EventType; label: string; severity: number }> = {
+  '183': { type: 'airstrike', label: 'Suicide bombing', severity: 90 },
+  '184': { type: 'airstrike', label: 'Chemical weapons', severity: 95 },
+  '185': { type: 'airstrike', label: 'Explosive device/IED', severity: 80 },
+  '186': { type: 'conflict', label: 'Assassination', severity: 85 },
+  '190': { type: 'conflict', label: 'Military force used', severity: 70 },
+  '191': { type: 'conflict', label: 'Blockade imposed', severity: 60 },
+  '192': { type: 'conflict', label: 'Territory occupied', severity: 75 },
+  '193': { type: 'conflict', label: 'Small arms fighting', severity: 65 },
+  '194': { type: 'airstrike', label: 'Artillery/tank fire', severity: 80 },
+  '195': { type: 'airstrike', label: 'Aerial weapons/bombing', severity: 85 },
+  '196': { type: 'conflict', label: 'Ceasefire violated', severity: 70 },
+  '200': { type: 'conflict', label: 'Mass violence', severity: 90 },
+  '201': { type: 'conflict', label: 'Mass expulsion', severity: 85 },
+  '202': { type: 'conflict', label: 'Ethnic cleansing', severity: 95 },
+  '203': { type: 'airstrike', label: 'WMD used', severity: 100 },
+  '145': { type: 'protest', label: 'Violent protest/riot', severity: 50 },
+  '180': { type: 'conflict', label: 'Assault', severity: 55 },
+  '181': { type: 'conflict', label: 'Abduction/hijacking', severity: 60 },
+  '182': { type: 'conflict', label: 'Physical assault', severity: 55 },
+};
+
+// GDELT export columns (tab-separated, 58+ columns)
+const COL = {
+  GLOBALEVENTID: 0,
+  SQLDATE: 1,
+  Actor1CountryCode: 7,
+  Actor2CountryCode: 17,
+  EventCode: 26,
+  EventRootCode: 27,
+  GoldsteinScale: 30,
+  NumArticles: 33,
+  ActionGeo_CountryCode: 53,
+  ActionGeo_Lat: 56,
+  ActionGeo_Long: 57,
+  SOURCEURL: 60,
+  ActionGeo_FullName: 52,
 };
 
 export class GDELTEventsAdapter extends BaseAdapter {
@@ -57,160 +59,114 @@ export class GDELTEventsAdapter extends BaseAdapter {
 
   async fetch(): Promise<IntelEvent[]> {
     try {
-      // Get the latest 15-minute export file URL
+      // Get the latest export file URL
       const updateRes = await this.safeFetch('http://data.gdeltproject.org/gdeltv2/lastupdate.txt');
-      if (!updateRes.ok) {
-        this.warn(`GDELT lastupdate returned ${updateRes.status}`);
-        return [];
-      }
+      if (!updateRes.ok) return [];
 
-      const updateText = await updateRes.text();
-      const lines = updateText.trim().split('\n');
-      
-      // Find the events export file (not mentions or GKG)
-      const eventsLine = lines.find(l => l.includes('.export.CSV'));
-      if (!eventsLine) {
-        this.warn('No events export found in GDELT lastupdate');
-        return [];
-      }
+      const text = await updateRes.text();
+      const exportLine = text.trim().split('\n').find(l => l.includes('.export.CSV'));
+      if (!exportLine) return [];
 
-      const eventsUrl = eventsLine.split(' ').pop()?.trim();
-      if (!eventsUrl) return [];
+      const zipUrl = exportLine.split(' ').pop()?.trim();
+      if (!zipUrl) return [];
 
-      // Fetch the ZIP file
-      const zipRes = await this.safeFetch(eventsUrl);
-      if (!zipRes.ok) {
-        this.warn(`GDELT events file returned ${zipRes.status}`);
-        return [];
-      }
+      // Download and unzip
+      const tmpDir = '/tmp';
+      const zipPath = join(tmpDir, 'gdelt_events.zip');
 
-      // The file is a ZIP containing a tab-separated CSV
-      // Since we can't easily unzip in pure Node without a dep,
-      // we'll use the GDELT BigQuery-compatible API endpoint instead
-      return this.fetchViaAPI();
-    } catch (err) {
-      this.error('GDELT events fetch failed', err);
-      return this.fetchViaAPI();
-    }
-  }
-
-  private async fetchViaAPI(): Promise<IntelEvent[]> {
-    try {
-      // Use GDELT's event API to get conflict/military events from the last hour
-      // Filter for CAMEO root codes 14 (protest), 17-20 (conflict/force)
-      const query = encodeURIComponent('(airstrike OR bombing OR shelling OR attack OR military OR conflict OR protest OR missile) sourcelang:eng');
-      const url =
-        `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}` +
-        '&mode=artlist&maxrecords=100&format=json&timespan=60min' +
-        '&sort=datedesc';
-
-      const res = await this.safeFetch(url);
-      if (!res.ok) {
-        if (res.status === 429) {
-          this.warn('GDELT rate limited — will retry next cycle');
-          return [];
-        }
-        this.warn(`GDELT API returned ${res.status}`);
-        return [];
-      }
-
-      const text = await res.text();
-      let data: { articles?: GDELTArticle[] };
       try {
-        data = JSON.parse(text);
+        execSync(`curl -sL "${zipUrl}" -o "${zipPath}"`, { timeout: 20000 });
+        execSync(`cd "${tmpDir}" && unzip -o "${zipPath}" 2>/dev/null`, { timeout: 10000 });
       } catch {
-        this.warn('GDELT returned non-JSON response');
+        this.warn('Failed to download/unzip GDELT export');
         return [];
       }
 
-      if (!data.articles) return [];
-
-      const events: IntelEvent[] = [];
-
-      for (const art of data.articles) {
-        const title = (art.title || '').toLowerCase();
-        
-        // Classify event type from title keywords
-        let eventType: EventType = 'conflict';
-        let baseSeverity = 50;
-
-        if (/airstrike|air\s*strike|bomb(ing|ed)|aerial/.test(title)) {
-          eventType = 'airstrike';
-          baseSeverity = 85;
-        } else if (/shell(ing|ed)|artiller|rocket|missile/.test(title)) {
-          eventType = 'airstrike';
-          baseSeverity = 80;
-        } else if (/explo(sion|ded)|blast|detonat/.test(title)) {
-          eventType = 'airstrike';
-          baseSeverity = 75;
-        } else if (/protest|demonstrat|rally|riot/.test(title)) {
-          eventType = 'protest';
-          baseSeverity = 35;
-        } else if (/attack|assault|ambush|clash|fighting/.test(title)) {
-          eventType = 'conflict';
-          baseSeverity = 65;
-        } else if (/kill(ed|ing|s)|dead|death|casualt|fatalit/.test(title)) {
-          baseSeverity = 75;
-        } else if (/war|invasion|offensive|operation/.test(title)) {
-          baseSeverity = 60;
-        }
-
-        // Extract country from source country or title
-        const countryCode = art.sourcecountry?.substring(0, 2)?.toUpperCase() || 'XX';
-
-        const timestamp = art.seendate
-          ? `${art.seendate.substring(0, 4)}-${art.seendate.substring(4, 6)}-${art.seendate.substring(6, 8)}T${art.seendate.substring(8, 10)}:${art.seendate.substring(10, 12)}:${art.seendate.substring(12, 14)}Z`
-          : new Date().toISOString();
-
-        // Build conflict-specific tags
-        const tags = ['gdelt', 'conflict'];
-        if (eventType === 'airstrike') tags.push('bombing', 'airstrike');
-        if (/ukraine|ukrainian/.test(title)) tags.push('ukraine');
-        if (/russia|russian/.test(title)) tags.push('russia');
-        if (/gaza|palestinian|hamas/.test(title)) tags.push('gaza');
-        if (/israel|israeli|idf/.test(title)) tags.push('israel');
-        if (/syria|syrian/.test(title)) tags.push('syria');
-        if (/sudan|sudanese/.test(title)) tags.push('sudan');
-        if (/yemen|houthi/.test(title)) tags.push('yemen');
-        if (/myanmar|burma/.test(title)) tags.push('myanmar');
-
-        events.push({
-          source: 'gdelt',
-          type: eventType,
-          severity: baseSeverity,
-          confidence: 0.65,
-          lat: 0,
-          lng: 0,
-          country_code: countryCode,
-          timestamp,
-          title: art.title || 'GDELT conflict event',
-          summary: art.url || '',
-          tags,
-          raw_data: {
-            url: art.url,
-            domain: art.domain,
-            source_country: art.sourcecountry,
-            tone: art.tone,
-            language: art.language,
-          },
-        });
+      // Find the CSV file
+      const csvName = zipUrl.split('/').pop()?.replace('.zip', '') || '';
+      const csvPath = join(tmpDir, csvName);
+      if (!existsSync(csvPath)) {
+        this.warn('GDELT CSV not found after unzip');
+        return [];
       }
 
-      this.log(`Fetched ${events.length} conflict-focused events`);
+      const csv = readFileSync(csvPath, 'utf-8');
+      const events = this.parseEvents(csv);
+
+      // Cleanup
+      try { unlinkSync(zipPath); } catch {}
+      try { unlinkSync(csvPath); } catch {}
+
+      this.log(`Parsed ${events.length} conflict events from GDELT export`);
       return events;
     } catch (err) {
-      this.error('GDELT events API failed', err);
+      this.error('GDELT events export failed', err);
       return [];
     }
   }
-}
 
-interface GDELTArticle {
-  url?: string;
-  title?: string;
-  seendate?: string;
-  sourcecountry?: string;
-  domain?: string;
-  tone?: number;
-  language?: string;
+  private parseEvents(csv: string): IntelEvent[] {
+    const lines = csv.trim().split('\n');
+    const events: IntelEvent[] = [];
+
+    for (const line of lines) {
+      const cols = line.split('\t');
+      if (cols.length < 58) continue;
+
+      const eventCode = cols[COL.EventCode] || '';
+      const rootCode = cols[COL.EventRootCode] || '';
+
+      // Only process conflict/military events
+      const match = CONFLICT_CAMEO[eventCode] || CONFLICT_CAMEO[rootCode];
+      if (!match) continue;
+
+      const lat = parseFloat(cols[COL.ActionGeo_Lat]);
+      const lng = parseFloat(cols[COL.ActionGeo_Long]);
+      if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) continue;
+
+      const countryCode = (cols[COL.ActionGeo_CountryCode] || 'XX').substring(0, 2);
+      const goldstein = parseFloat(cols[COL.GoldsteinScale] || '0');
+      const numArticles = parseInt(cols[COL.NumArticles] || '1', 10);
+      const locationName = cols[COL.ActionGeo_FullName] || '';
+      const sourceUrl = cols[COL.SOURCEURL] || '';
+      const dateStr = cols[COL.SQLDATE] || '';
+
+      // Boost severity based on number of articles covering this event
+      const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
+
+      const actor1 = cols[COL.Actor1CountryCode] || '?';
+      const actor2 = cols[COL.Actor2CountryCode] || '?';
+
+      const tags = ['gdelt', 'conflict', 'geocoded', match.type];
+      if (countryCode !== 'XX') tags.push(countryCode.toLowerCase());
+
+      events.push({
+        source: 'gdelt',
+        type: match.type,
+        severity,
+        confidence: 0.65,
+        lat,
+        lng,
+        country_code: countryCode,
+        timestamp: dateStr.length === 8
+          ? `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T00:00:00Z`
+          : new Date().toISOString(),
+        title: `${match.label}: ${locationName || countryCode}`,
+        summary: `${actor1} → ${actor2} | Goldstein: ${goldstein} | Sources: ${numArticles} | ${sourceUrl.slice(0, 200)}`,
+        tags,
+        raw_data: {
+          event_id: cols[COL.GLOBALEVENTID],
+          cameo_code: eventCode,
+          goldstein,
+          num_articles: numArticles,
+          actor1: cols[7],
+          actor2: cols[17],
+          source_url: sourceUrl,
+          location: locationName,
+        },
+      });
+    }
+
+    return events;
+  }
 }
