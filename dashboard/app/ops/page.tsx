@@ -158,24 +158,28 @@ function OpsCenter() {
   const [feedTab, setFeedTab] = useState<"fused" | "articles" | "events">("fused");
 
   /* ── Data fetching ── */
+  const safeFetch = async (url: string) => {
+    try { const r = await fetch(url); if (!r.ok) return {}; return await r.json(); } catch { return {}; }
+  };
+
   const fetchAll = useCallback(async () => {
-    const [evRes, fusedRes, artRes, runsRes, hypoRes, arcsRes, dreamRes] = await Promise.allSettled([
-      fetch("/api/intel/events?hours=48&limit=500&severity_min=15").then(r => r.json()),
-      fetch("/api/intel/fused?hours=48&limit=50").then(r => r.json()),
-      fetch("/api/data/articles?limit=30").then(r => r.json()),
-      fetch("/api/intel/engine-runs").then(r => r.json()),
-      fetch("/api/intel/hypotheses").then(r => r.json()),
-      fetch("/api/intel/arcs").then(r => r.json()),
-      fetch("/api/intel/dreamtime").then(r => r.json()),
+    const [ev, fused, art, runs, hypo, arc, dream] = await Promise.all([
+      safeFetch("/api/intel/events?hours=48&limit=500&severity_min=15"),
+      safeFetch("/api/intel/fused?hours=48&limit=50"),
+      safeFetch("/api/data/articles?limit=30"),
+      safeFetch("/api/intel/engine-runs"),
+      safeFetch("/api/intel/hypotheses"),
+      safeFetch("/api/intel/arcs"),
+      safeFetch("/api/intel/dreamtime"),
     ]);
 
-    if (evRes.status === "fulfilled") setEvents(evRes.value.events ?? []);
-    if (fusedRes.status === "fulfilled") setFusedSignals(fusedRes.value.signals ?? []);
-    if (artRes.status === "fulfilled") setArticles(artRes.value.articles ?? artRes.value ?? []);
-    if (runsRes.status === "fulfilled") setEngineRuns(runsRes.value.runs ?? []);
-    if (hypoRes.status === "fulfilled") setHypotheses(hypoRes.value.hypotheses ?? []);
-    if (arcsRes.status === "fulfilled") setArcs(arcsRes.value.arcs ?? []);
-    if (dreamRes.status === "fulfilled") setDreams(dreamRes.value.scenarios ?? []);
+    setEvents(ev.events ?? []);
+    setFusedSignals(fused.signals ?? []);
+    setArticles(art.articles ?? []);
+    setEngineRuns(runs.runs ?? []);
+    setHypotheses(hypo.hypotheses ?? []);
+    setArcs(arc.arcs ?? []);
+    setDreams(dream.scenarios ?? []);
   }, []);
 
   useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 60_000); return () => clearInterval(i); }, [fetchAll]);

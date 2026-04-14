@@ -25,19 +25,27 @@ export default function IntelPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [section, setSection] = useState<"beliefs" | "hypos" | "arcs" | "dream" | "predictions">("beliefs");
 
+  const safeFetch = async (url: string) => {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return {};
+      return await r.json();
+    } catch { return {}; }
+  };
+
   const fetchAll = useCallback(async () => {
-    const [bRes, hRes, aRes, dRes, pRes] = await Promise.allSettled([
-      fetch("/api/intel/beliefs").then(r => r.json()),
-      fetch("/api/intel/hypotheses").then(r => r.json()),
-      fetch("/api/intel/arcs").then(r => r.json()),
-      fetch("/api/intel/dreamtime").then(r => r.json()),
-      fetch("/api/intel/predictions").then(r => r.json()),
+    const [b, h, a, d, p] = await Promise.all([
+      safeFetch("/api/intel/beliefs"),
+      safeFetch("/api/intel/hypotheses"),
+      safeFetch("/api/intel/arcs"),
+      safeFetch("/api/intel/dreamtime"),
+      safeFetch("/api/intel/predictions"),
     ]);
-    if (bRes.status === "fulfilled") setBeliefs(bRes.value.beliefs ?? []);
-    if (hRes.status === "fulfilled") setHypotheses(hRes.value.hypotheses ?? []);
-    if (aRes.status === "fulfilled") setArcs(aRes.value.arcs ?? []);
-    if (dRes.status === "fulfilled") setDreams(dRes.value.scenarios ?? []);
-    if (pRes.status === "fulfilled") setPredictions(pRes.value.predictions ?? []);
+    setBeliefs(b.beliefs ?? []);
+    setHypotheses(h.hypotheses ?? []);
+    setArcs(a.arcs ?? []);
+    setDreams(d.scenarios ?? []);
+    setPredictions(p.predictions ?? []);
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);

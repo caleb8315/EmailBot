@@ -26,12 +26,16 @@ export function requireAuth(req: Request): NextResponse | null {
   }
 
   // Check for Supabase auth cookie presence (middleware already validated session)
-  const cookieStore = cookies();
-  const hasAuthCookie = cookieStore
-    .getAll()
-    .some((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"));
+  try {
+    const cookieStore = cookies();
+    const hasAuthCookie = cookieStore
+      .getAll()
+      .some((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"));
 
-  if (!hasAuthCookie) {
+    if (!hasAuthCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
