@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-interface Belief { id: string; statement: string; confidence: number; evidence_for: number; evidence_against: number; region?: string }
+interface EvidenceItem { weight?: number; event_id?: string; timestamp?: string; description?: string }
+interface Belief { id: string; statement: string; confidence: number; evidence_for: EvidenceItem[] | number; evidence_against: EvidenceItem[] | number; region?: string }
 interface Hypothesis { id: string; title: string; status: string; evidence_score: number; description?: string }
 interface Arc { id: string; title: string; current_act: string; total_acts?: number; significance: number; next_act_predicted?: string }
 interface Dream { id: string; title: string; scenario_type: string; probability: number; impact_level: string; narrative?: string }
@@ -11,6 +12,12 @@ interface Article {
   url: string; title: string; source: string; summary: string | null;
   importance_score: number | null; credibility_score: number | null;
   alerted: boolean; emailed: boolean; fetched_at: string;
+}
+
+function evidenceCount(val: EvidenceItem[] | number | undefined): number {
+  if (typeof val === "number") return val;
+  if (Array.isArray(val)) return val.length;
+  return 0;
 }
 
 function timeAgo(iso: string): string {
@@ -83,18 +90,18 @@ export default function IntelPage() {
   const toggleExpand = (url: string) => setExpanded(prev => { const n = new Set(prev); n.has(url) ? n.delete(url) : n.add(url); return n; });
 
   const sections: { id: Section; label: string; count: number }[] = [
-    { id: "articles", label: "Articles", count: articles.length },
-    { id: "beliefs", label: "Beliefs", count: beliefs.length },
+    { id: "articles", label: "Intercepts", count: articles.length },
+    { id: "beliefs", label: "Convictions", count: beliefs.length },
     { id: "hypos", label: "Hypotheses", count: hypotheses.length },
-    { id: "arcs", label: "Arcs", count: arcs.length },
-    { id: "dream", label: "Dreamtime", count: dreams.length },
-    { id: "predictions", label: "Predictions", count: predictions.length },
+    { id: "arcs", label: "Story Arcs", count: arcs.length },
+    { id: "dream", label: "Projections", count: dreams.length },
+    { id: "predictions", label: "Forecasts", count: predictions.length },
   ];
 
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200">
       {/* Section tabs */}
-      <div className="sticky top-11 z-40 bg-[#050505]/95 backdrop-blur-md border-b border-white/5">
+      <div className="sticky top-11 z-40 bg-[#050505]/95 backdrop-blur-md border-b border-[#00C2FF]/10">
         <div className="max-w-4xl mx-auto px-4 flex gap-1 overflow-x-auto py-2 no-scrollbar">
           {sections.map(s => (
             <button
@@ -102,7 +109,7 @@ export default function IntelPage() {
               onClick={() => setSection(s.id)}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition ${
                 section === s.id
-                  ? "bg-[#00FF41]/10 text-[#00FF41]"
+                  ? "bg-[#00C2FF]/10 text-[#00C2FF]"
                   : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
               }`}
             >
@@ -113,62 +120,62 @@ export default function IntelPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-4 space-y-3">
-        {/* ─── Articles ─── */}
+        {/* ─── Intercepts (Articles) ─── */}
         {section === "articles" && (
           <>
-            <div className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
+            <div className="bg-[#0c0c0c] border border-[#00C2FF]/10 rounded-xl p-4">
               <div className="flex items-stretch gap-2">
                 <div className="flex-1 flex items-center gap-2 bg-[#050505] border border-white/10 rounded-lg px-3">
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-500 shrink-0" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
                   <input
                     value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Search title, source, or summary..."
+                    placeholder="Search intercepts, sources, intel..."
                     className="flex-1 bg-transparent py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none"
                   />
                 </div>
-                <button onClick={() => setShowFilters(v => !v)} className={`px-3 rounded-lg border text-xs font-bold transition ${showFilters ? "border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41]" : "border-white/10 text-gray-500 hover:text-gray-300"}`}>
+                <button onClick={() => setShowFilters(v => !v)} className={`px-3 rounded-lg border text-xs font-bold uppercase tracking-wider transition ${showFilters ? "border-[#00C2FF]/30 bg-[#00C2FF]/10 text-[#00C2FF]" : "border-white/10 text-gray-500 hover:text-gray-300"}`}>
                   Filter
                 </button>
               </div>
               {showFilters && (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
-                    <option value="date">Newest</option>
-                    <option value="importance">Importance</option>
+                    <option value="date">Latest first</option>
+                    <option value="importance">Highest priority</option>
                   </select>
                   <select value={minScore} onChange={e => setMinScore(Number(e.target.value))} className="bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none">
-                    <option value="0">All scores</option>
-                    <option value="3">3+</option>
-                    <option value="5">5+</option>
-                    <option value="7">7+</option>
+                    <option value="0">All clearance levels</option>
+                    <option value="3">Priority 3+</option>
+                    <option value="5">Priority 5+</option>
+                    <option value="7">Priority 7+</option>
                   </select>
                 </div>
               )}
-              <p className="mt-2 text-[11px] text-gray-600">{filteredArticles.length} article{filteredArticles.length === 1 ? "" : "s"}</p>
+              <p className="mt-2 text-[11px] text-gray-600 font-mono">{filteredArticles.length} INTERCEPT{filteredArticles.length === 1 ? "" : "S"} LOADED</p>
             </div>
             {filteredArticles.length === 0 ? (
-              <Empty label="No articles match your filters" />
+              <Empty label="NO INTERCEPTS MATCH CURRENT FILTERS" />
             ) : filteredArticles.map(article => (
               <article key={article.url} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4" style={{ borderLeftWidth: "3px", borderLeftColor: importanceColor(article.importance_score ?? 0) }}>
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-[#00FF41]/10 text-gray-300 border border-[#00FF41]/20">{article.source}</span>
-                  {article.alerted && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-orange-500/12 text-orange-200 border border-orange-400/30">alert</span>}
-                  {article.emailed && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-200 border border-emerald-400/30">emailed</span>}
-                  {article.importance_score != null && <span className="text-[11px] text-gray-500">imp {article.importance_score}/10</span>}
-                  {article.credibility_score != null && <span className="text-[11px] text-gray-500">cred {article.credibility_score}/10</span>}
+                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-[#00C2FF]/10 text-[#00C2FF]/80 border border-[#00C2FF]/20">{article.source}</span>
+                  {article.alerted && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-orange-500/12 text-orange-200 border border-orange-400/30">FLAGGED</span>}
+                  {article.emailed && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-200 border border-emerald-400/30">DISPATCHED</span>}
+                  {article.importance_score != null && <span className="text-[11px] text-gray-500 font-mono">PRI {article.importance_score}/10</span>}
+                  {article.credibility_score != null && <span className="text-[11px] text-gray-500 font-mono">CRED {article.credibility_score}/10</span>}
                 </div>
                 <h3 className="text-sm font-semibold text-gray-100 leading-snug">{article.title}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                   <span>{timeAgo(article.fetched_at)}</span>
-                  <a href={article.url} target="_blank" rel="noreferrer" className="text-[#00C2FF] hover:text-[#00FF41] font-medium" onClick={e => e.stopPropagation()}>open ↗</a>
+                  <a href={article.url} target="_blank" rel="noreferrer" className="text-[#00C2FF] hover:text-[#00FF41] font-medium font-mono text-[11px]" onClick={e => e.stopPropagation()}>OPEN SOURCE ↗</a>
                 </div>
                 {article.summary && (
                   <div className="mt-2">
-                    <button onClick={() => toggleExpand(article.url)} className="text-xs font-semibold text-[#00C2FF] hover:text-[#00FF41]">
-                      {expanded.has(article.url) ? "Hide summary" : "Show summary"}
+                    <button onClick={() => toggleExpand(article.url)} className="text-xs font-bold text-[#00C2FF] hover:text-[#00FF41] uppercase tracking-wider">
+                      {expanded.has(article.url) ? "Hide Analysis" : "View Analysis"}
                     </button>
                     {expanded.has(article.url) && (
-                      <p className="mt-2 bg-[#050505] border border-white/5 rounded-lg p-3 text-sm leading-relaxed text-gray-300">{article.summary}</p>
+                      <p className="mt-2 bg-[#050505] border border-[#00C2FF]/10 rounded-lg p-3 text-sm leading-relaxed text-gray-300">{article.summary}</p>
                     )}
                   </div>
                 )}
@@ -177,10 +184,12 @@ export default function IntelPage() {
           </>
         )}
 
-        {/* ─── Beliefs ─── */}
+        {/* ─── Convictions (Beliefs) ─── */}
         {section === "beliefs" && beliefs.map(b => {
           const pct = Math.round(b.confidence * 100);
           const barColor = pct >= 70 ? "#00FF41" : pct >= 40 ? "#fbbf24" : "#f87171";
+          const forCount = evidenceCount(b.evidence_for);
+          const againstCount = evidenceCount(b.evidence_against);
           return (
             <div key={b.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
               <p className="text-sm text-gray-100 leading-relaxed">{b.statement}</p>
@@ -190,22 +199,22 @@ export default function IntelPage() {
                 </div>
                 <span className="text-xs font-mono font-bold" style={{ color: barColor }}>{pct}%</span>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-500">
-                <span>+{b.evidence_for} for</span>
-                <span>-{b.evidence_against} against</span>
-                {b.region && <span className="ml-auto">{b.region}</span>}
+              <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-500 font-mono">
+                <span className="text-green-400/70">+{forCount} CORROBORATING</span>
+                <span className="text-red-400/70">-{againstCount} CONTRADICTING</span>
+                {b.region && <span className="ml-auto uppercase">{b.region}</span>}
               </div>
             </div>
           );
         })}
-        {section === "beliefs" && beliefs.length === 0 && <Empty label="No beliefs tracked yet" />}
+        {section === "beliefs" && beliefs.length === 0 && <Empty label="NO ACTIVE CONVICTIONS — SYSTEM STILL FORMING ASSESSMENTS" />}
 
         {/* ─── Hypotheses ─── */}
         {section === "hypos" && hypotheses.map(h => (
           <div key={h.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                h.status === "active" ? "bg-blue-500/15 text-blue-400" :
+              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full font-mono tracking-wider ${
+                h.status === "active" ? "bg-[#00C2FF]/15 text-[#00C2FF]" :
                 h.status === "watching" ? "bg-yellow-500/15 text-yellow-400" :
                 "bg-gray-500/15 text-gray-400"
               }`}>{h.status}</span>
@@ -219,61 +228,61 @@ export default function IntelPage() {
             </div>
           </div>
         ))}
-        {section === "hypos" && hypotheses.length === 0 && <Empty label="No active hypotheses" />}
+        {section === "hypos" && hypotheses.length === 0 && <Empty label="NO ACTIVE HYPOTHESES — ANALYSIS ENGINE IDLE" />}
 
-        {/* ─── Arcs ─── */}
+        {/* ─── Story Arcs ─── */}
         {section === "arcs" && arcs.map(a => (
           <div key={a.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
             <p className="text-sm text-gray-100 font-semibold">{a.title}</p>
             <div className="mt-2 flex items-center gap-3 text-[11px]">
-              <span className="text-purple-400 font-mono font-bold">Act {a.current_act}{a.total_acts ? `/${a.total_acts}` : ""}</span>
-              <span className="text-gray-500">Significance: {a.significance}</span>
+              <span className="text-purple-400 font-mono font-bold">ACT {a.current_act}{a.total_acts ? `/${a.total_acts}` : ""}</span>
+              <span className="text-gray-500 font-mono">SIGNIFICANCE: {a.significance}</span>
             </div>
             {a.next_act_predicted && (
-              <p className="text-[11px] text-gray-500 mt-1">Next: {a.next_act_predicted}</p>
+              <p className="text-[11px] text-gray-500 mt-1 font-mono">NEXT: {a.next_act_predicted}</p>
             )}
           </div>
         ))}
-        {section === "arcs" && arcs.length === 0 && <Empty label="No active narrative arcs" />}
+        {section === "arcs" && arcs.length === 0 && <Empty label="NO ACTIVE NARRATIVE ARCS DETECTED" />}
 
-        {/* ─── Dreamtime ─── */}
+        {/* ─── Projections (Dreamtime) ─── */}
         {section === "dream" && dreams.map(d => {
-          const typeColor = d.scenario_type === "wildcard" ? "text-yellow-400" : d.scenario_type === "underrated" ? "text-blue-400" : "text-gray-400";
+          const typeColor = d.scenario_type === "wildcard" ? "text-yellow-400" : d.scenario_type === "underrated" ? "text-[#00C2FF]" : "text-gray-400";
           return (
             <div key={d.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className={`text-[10px] font-bold uppercase ${typeColor}`}>{d.scenario_type}</span>
-                {d.probability > 0 && <span className="text-[10px] text-gray-500 font-mono">{Math.round(d.probability * 100)}%</span>}
-                {d.impact_level && <span className="text-[10px] text-gray-600 ml-auto uppercase">{d.impact_level} impact</span>}
+                <span className={`text-[10px] font-bold uppercase font-mono ${typeColor}`}>{d.scenario_type}</span>
+                {d.probability > 0 && <span className="text-[10px] text-gray-500 font-mono">{Math.round(d.probability * 100)}% PROBABILITY</span>}
+                {d.impact_level && <span className="text-[10px] text-gray-600 ml-auto uppercase font-mono">{d.impact_level} IMPACT</span>}
               </div>
               <p className="text-sm text-gray-100 font-semibold">{d.title}</p>
               {d.narrative && <p className="text-xs text-gray-400 mt-2 leading-relaxed line-clamp-3">{d.narrative}</p>}
             </div>
           );
         })}
-        {section === "dream" && dreams.length === 0 && <Empty label="No dreamtime scenarios generated" />}
+        {section === "dream" && dreams.length === 0 && <Empty label="NO SCENARIO PROJECTIONS GENERATED — INITIATE DREAMTIME PROTOCOL" />}
 
-        {/* ─── Predictions ─── */}
+        {/* ─── Forecasts (Predictions) ─── */}
         {section === "predictions" && predictions.map(p => (
           <div key={p.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
             <p className="text-sm text-gray-100">{p.statement}</p>
-            <div className="mt-2 flex items-center gap-3 text-[11px]">
-              <span className="text-[#00FF41] font-mono">{Math.round(p.confidence * 100)}%</span>
+            <div className="mt-2 flex items-center gap-3 text-[11px] font-mono">
+              <span className="text-[#00FF41]">{Math.round(p.confidence * 100)}% CONFIDENCE</span>
               {p.result && (
                 <span className={`font-bold uppercase ${p.result === "correct" ? "text-green-400" : p.result === "wrong" ? "text-red-400" : "text-gray-500"}`}>
-                  {p.result}
+                  {p.result === "correct" ? "VERIFIED" : p.result === "wrong" ? "DISPROVEN" : p.result.toUpperCase()}
                 </span>
               )}
               <span className="text-gray-600 ml-auto">{timeAgo(p.created_at)}</span>
             </div>
           </div>
         ))}
-        {section === "predictions" && predictions.length === 0 && <Empty label="No predictions recorded" />}
+        {section === "predictions" && predictions.length === 0 && <Empty label="NO FORECASTS RECORDED — PREDICTION ENGINE AWAITING DATA" />}
       </div>
     </div>
   );
 }
 
 function Empty({ label }: { label: string }) {
-  return <div className="text-center text-gray-600 text-xs py-12">{label}</div>;
+  return <div className="text-center text-gray-600 text-xs py-12 font-mono tracking-wider">{label}</div>;
 }

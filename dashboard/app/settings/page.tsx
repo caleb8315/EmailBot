@@ -120,7 +120,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[#050505] text-gray-200">
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-[#00FF41] font-mono">SETTINGS</h1>
+          <h1 className="text-lg font-bold text-[#00C2FF] font-mono tracking-widest">SYSTEM CONFIG</h1>
           <button onClick={save} disabled={!dirty || saving} className="px-4 py-1.5 rounded-lg bg-[#00FF41]/10 text-[#00FF41] text-xs font-bold disabled:opacity-30 transition">
             {saving ? "Saving..." : "Save"}
           </button>
@@ -128,7 +128,7 @@ export default function SettingsPage() {
         {msg && <p className="text-xs text-center text-[#00FF41]">{msg}</p>}
 
         {/* Quick interests */}
-        <Section title="Quick Interests" subtitle="Tap to toggle">
+        <Section title="Priority Domains" subtitle="Tap to activate tracking">
           <div className="flex flex-wrap gap-2">
             {QUICK_INTERESTS.map(topic => {
               const active = prefs.interests.some(i => i.toLowerCase() === topic.toLowerCase());
@@ -158,7 +158,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* Section boost/ignore */}
-        <Section title="Section Priority" subtitle="Boost or ignore briefing categories">
+        <Section title="Briefing Priorities" subtitle="Amplify or suppress intel categories">
           <div className="space-y-1.5">
             {SECTIONS.map(s => {
               const boosted = prefs.briefing_overlay.boost_categories.includes(s);
@@ -199,12 +199,12 @@ export default function SettingsPage() {
           onRemove={v => removeItem("blocked_sources", v)} placeholder="example.com" />
 
         {/* Workflow dispatch */}
-        <Section title="Run Workflows">
+        <Section title="Deploy Protocols">
           <div className="flex flex-wrap gap-2">
             {["pipeline.yml", "daily_email.yml", "weekly_digest.yml", "ingest.yml", "dreamtime.yml"].map(w => (
               <button key={w} onClick={() => dispatch(w)}
-                className="px-3 py-1.5 rounded-lg border border-white/10 bg-[#0c0c0c] text-[11px] text-gray-400 hover:border-[#00FF41]/30 hover:text-gray-200 transition">
-                {w.replace(".yml", "")}
+                className="px-3 py-1.5 rounded-lg border border-[#00C2FF]/15 bg-[#0c0c0c] text-[11px] text-gray-400 hover:border-[#00C2FF]/40 hover:text-[#00C2FF] transition font-mono uppercase tracking-wider">
+                {w.replace(".yml", "").replace("_", " ")}
               </button>
             ))}
           </div>
