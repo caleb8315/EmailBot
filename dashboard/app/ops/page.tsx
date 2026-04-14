@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { createClient } from "@/lib/supabase";
 
 /* ────── Types ────── */
 
@@ -138,6 +139,23 @@ function severityBadge(s: number): { label: string; cls: string } {
   return { label: "LOW", cls: "bg-green-500/20 text-green-400" };
 }
 
+interface Digest {
+  id: string;
+  created_at: string;
+  channels: string[];
+  subject: string | null;
+  plain_text: string;
+}
+
+interface GHRun {
+  id: number;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+  html_url: string;
+}
+
 /* ────── Main Component ────── */
 
 function OpsCenter() {
@@ -155,7 +173,12 @@ function OpsCenter() {
   const [dreams, setDreams] = useState<DreamScenario[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<MapEvent | null>(null);
 
+  const [digests, setDigests] = useState<Digest[]>([]);
+  const [ghRuns, setGhRuns] = useState<GHRun[]>([]);
+  const [dispatchMsg, setDispatchMsg] = useState<string | null>(null);
+
   const [feedTab, setFeedTab] = useState<"fused" | "articles" | "events">("fused");
+  const [showActions, setShowActions] = useState(false);
 
   /* ── Data fetching ── */
   const safeFetch = async (url: string) => {
@@ -163,7 +186,7 @@ function OpsCenter() {
   };
 
   const fetchAll = useCallback(async () => {
-    const [ev, fused, art, runs, hypo, arc, dream] = await Promise.all([
+    const [ev, fused, art, runs, hypo, arc, dream, dig, ghr] = await Promise.all([
       safeFetch("/api/intel/events?hours=48&limit=500&severity_min=15"),
       safeFetch("/api/intel/fused?hours=48&limit=50"),
       safeFetch("/api/data/articles?limit=30"),
@@ -171,6 +194,8 @@ function OpsCenter() {
       safeFetch("/api/intel/hypotheses"),
       safeFetch("/api/intel/arcs"),
       safeFetch("/api/intel/dreamtime"),
+      safeFetch("/api/data/digests"),
+      safeFetch("/api/github/runs"),
     ]);
 
     setEvents(ev.events ?? []);
@@ -180,6 +205,8 @@ function OpsCenter() {
     setHypotheses(hypo.hypotheses ?? []);
     setArcs(arc.arcs ?? []);
     setDreams(dream.scenarios ?? []);
+    setDigests(dig.digests ?? []);
+    setGhRuns(ghr.runs ?? []);
   }, []);
 
   useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 60_000); return () => clearInterval(i); }, [fetchAll]);
@@ -252,14 +279,77 @@ function OpsCenter() {
     }
   }, [events, mapReady]);
 
+  /* ── Dispatch workflow ── */
+  const dispatch = async (workflow: string) => {
+    setDispatchMsg(null);
+    try {
+      const res = await fetch("/api/github/dispatch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workflow }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || res.statusText);
+      setDispatchMsg(`Triggered ${workflow.replace(".yml", "")}`);
+      setTimeout(() => setDispatchMsg(null), 3000);
+      setTimeout(fetchAll, 2000);
+    } catch (err) { setDispatchMsg(err instanceof Error ? err.message : String(err)); setTimeout(() => setDispatchMsg(null), 4000); }
+  };
+
   /* ── Derived stats ── */
   const flashCount = fusedSignals.filter(s => s.alert_tier === "FLASH").length;
   const priorityCount = fusedSignals.filter(s => s.alert_tier === "PRIORITY").length;
   const lastRun = engineRuns[0];
+  const articlesToday = articles.filter(a => new Date(a.fetched_at).toDateString() === new Date().toDateString()).length;
+  const alertCount = useMemo(() => articles.filter((a: any) => a.alerted).length, [articles]);
+  const latestDigest = digests[0];
+  const lastGhRun = ghRuns[0];
 
   /* ────── Render ────── */
   return (
-    <div className="h-[calc(100vh-48px)] flex flex-col md:flex-row bg-[#050505] text-gray-200 overflow-hidden">
+    <div className="h-[calc(100vh-48px)] flex flex-col bg-[#050505] text-gray-200 overflow-hidden">
+      {/* ════ COMMAND BAR ════ */}
+      <div className="shrink-0 border-b border-white/5 bg-[#080808]">
+        <div className="flex items-center gap-2 px-3 py-1.5 overflow-x-auto no-scrollbar">
+          {/* Stat badges */}
+          <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
+            <span className="bg-[#00FF41]/10 text-[#00FF41] px-2 py-0.5 rounded-full font-bold">{events.length} events</span>
+            <span className="bg-white/5 text-gray-400 px-2 py-0.5 rounded-full">{articlesToday} articles today</span>
+            {flashCount > 0 && <span className="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold">{flashCount} FLASH</span>}
+            {priorityCount > 0 && <span className="bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">{priorityCount} PRIORITY</span>}
+            {lastGhRun && (
+              <span className={`px-2 py-0.5 rounded-full ${lastGhRun.conclusion === "success" ? "bg-green-500/10 text-green-400" : lastGhRun.conclusion === "failure" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>
+                {lastGhRun.name.split("/").pop()}: {lastGhRun.conclusion || lastGhRun.status}
+              </span>
+            )}
+          </div>
+          <div className="flex-1" />
+          {/* Quick actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            {dispatchMsg && <span className="text-[10px] text-[#00FF41] font-mono mr-1">{dispatchMsg}</span>}
+            <button onClick={() => setShowActions(v => !v)} className="text-[10px] text-gray-500 hover:text-gray-300 px-2 py-1 rounded-md hover:bg-white/5 transition font-bold uppercase tracking-wider">
+              {showActions ? "Hide" : "Actions"}
+            </button>
+            <button onClick={() => fetchAll()} className="text-gray-500 hover:text-[#00FF41] p-1 rounded-md hover:bg-white/5 transition" title="Refresh">
+              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="2"><path d="M20 4v5h-5"/><path d="M4 20v-5h5"/><path d="M19 9a8 8 0 0 0-13-3M5 15a8 8 0 0 0 13 3"/></svg>
+            </button>
+          </div>
+        </div>
+        {showActions && (
+          <div className="flex items-center gap-2 px-3 pb-2 overflow-x-auto no-scrollbar">
+            {[
+              { w: "pipeline.yml", label: "Pipeline", icon: "▶" },
+              { w: "daily_email.yml", label: "Daily Digest", icon: "📧" },
+              { w: "weekly_digest.yml", label: "Weekly Recap", icon: "📋" },
+              { w: "ingest.yml", label: "Ingest", icon: "📡" },
+              { w: "dreamtime.yml", label: "Dreamtime", icon: "🌙" },
+            ].map(a => (
+              <button key={a.w} onClick={() => dispatch(a.w)} className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-[#0c0c0c] text-[11px] text-gray-400 hover:border-[#00FF41]/30 hover:text-gray-200 transition">
+                <span>{a.icon}</span> {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ════ MAIN 3-COL LAYOUT ════ */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
       {/* ════ LEFT: MAP ════ */}
       <div className="relative flex-1 min-h-[40vh]">
         <div ref={mapContainer} className="absolute inset-0" style={{ width: "100%", height: "100%" }} />
@@ -268,21 +358,14 @@ function OpsCenter() {
             <div className="text-[#00FF41] font-mono animate-pulse text-sm">LOADING MAP...</div>
           </div>
         )}
-        {/* Status bar overlaid on map */}
-        <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-2">
-          <div className="bg-black/85 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-[10px] font-mono">
-            <span className="text-[#00FF41] font-bold">{events.length}</span>
-            <span className="text-gray-500">events</span>
-            {flashCount > 0 && <span className="text-red-400 font-bold">{flashCount} FLASH</span>}
-            {priorityCount > 0 && <span className="text-orange-400">{priorityCount} PRIORITY</span>}
-          </div>
-          {lastRun && (
-            <div className="bg-black/85 backdrop-blur-md rounded-lg px-3 py-1.5 text-[10px] font-mono text-gray-500">
-              {lastRun.engine}: <span className={lastRun.status === "success" ? "text-green-400" : "text-red-400"}>{lastRun.status}</span>{" "}
-              {timeAgo(lastRun.started_at)} ago
+        {/* Compact map overlay */}
+        {lastRun && (
+          <div className="absolute top-2 left-2 z-20">
+            <div className="bg-black/80 backdrop-blur-md rounded-lg px-2.5 py-1 text-[9px] font-mono text-gray-500">
+              Last engine: <span className={lastRun.status === "success" ? "text-green-400" : "text-red-400"}>{lastRun.engine} {lastRun.status}</span> {timeAgo(lastRun.started_at)} ago
             </div>
-          )}
-        </div>
+          </div>
+        )}
         {/* Selected event detail */}
         {selectedEvent && (
           <div className="absolute bottom-2 left-2 right-2 md:left-auto md:right-2 md:w-80 bg-black/92 backdrop-blur-md border border-white/10 rounded-xl p-3 z-30">
@@ -372,6 +455,18 @@ function OpsCenter() {
       {/* ════ RIGHT: RISK RAIL ════ */}
       <div className="hidden lg:flex w-[300px] border-l border-white/5 flex-col overflow-y-auto">
         <div className="p-3 space-y-4">
+          {/* Latest Digest */}
+          {latestDigest && (
+            <section>
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#00FF41]/70 mb-2">Latest Digest</h3>
+              <div className="bg-[#0c0c0c] border border-white/5 rounded-lg p-2.5">
+                <p className="text-[11px] text-gray-200 font-semibold leading-snug">{latestDigest.subject || "Daily Briefing"}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{timeAgo(latestDigest.created_at)}</p>
+                <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed line-clamp-4">{latestDigest.plain_text.slice(0, 300)}</p>
+              </div>
+            </section>
+          )}
+
           {/* Engine health */}
           <section>
             <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#00FF41]/70 mb-2">Engine Status</h3>
@@ -386,6 +481,22 @@ function OpsCenter() {
               {engineRuns.length === 0 && <p className="text-[10px] text-gray-600">No engine runs recorded yet.</p>}
             </div>
           </section>
+
+          {/* Workflow Runs */}
+          {ghRuns.length > 0 && (
+            <section>
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#00C2FF]/70 mb-2">Workflow Runs</h3>
+              <div className="space-y-1">
+                {ghRuns.slice(0, 6).map(r => (
+                  <a key={r.id} href={r.html_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[10px] hover:bg-white/5 rounded px-1 py-0.5 -mx-1 transition">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.conclusion === "success" ? "bg-green-400" : r.conclusion === "failure" ? "bg-red-400" : "bg-yellow-400"}`} />
+                    <span className="text-gray-300 truncate flex-1">{r.name}</span>
+                    <span className="text-gray-600 shrink-0">{timeAgo(r.created_at)}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Active hypotheses */}
           <section>
@@ -432,6 +543,7 @@ function OpsCenter() {
             {dreams.length === 0 && <p className="text-[10px] text-gray-600">No scenarios generated yet.</p>}
           </section>
         </div>
+      </div>
       </div>
     </div>
   );

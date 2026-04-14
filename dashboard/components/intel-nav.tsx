@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 const PRIMARY_NAV = [
   { href: "/ops", label: "Ops", icon: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7Zm10-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" },
@@ -12,6 +13,12 @@ const PRIMARY_NAV = [
 
 export default function IntelNav() {
   const pathname = usePathname();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   const isActive = (href: string) => {
     if (href === "/ops") return pathname === "/ops" || pathname === "/map" || pathname === "/";
@@ -69,6 +76,13 @@ export default function IntelNav() {
               </Link>
             );
           })}
+          <div className="flex-1" />
+          <button
+            onClick={handleSignOut}
+            className="px-3 py-1.5 rounded-md text-xs font-medium text-[#A3A3A3]/40 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+          >
+            Sign out
+          </button>
         </div>
       </nav>
     </>
