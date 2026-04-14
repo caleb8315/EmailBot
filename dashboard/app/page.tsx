@@ -1,3 +1,5 @@
-import DashboardClient from "./dashboard-client";
+import { redirect } from "next/navigation";
 
-export default DashboardClient;
+export default function Home() {
+  redirect("/ops");
+}
