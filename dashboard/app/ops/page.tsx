@@ -186,12 +186,13 @@ function OpsCenter() {
     let cancelled = false;
     (async () => {
       const maplibregl = (await import("maplibre-gl")).default;
-      if (!document.querySelector("#maplibre-css-ops")) {
+      if (!document.querySelector("#maplibre-css")) {
         const link = document.createElement("link");
-        link.id = "maplibre-css-ops";
+        link.id = "maplibre-css";
         link.rel = "stylesheet";
         link.href = "https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css";
         document.head.appendChild(link);
+        await new Promise(r => setTimeout(r, 200));
       }
       if (cancelled || !mapContainer.current) return;
       const m = new maplibregl.Map({
@@ -256,8 +257,8 @@ function OpsCenter() {
   return (
     <div className="h-[calc(100vh-48px)] flex flex-col md:flex-row bg-[#050505] text-gray-200 overflow-hidden">
       {/* ════ LEFT: MAP ════ */}
-      <div className="relative flex-1 min-h-[40vh] md:min-h-0">
-        <div ref={mapContainer} className="absolute inset-0" />
+      <div className="relative flex-1 min-h-[40vh]">
+        <div ref={mapContainer} className="absolute inset-0" style={{ width: "100%", height: "100%" }} />
         {!mapReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#050505] z-10">
             <div className="text-[#00FF41] font-mono animate-pulse text-sm">LOADING MAP...</div>
