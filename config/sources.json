@@ -1,155 +1,104 @@
 {
   "sources": [
-    {
-      "name": "Google News — Top stories",
-      "url": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 7
-    },
-    {
-      "name": "Reuters Top News",
-      "url": "https://feeds.reuters.com/reuters/topNews",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 9
-    },
-    {
-      "name": "AP News (RSSHub)",
-      "url": "https://rsshub.app/apnews/topics/apf-topnews",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 9
-    },
-    {
-      "name": "BBC World",
-      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 8
-    },
-    {
-      "name": "NPR News",
-      "url": "https://feeds.npr.org/1001/rss.xml",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 8
-    },
-    {
-      "name": "The Guardian World",
-      "url": "https://www.theguardian.com/world/rss",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 8
-    },
-    {
-      "name": "Reddit — r/worldnews",
-      "url": "https://www.reddit.com/r/worldnews/.rss",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 5
-    },
-    {
-      "name": "Reddit — r/technology",
-      "url": "https://www.reddit.com/r/technology/.rss",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 5
-    },
-    {
-      "name": "Reddit — r/news",
-      "url": "https://www.reddit.com/r/news/.rss",
-      "type": "rss",
-      "category": "world",
-      "trust_score": 5
-    },
-    {
-      "name": "Hacker News — front page",
-      "url": "https://hnrss.org/frontpage",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 6
-    },
-    {
-      "name": "Hacker News Best",
-      "url": "https://hnrss.org/best",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 6
-    },
-    {
-      "name": "TechCrunch",
-      "url": "https://techcrunch.com/feed/",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 7
-    },
-    {
-      "name": "Ars Technica",
-      "url": "https://feeds.arstechnica.com/arstechnica/index",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 8
-    },
-    {
-      "name": "The Verge",
-      "url": "https://www.theverge.com/rss/index.xml",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 7
-    },
-    {
-      "name": "Wired",
-      "url": "https://www.wired.com/feed/rss",
-      "type": "rss",
-      "category": "tech",
-      "trust_score": 7
-    },
-    {
-      "name": "Bloomberg Markets",
-      "url": "https://feeds.bloomberg.com/markets/news.rss",
-      "type": "rss",
-      "category": "finance",
-      "trust_score": 9
-    },
-    {
-      "name": "Financial Times",
-      "url": "https://www.ft.com/?format=rss",
-      "type": "rss",
-      "category": "finance",
-      "trust_score": 9
-    },
-    {
-      "name": "CoinDesk",
-      "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
-      "type": "rss",
-      "category": "finance",
-      "trust_score": 7
-    }
+    {"name":"Reuters","url":"https://feeds.reuters.com/reuters/topNews","type":"rss","category":"world","trust_score":9,"tier":1,"lean":"center","reliability":0.95,"signal_type":"breaking","region":"global","topics":["geopolitics","diplomacy"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"AP News","url":"https://rsshub.app/apnews/topics/apf-topnews","type":"rss","category":"world","trust_score":9,"tier":1,"lean":"center","reliability":0.95,"signal_type":"breaking","region":"global","topics":["geopolitics"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"BBC World","url":"https://feeds.bbci.co.uk/news/world/rss.xml","type":"rss","category":"world","trust_score":8,"tier":1,"lean":"center","reliability":0.9,"signal_type":"breaking","region":"global","topics":["geopolitics","diplomacy"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"NPR News","url":"https://feeds.npr.org/1001/rss.xml","type":"rss","category":"world","trust_score":8,"tier":1,"lean":"center-left","reliability":0.85,"signal_type":"analysis","region":"US","topics":["geopolitics","conflicts"],"update_frequency":"medium","role":"analysis","briefing_category":"World & Geopolitics"},
+    {"name":"The Guardian World","url":"https://www.theguardian.com/world/rss","type":"rss","category":"world","trust_score":8,"tier":1,"lean":"center-left","reliability":0.85,"signal_type":"analysis","region":"EU","topics":["geopolitics","conflicts"],"update_frequency":"medium","role":"analysis","briefing_category":"World & Geopolitics"},
+    {"name":"Al Jazeera","url":"https://www.aljazeera.com/xml/rss/all.xml","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center-left","reliability":0.8,"signal_type":"breaking","region":"MiddleEast","topics":["geopolitics","conflicts"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"France24","url":"https://www.france24.com/en/rss","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.85,"signal_type":"breaking","region":"EU","topics":["geopolitics"],"update_frequency":"medium","role":"confirmation","briefing_category":"World & Geopolitics"},
+    {"name":"DW News","url":"https://rss.dw.com/rdf/rss-en-world","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.85,"signal_type":"breaking","region":"EU","topics":["geopolitics"],"update_frequency":"medium","role":"confirmation","briefing_category":"World & Geopolitics"},
+    {"name":"SCMP","url":"https://www.scmp.com/rss/91/feed","type":"rss","category":"world","trust_score":6,"tier":2,"lean":"center","reliability":0.75,"signal_type":"analysis","region":"China","topics":["geopolitics","China"],"update_frequency":"medium","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"Nikkei Asia","url":"https://asia.nikkei.com/rss","type":"rss","category":"world","trust_score":8,"tier":1,"lean":"center","reliability":0.85,"signal_type":"analysis","region":"Asia","topics":["geopolitics","economy","Japan"],"update_frequency":"medium","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"Yonhap News","url":"https://en.yna.co.kr/RSS/news.xml","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"Asia","topics":["geopolitics","NorthKorea","Korea"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"The Diplomat","url":"https://thediplomat.com/feed/","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"analysis","region":"Asia","topics":["geopolitics","China","security"],"update_frequency":"medium","role":"analysis","briefing_category":"World & Geopolitics"},
+    {"name":"The Straits Times","url":"https://www.straitstimes.com/news/asia/rss.xml","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"Asia","topics":["geopolitics","ASEAN"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"Google News — Top stories","url":"https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en","type":"rss","category":"world","trust_score":7,"tier":2,"lean":"center","reliability":0.55,"signal_type":"breaking","region":"global","topics":["geopolitics"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"RT","url":"https://www.rt.com/rss/news/","type":"rss","category":"world","trust_score":3,"tier":2,"lean":"institutional","reliability":0.4,"signal_type":"narrative","region":"Russia","topics":["geopolitics","Russia"],"update_frequency":"high","role":"contrarian","briefing_category":"World & Geopolitics"},
+    {"name":"TASS","url":"https://tass.com/rss/v2.xml","type":"rss","category":"world","trust_score":3,"tier":2,"lean":"institutional","reliability":0.4,"signal_type":"narrative","region":"Russia","topics":["geopolitics","Russia"],"update_frequency":"high","role":"contrarian","briefing_category":"World & Geopolitics"},
+    {"name":"Reddit — r/worldnews","url":"https://www.reddit.com/r/worldnews/.rss","type":"rss","category":"world","trust_score":5,"tier":3,"lean":"independent","reliability":0.45,"signal_type":"breaking","region":"global","topics":["geopolitics"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+    {"name":"Reddit — r/news","url":"https://www.reddit.com/r/news/.rss","type":"rss","category":"world","trust_score":5,"tier":3,"lean":"independent","reliability":0.45,"signal_type":"breaking","region":"US","topics":["geopolitics"],"update_frequency":"high","role":"signal","briefing_category":"World & Geopolitics"},
+
+    {"name":"NPR — World","url":"https://feeds.npr.org/1004/rss.xml","type":"rss","category":"conflict","trust_score":8,"tier":1,"lean":"center-left","reliability":0.85,"signal_type":"analysis","region":"global","topics":["conflicts","geopolitics"],"update_frequency":"medium","role":"analysis","briefing_category":"Wars & Conflicts"},
+    {"name":"Long War Journal","url":"https://www.longwarjournal.org/feed","type":"rss","category":"conflict","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"analysis","region":"MiddleEast","topics":["conflicts","terrorism"],"update_frequency":"medium","role":"analysis","briefing_category":"Wars & Conflicts"},
+    {"name":"SIPRI","url":"https://www.sipri.org/rss.xml","type":"rss","category":"conflict","trust_score":8,"tier":1,"lean":"center","reliability":0.9,"signal_type":"data","region":"global","topics":["conflicts","arms","nuclear"],"update_frequency":"low","role":"analysis","briefing_category":"Wars & Conflicts"},
+    {"name":"IISS","url":"https://www.iiss.org/rss/","type":"rss","category":"conflict","trust_score":8,"tier":1,"lean":"center","reliability":0.9,"signal_type":"analysis","region":"global","topics":["conflicts","defense","security"],"update_frequency":"low","role":"analysis","briefing_category":"Wars & Conflicts"},
+    {"name":"Conflict News (Twitter/RSS)","url":"https://rss.app/feeds/v1.1/tgbGMcWV5EqZnl71.xml","type":"rss","category":"conflict","trust_score":5,"tier":3,"lean":"independent","reliability":0.5,"signal_type":"breaking","region":"global","topics":["conflicts"],"update_frequency":"high","role":"signal","briefing_category":"Wars & Conflicts"},
+
+    {"name":"Reuters Business","url":"https://news.google.com/rss/search?q=site:reuters.com+economy+OR+markets&hl=en-US&gl=US&ceid=US:en","type":"rss","category":"finance","trust_score":9,"tier":1,"lean":"center","reliability":0.95,"signal_type":"breaking","region":"global","topics":["markets","economy"],"update_frequency":"high","role":"signal","briefing_category":"Economy & Markets"},
+    {"name":"Bloomberg","url":"https://news.google.com/rss/search?q=site:bloomberg.com+economy&hl=en-US&gl=US&ceid=US:en","type":"rss","category":"finance","trust_score":9,"tier":1,"lean":"center","reliability":0.9,"signal_type":"breaking","region":"global","topics":["markets","economy"],"update_frequency":"high","role":"signal","briefing_category":"Economy & Markets"},
+    {"name":"Financial Times","url":"https://www.ft.com/?format=rss","type":"rss","category":"finance","trust_score":9,"tier":1,"lean":"center-right","reliability":0.9,"signal_type":"analysis","region":"global","topics":["markets","economy","stocks"],"update_frequency":"medium","role":"analysis","briefing_category":"Economy & Markets"},
+    {"name":"CNBC — Economy","url":"https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258","type":"rss","category":"finance","trust_score":7,"tier":2,"lean":"center-right","reliability":0.8,"signal_type":"data","region":"US","topics":["markets","economy"],"update_frequency":"high","role":"confirmation","briefing_category":"Economy & Markets"},
+    {"name":"Wolf Street","url":"https://wolfstreet.com/feed/","type":"rss","category":"finance","trust_score":5,"tier":3,"lean":"independent","reliability":0.6,"signal_type":"analysis","region":"US","topics":["economy","housing"],"update_frequency":"low","role":"contrarian","briefing_category":"Economy & Markets"},
+    {"name":"FreightWaves","url":"https://www.freightwaves.com/news/rss.xml","type":"rss","category":"finance","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"data","region":"global","topics":["supply_chain","logistics","shipping"],"update_frequency":"high","role":"signal","briefing_category":"Economy & Markets"},
+    {"name":"gCaptain","url":"https://gcaptain.com/feed/","type":"rss","category":"finance","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"breaking","region":"global","topics":["shipping","maritime","supply_chain"],"update_frequency":"high","role":"signal","briefing_category":"Economy & Markets"},
+    {"name":"OilPrice.com","url":"https://oilprice.com/rss/main","type":"rss","category":"finance","trust_score":6,"tier":2,"lean":"center","reliability":0.7,"signal_type":"data","region":"global","topics":["oil","energy","commodities"],"update_frequency":"high","role":"signal","briefing_category":"Economy & Markets"},
+    {"name":"EIA Today in Energy","url":"https://www.eia.gov/todayinenergy/rss.xml","type":"rss","category":"finance","trust_score":9,"tier":1,"lean":"center","reliability":0.95,"signal_type":"data","region":"US","topics":["energy","oil","gas"],"update_frequency":"medium","role":"signal","briefing_category":"Economy & Markets"},
+
+    {"name":"CNBC — Stocks","url":"https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069","type":"rss","category":"stocks","trust_score":7,"tier":2,"lean":"center-right","reliability":0.8,"signal_type":"data","region":"US","topics":["stocks"],"update_frequency":"high","role":"signal","briefing_category":"Stocks"},
+    {"name":"MarketWatch","url":"https://feeds.marketwatch.com/marketwatch/topstories/","type":"rss","category":"stocks","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"data","region":"US","topics":["stocks","markets"],"update_frequency":"high","role":"signal","briefing_category":"Stocks"},
+    {"name":"Seeking Alpha","url":"https://seekingalpha.com/market_currents.xml","type":"rss","category":"stocks","trust_score":6,"tier":2,"lean":"center-right","reliability":0.65,"signal_type":"analysis","region":"US","topics":["stocks"],"update_frequency":"high","role":"analysis","briefing_category":"Stocks"},
+    {"name":"Yahoo Finance","url":"https://finance.yahoo.com/news/rssindex","type":"rss","category":"stocks","trust_score":6,"tier":2,"lean":"center","reliability":0.7,"signal_type":"data","region":"US","topics":["stocks","markets"],"update_frequency":"high","role":"signal","briefing_category":"Stocks"},
+    {"name":"Investor's Business Daily","url":"https://www.investors.com/feed/","type":"rss","category":"stocks","trust_score":7,"tier":2,"lean":"center-right","reliability":0.75,"signal_type":"analysis","region":"US","topics":["stocks"],"update_frequency":"medium","role":"analysis","briefing_category":"Stocks"},
+    {"name":"Barron's","url":"https://news.google.com/rss/search?q=site:barrons.com+stocks+OR+markets&hl=en-US&gl=US&ceid=US:en","type":"rss","category":"stocks","trust_score":8,"tier":1,"lean":"center-right","reliability":0.85,"signal_type":"analysis","region":"US","topics":["stocks","markets"],"update_frequency":"medium","role":"analysis","briefing_category":"Stocks"},
+
+    {"name":"CoinDesk","url":"https://www.coindesk.com/arc/outboundfeeds/rss/","type":"rss","category":"crypto","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"breaking","region":"global","topics":["crypto"],"update_frequency":"high","role":"signal","briefing_category":"Crypto"},
+    {"name":"CoinTelegraph","url":"https://cointelegraph.com/rss","type":"rss","category":"crypto","trust_score":6,"tier":2,"lean":"center","reliability":0.65,"signal_type":"breaking","region":"global","topics":["crypto"],"update_frequency":"high","role":"signal","briefing_category":"Crypto"},
+    {"name":"Decrypt","url":"https://decrypt.co/feed","type":"rss","category":"crypto","trust_score":6,"tier":2,"lean":"center","reliability":0.7,"signal_type":"breaking","region":"global","topics":["crypto"],"update_frequency":"high","role":"signal","briefing_category":"Crypto"},
+    {"name":"The Block","url":"https://www.theblock.co/rss.xml","type":"rss","category":"crypto","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"data","region":"global","topics":["crypto"],"update_frequency":"high","role":"signal","briefing_category":"Crypto"},
+    {"name":"Bitcoin Magazine","url":"https://bitcoinmagazine.com/.rss/full/","type":"rss","category":"crypto","trust_score":5,"tier":2,"lean":"center","reliability":0.6,"signal_type":"narrative","region":"global","topics":["crypto"],"update_frequency":"medium","role":"analysis","briefing_category":"Crypto"},
+    {"name":"DL News","url":"https://www.dlnews.com/arc/outboundfeeds/rss/","type":"rss","category":"crypto","trust_score":6,"tier":2,"lean":"center","reliability":0.65,"signal_type":"breaking","region":"global","topics":["crypto"],"update_frequency":"medium","role":"signal","briefing_category":"Crypto"},
+
+    {"name":"Ars Technica","url":"https://feeds.arstechnica.com/arstechnica/index","type":"rss","category":"tech","trust_score":8,"tier":2,"lean":"center-left","reliability":0.85,"signal_type":"analysis","region":"US","topics":["AI","technology"],"update_frequency":"medium","role":"analysis","briefing_category":"AI & Technology"},
+    {"name":"MIT Tech Review","url":"https://www.technologyreview.com/feed/","type":"rss","category":"tech","trust_score":8,"tier":2,"lean":"center","reliability":0.9,"signal_type":"analysis","region":"US","topics":["AI","semiconductors","technology"],"update_frequency":"low","role":"analysis","briefing_category":"AI & Technology"},
+    {"name":"The Verge","url":"https://www.theverge.com/rss/index.xml","type":"rss","category":"tech","trust_score":7,"tier":2,"lean":"center-left","reliability":0.75,"signal_type":"breaking","region":"US","topics":["technology"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"TechCrunch","url":"https://techcrunch.com/feed/","type":"rss","category":"tech","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"US","topics":["AI","technology"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"Wired","url":"https://www.wired.com/feed/rss","type":"rss","category":"tech","trust_score":7,"tier":2,"lean":"center-left","reliability":0.8,"signal_type":"analysis","region":"US","topics":["AI","technology"],"update_frequency":"medium","role":"analysis","briefing_category":"AI & Technology"},
+    {"name":"Hacker News — front page","url":"https://hnrss.org/frontpage","type":"rss","category":"tech","trust_score":6,"tier":3,"lean":"independent","reliability":0.5,"signal_type":"breaking","region":"global","topics":["technology"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"Hacker News Best","url":"https://hnrss.org/best","type":"rss","category":"tech","trust_score":6,"tier":3,"lean":"independent","reliability":0.5,"signal_type":"analysis","region":"global","topics":["technology"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"Reddit — r/technology","url":"https://www.reddit.com/r/technology/.rss","type":"rss","category":"tech","trust_score":5,"tier":3,"lean":"independent","reliability":0.45,"signal_type":"breaking","region":"US","topics":["technology"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"Krebs on Security","url":"https://krebsonsecurity.com/feed/","type":"rss","category":"tech","trust_score":8,"tier":2,"lean":"center","reliability":0.9,"signal_type":"analysis","region":"US","topics":["cyber","security"],"update_frequency":"low","role":"analysis","briefing_category":"AI & Technology"},
+    {"name":"BleepingComputer","url":"https://www.bleepingcomputer.com/feed/","type":"rss","category":"tech","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"global","topics":["cyber","security"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+    {"name":"The Record","url":"https://therecord.media/feed","type":"rss","category":"tech","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"global","topics":["cyber","security"],"update_frequency":"high","role":"signal","briefing_category":"AI & Technology"},
+
+    {"name":"Reuters Politics","url":"https://news.google.com/rss/search?q=site:reuters.com+politics&hl=en-US&gl=US&ceid=US:en","type":"rss","category":"politics","trust_score":9,"tier":1,"lean":"center","reliability":0.95,"signal_type":"breaking","region":"US","topics":["politics","policy"],"update_frequency":"high","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"Politico","url":"https://rss.politico.com/politics-news.xml","type":"rss","category":"politics","trust_score":7,"tier":2,"lean":"center-left","reliability":0.8,"signal_type":"breaking","region":"US","topics":["politics","policy"],"update_frequency":"high","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"The Hill","url":"https://thehill.com/feed/","type":"rss","category":"politics","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"breaking","region":"US","topics":["politics"],"update_frequency":"high","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"ProPublica","url":"https://www.propublica.org/feeds/propublica/main","type":"rss","category":"politics","trust_score":8,"tier":2,"lean":"center-left","reliability":0.85,"signal_type":"analysis","region":"US","topics":["politics","corruption"],"update_frequency":"low","role":"analysis","briefing_category":"Power & Elite Activity"},
+    {"name":"The Intercept","url":"https://theintercept.com/feed/?rss","type":"rss","category":"politics","trust_score":6,"tier":2,"lean":"left","reliability":0.7,"signal_type":"analysis","region":"US","topics":["politics","surveillance"],"update_frequency":"low","role":"contrarian","briefing_category":"Power & Elite Activity"},
+    {"name":"White House Briefing Room","url":"https://www.whitehouse.gov/feed/","type":"rss","category":"politics","trust_score":8,"tier":1,"lean":"institutional","reliability":0.9,"signal_type":"breaking","region":"US","topics":["politics","policy","executive"],"update_frequency":"medium","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"State Department","url":"https://www.state.gov/rss-feed/press-releases/feed/","type":"rss","category":"politics","trust_score":8,"tier":1,"lean":"institutional","reliability":0.9,"signal_type":"breaking","region":"US","topics":["diplomacy","foreign_policy"],"update_frequency":"medium","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"DOD News","url":"https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=10","type":"rss","category":"politics","trust_score":8,"tier":1,"lean":"institutional","reliability":0.9,"signal_type":"breaking","region":"US","topics":["military","defense"],"update_frequency":"medium","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"Federal Register","url":"https://www.federalregister.gov/documents/search.atom?conditions%5Btype%5D=RULE&conditions%5Btype%5D=PRORULE&conditions%5Btype%5D=PRESDOCU","type":"rss","category":"politics","trust_score":9,"tier":1,"lean":"institutional","reliability":0.99,"signal_type":"data","region":"US","topics":["policy","regulation"],"update_frequency":"medium","role":"signal","briefing_category":"Power & Elite Activity"},
+    {"name":"Breitbart","url":"https://feeds.feedburner.com/breitbart","type":"rss","category":"politics","trust_score":3,"tier":2,"lean":"right","reliability":0.4,"signal_type":"narrative","region":"US","topics":["politics"],"update_frequency":"high","role":"contrarian","briefing_category":"Power & Elite Activity"},
+
+    {"name":"WHO Disease Outbreak News","url":"https://www.who.int/feeds/entity/don/en/rss.xml","type":"rss","category":"health","trust_score":9,"tier":1,"lean":"institutional","reliability":0.95,"signal_type":"breaking","region":"global","topics":["health","pandemic","disease"],"update_frequency":"medium","role":"signal","briefing_category":"Health & Science"},
+    {"name":"CDC MMWR","url":"https://tools.cdc.gov/api/v2/resources/media/403702.rss","type":"rss","category":"health","trust_score":9,"tier":1,"lean":"institutional","reliability":0.95,"signal_type":"data","region":"US","topics":["health","pandemic","disease"],"update_frequency":"low","role":"signal","briefing_category":"Health & Science"},
+    {"name":"ProMED","url":"https://promedmail.org/feed/","type":"rss","category":"health","trust_score":8,"tier":1,"lean":"center","reliability":0.9,"signal_type":"breaking","region":"global","topics":["disease","outbreak","pandemic"],"update_frequency":"high","role":"signal","briefing_category":"Health & Science"},
+    {"name":"STAT News","url":"https://www.statnews.com/feed/","type":"rss","category":"health","trust_score":8,"tier":2,"lean":"center","reliability":0.85,"signal_type":"breaking","region":"US","topics":["health","pharma","biotech"],"update_frequency":"high","role":"signal","briefing_category":"Health & Science"},
+
+    {"name":"Colorado Public Radio","url":"https://www.cpr.org/feed/","type":"rss","category":"local","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"breaking","region":"US","topics":["colorado","denver","local"],"update_frequency":"high","role":"signal","briefing_category":"US Local & Weather"},
+    {"name":"Colorado Sun","url":"https://coloradosun.com/feed/","type":"rss","category":"local","trust_score":7,"tier":2,"lean":"center","reliability":0.8,"signal_type":"analysis","region":"US","topics":["colorado","politics","local"],"update_frequency":"medium","role":"signal","briefing_category":"US Local & Weather"},
+    {"name":"Denver Post","url":"https://www.denverpost.com/feed/","type":"rss","category":"local","trust_score":7,"tier":2,"lean":"center","reliability":0.75,"signal_type":"breaking","region":"US","topics":["colorado","denver","local"],"update_frequency":"high","role":"signal","briefing_category":"US Local & Weather"},
+    {"name":"NWS Denver/Boulder","url":"https://alerts.weather.gov/cap/wwaatmget.php?x=COZ039&y=1","type":"rss","category":"local","trust_score":9,"tier":1,"lean":"institutional","reliability":0.99,"signal_type":"breaking","region":"US","topics":["weather","colorado","severe_weather"],"update_frequency":"high","role":"signal","briefing_category":"US Local & Weather"},
+    {"name":"NWS Severe Weather","url":"https://alerts.weather.gov/cap/us.php?x=1","type":"rss","category":"local","trust_score":9,"tier":1,"lean":"institutional","reliability":0.99,"signal_type":"breaking","region":"US","topics":["weather","severe_weather"],"update_frequency":"high","role":"signal","briefing_category":"US Local & Weather"},
+
+    {"name":"The Grayzone","url":"https://thegrayzone.com/feed/","type":"rss","category":"alt","trust_score":3,"tier":3,"lean":"independent","reliability":0.3,"signal_type":"narrative","region":"global","topics":["geopolitics"],"update_frequency":"low","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"},
+    {"name":"Consortium News","url":"https://consortiumnews.com/feed/","type":"rss","category":"alt","trust_score":3,"tier":3,"lean":"independent","reliability":0.3,"signal_type":"narrative","region":"US","topics":["geopolitics","politics"],"update_frequency":"low","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"},
+    {"name":"MintPress News","url":"https://www.mintpressnews.com/feed/","type":"rss","category":"alt","trust_score":2,"tier":3,"lean":"independent","reliability":0.25,"signal_type":"narrative","region":"global","topics":["geopolitics"],"update_frequency":"low","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"},
+    {"name":"Unlimited Hangout","url":"https://unlimitedhangout.com/feed/","type":"rss","category":"alt","trust_score":2,"tier":3,"lean":"independent","reliability":0.2,"signal_type":"narrative","region":"global","topics":["surveillance","corruption"],"update_frequency":"low","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"},
+    {"name":"ZeroHedge","url":"https://feeds.feedburner.com/zerohedge/feed","type":"rss","category":"alt","trust_score":3,"tier":3,"lean":"right","reliability":0.3,"signal_type":"narrative","region":"US","topics":["markets","economy","geopolitics"],"update_frequency":"high","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"},
+    {"name":"Corbett Report","url":"https://www.corbettreport.com/feed/","type":"rss","category":"alt","trust_score":2,"tier":3,"lean":"independent","reliability":0.2,"signal_type":"narrative","region":"global","topics":["surveillance","geopolitics"],"update_frequency":"low","role":"contrarian","briefing_category":"Conspiracy / Unverified Signals"}
   ],
   "trusted_domains": [
-    "reuters.com",
-    "apnews.com",
-    "bbc.co.uk",
-    "bbc.com",
-    "npr.org",
-    "bloomberg.com",
-    "nytimes.com",
-    "washingtonpost.com",
-    "theguardian.com",
-    "ft.com"
+    "reuters.com","apnews.com","bbc.co.uk","bbc.com","npr.org",
+    "bloomberg.com","nytimes.com","washingtonpost.com","theguardian.com","ft.com",
+    "who.int","cdc.gov","state.gov","defense.gov","whitehouse.gov",
+    "federalregister.gov","weather.gov","eia.gov"
   ],
   "blocked_domains": [
-    "buzzfeed.com",
-    "dailymail.co.uk",
-    "infowars.com",
-    "naturalnews.com",
-    "beforeitsnews.com",
-    "thegatewaypundit.com",
-    "worldtruth.tv",
-    "yournewswire.com",
-    "newsmax.com",
-    "oann.com",
-    "sputniknews.com"
+    "buzzfeed.com","dailymail.co.uk","infowars.com","naturalnews.com",
+    "beforeitsnews.com","thegatewaypundit.com","worldtruth.tv",
+    "yournewswire.com","newsmax.com","oann.com","sputniknews.com"
   ]
 }

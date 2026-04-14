@@ -28,6 +28,8 @@ SECTION_ICONS = {
     "Crypto": "🪙",
     "AI & Technology": "🤖",
     "Power & Elite Activity": "🏛️",
+    "Health & Science": "🧬",
+    "US Local & Weather": "🏔️",
     "Conspiracy / Unverified Signals": "⚠️",
 }
 
@@ -35,6 +37,8 @@ LABEL_COLORS = {
     "🟢 VERIFIED": ("#3fb950", "#0d1f14", "VERIFIED"),
     "🟡 DEVELOPING": ("#d29922", "#1c1a00", "DEVELOPING"),
     "🔴 UNVERIFIED": ("#f85149", "#1c0f0f", "UNVERIFIED"),
+    "🟠 QUARANTINED": ("#e3872d", "#1c1200", "QUARANTINED"),
+    "⛔ BLOCKED": ("#6e7681", "#161b22", "BLOCKED"),
 }
 
 

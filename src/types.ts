@@ -168,6 +168,15 @@ export interface SourceConfig {
   type: "rss" | "api";
   category: string;
   trust_score: number;
+  tier?: number;
+  lean?: string;
+  reliability?: number;
+  signal_type?: string;
+  region?: string;
+  topics?: string[];
+  update_frequency?: string;
+  role?: string;
+  briefing_category?: string;
 }
 
 export interface SourcesConfig {
