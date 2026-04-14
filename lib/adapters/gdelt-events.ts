@@ -205,8 +205,9 @@ function parseActorCode(code: string): string {
   return code;
 }
 
-// Domains that produce false conflict events (movies, games, sports, fiction)
+// Domains that reliably produce GDELT false positives
 const JUNK_DOMAINS = [
+  // Entertainment
   'collider.com', 'imdb.com', 'rottentomatoes.com', 'screenrant.com', 'ign.com',
   'gamespot.com', 'kotaku.com', 'polygon.com', 'thegamer.com', 'pcgamer.com',
   'espn.com', 'bleacherreport.com', 'sports.yahoo.com', 'cbssports.com',
@@ -217,16 +218,42 @@ const JUNK_DOMAINS = [
   'weather.com', 'accuweather.com',
   'tiktok.com', 'instagram.com', 'pinterest.com', 'reddit.com',
   'youtube.com', 'twitch.tv', 'dailymotion.com',
+  // Legal / medical / lifestyle miscodings
+  'healthline.com', 'webmd.com', 'mayoclinic.org', 'medicalnewstoday.com',
+  'law360.com', 'findlaw.com', 'avvo.com', 'justia.com',
+  'psychologytoday.com', 'verywellmind.com', 'verywellhealth.com',
+  'npr.org', // NPR covers real news but GDELT miscodes soft stories heavily
 ];
 
-// URL patterns that indicate non-news content
+// URL path patterns that almost always indicate GDELT misfires
 const JUNK_URL_PATTERNS = [
+  // Entertainment / lifestyle
   /\/movie/i, /\/film/i, /\/review/i, /\/trailer/i, /\/game/i, /\/gaming/i,
   /\/recipe/i, /\/horoscope/i, /\/celebrity/i, /\/entertainment/i,
   /\/sport/i, /\/score/i, /\/fantasy-football/i,
   /best-.*-movies/i, /top-\d+/i, /listicle/i, /\/gallery/i,
   /\/book-review/i, /\/tv-show/i, /\/streaming/i,
+  // Health & medical — GDELT frequently codes "assault" in malpractice articles
+  /\/health\//i, /\/medical\//i, /\/wellness\//i, /\/mental-health/i,
+  /malpractice/i, /\/therapy/i, /\/treatment/i, /\/medicine\//i,
+  // Legal & courts — lawsuit language triggers CAMEO "assault/coerce" codes
+  /\/lawsuit/i, /\/legal\//i, /\/court/i, /\/verdict/i, /\/settlement/i,
+  /\/litigation/i, /\/attorney/i, /\/plaintiff/i, /\/defendant/i,
+  // Social issues that trigger false conflict codes
+  /\/lgbtq/i, /conversion-therapy/i, /\/abortion/i, /\/gender/i,
+  /\/civil-rights/i, /\/racial-justice/i,
+  // Opinion & commentary
+  /\/opinion\//i, /\/editorial\//i, /\/commentary\//i, /\/column\//i,
+  /\/podcast\//i, /\/newsletter/i,
 ];
+
+// Countries where domestic "conflict" events from GDELT are almost always
+// political/legal/protest misfires, not actual armed conflict.
+// We require much higher corroboration for these.
+const LOW_CONFLICT_COUNTRIES = new Set([
+  'US', 'CA', 'GB', 'AU', 'NZ', 'DE', 'FR', 'IT', 'ES', 'NL',
+  'SE', 'NO', 'DK', 'FI', 'CH', 'AT', 'BE', 'JP', 'KR', 'SG',
+]);
 
 // GDELT v2 export columns (tab-separated, 61 columns 0-60).
 // V2 adds ADM2Code columns for each geo block vs V1.
@@ -339,8 +366,44 @@ export class GDELTEventsAdapter extends BaseAdapter {
       if (JUNK_DOMAINS.some(d => domain.includes(d))) continue;
       if (JUNK_URL_PATTERNS.some(p => p.test(sourceUrl))) continue;
 
-      if (match.severity >= 80 && numArticles < 3) continue;
-      if (match.severity >= 70 && numArticles < 2) continue;
+      // ── Source count requirements (main quality gate) ────────────────────
+      // GDELT fires constantly on single-source mentions of generic words.
+      // The more sources independently report an event, the more likely it
+      // is an actual event rather than NLP noise.
+      const numSources = parseInt(cols[COL.NumSources] || '1', 10);
+
+      if (match.severity >= 90) {
+        // WMD, ethnic cleansing, mass violence — still require corroboration
+        if (numArticles < 3 || numSources < 2) continue;
+      } else if (match.severity >= 80) {
+        // Bombings, air strikes, assassinations
+        if (numArticles < 5 || numSources < 2) continue;
+      } else if (match.severity >= 70) {
+        // Military action, territory seizure, blockades
+        if (numArticles < 8 || numSources < 3) continue;
+      } else {
+        // Lower severity: protests, assaults, arrests — very noisy in GDELT
+        if (numArticles < 12 || numSources < 4) continue;
+      }
+
+      // ── Geography-based noise filter ──────────────────────────────────────
+      // Stable democracies almost never have genuine armed conflict.
+      // For these countries, require both higher source counts AND
+      // identifiable opposing actors — otherwise it's a legal/political story.
+      if (LOW_CONFLICT_COUNTRIES.has(countryCode)) {
+        const actor1Code = cols[COL.Actor1Code] || '';
+        const actor2Code = cols[COL.Actor2Code] || '';
+        const hasIdentifiedActors = actor1Code.length >= 3 && actor2Code.length >= 3
+          && actor1Code !== actor2Code;
+        if (!hasIdentifiedActors) continue; // No clear parties = almost certainly a misfire
+        if (numArticles < 15) continue; // Require heavy corroboration in these countries
+      }
+
+      // ── Goldstein reality-check ───────────────────────────────────────────
+      // Goldstein is assigned by code type, not by actual content.
+      // But if GDELT's own score is near-neutral, the event was likely
+      // categorized from weak textual signals — skip it.
+      if (goldstein > -1.5 && match.severity < 80) continue;
 
       const severity = Math.min(100, match.severity + Math.min(15, numArticles * 2));
 
@@ -378,7 +441,7 @@ export class GDELTEventsAdapter extends BaseAdapter {
         source: 'gdelt',
         type: match.type,
         severity,
-        confidence: 0.65,
+        confidence: numArticles >= 20 ? 0.85 : numArticles >= 10 ? 0.75 : numArticles >= 5 ? 0.65 : 0.55,
         lat,
         lng,
         country_code: countryCode,
