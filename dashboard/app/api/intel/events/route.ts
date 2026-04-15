@@ -2,6 +2,18 @@ import { NextResponse } from "next/server";
 import { requireDashboardSecret } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+const KEY_BOMBING_PATTERN =
+  /\b(airstrike|air strike|drone strike|missile|shell(ing)?|artiller(y|ies)|bomb(ing|ed)?|blast|explosion|detonat(ed|ion))\b/i;
+const KEY_MOVEMENT_PATTERN =
+  /\b(troop(s)?|deployment|convoy|staging|buildup|sortie|military movement|naval movement)\b/i;
+const HIGH_SIGNAL_MILITARY_TYPES = new Set([
+  "doomsday_plane",
+  "tanker_surge",
+  "military_flight_isr",
+  "hospital_ship_movement",
+  "satellite_change",
+]);
+
 /**
  * GET /api/intel/events — query intelligence events with decoded coordinates.
  *
@@ -39,7 +51,10 @@ export async function GET(req: Request) {
       if (type) query = query.eq("type", type);
       const { data, error } = await query;
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      const events = (data ?? []).map(decodeEvent);
+      const events = (data ?? [])
+        .map(decodeEvent)
+        .sort(sortByMapPriority)
+        .slice(0, limit);
       return NextResponse.json({ events, count: events.length });
     }
 
@@ -65,7 +80,9 @@ export async function GET(req: Request) {
 
     const geoEvents = (geoRes.data ?? []).map(decodeEvent);
     const textEvents = (textRes.data ?? []).map(decodeEvent);
-    const events = [...geoEvents, ...textEvents];
+    const events = [...geoEvents, ...textEvents]
+      .sort(sortByMapPriority)
+      .slice(0, limit);
 
     return NextResponse.json({ events, count: events.length });
   } catch (e) {
@@ -76,7 +93,100 @@ export async function GET(req: Request) {
 
 function decodeEvent(e: Record<string, unknown>) {
   const coords = extractCoords(e);
-  return { ...e, lat: coords.lat, lng: coords.lng, location: undefined };
+  const priority = classifyMapPriority(e);
+  return {
+    ...e,
+    lat: coords.lat,
+    lng: coords.lng,
+    location: undefined,
+    is_key_event: priority.isKeyEvent,
+    key_event_reason: priority.reason,
+    map_priority: priority.score,
+  };
+}
+
+function classifyMapPriority(e: Record<string, unknown>): {
+  isKeyEvent: boolean;
+  reason: string | null;
+  score: number;
+} {
+  const type = typeof e.type === "string" ? e.type : "";
+  const title = typeof e.title === "string" ? e.title : "";
+  const summary = typeof e.summary === "string" ? e.summary : "";
+  const combinedText = `${title} ${summary}`;
+  const severity = typeof e.severity === "number" ? e.severity : 0;
+  const confidence = typeof e.confidence === "number" ? e.confidence : 0;
+  const tags = extractStringArray(e.tags);
+  const rawData = asRecord(e.raw_data);
+  const numArticles = asNumber(rawData.num_articles);
+  const numSources = asNumber(rawData.num_sources);
+  const verificationStatus =
+    typeof rawData.verification_status === "string" ? rawData.verification_status : "";
+
+  const hasBombingSignal = type === "airstrike" || KEY_BOMBING_PATTERN.test(combinedText);
+  const hasVerificationSignal =
+    verificationStatus === "verified" ||
+    tags.includes("verified") ||
+    tags.includes("promoted_from_quarantine") ||
+    confidence >= 0.75 ||
+    ((numSources ?? 0) >= 2 && (numArticles ?? 0) >= 4);
+
+  const isVerifiedBombing = hasBombingSignal && hasVerificationSignal && severity >= 60;
+  const isLikelyBombing = hasBombingSignal && severity >= 80;
+
+  const isMilitaryMovement =
+    (HIGH_SIGNAL_MILITARY_TYPES.has(type) && severity >= 65) ||
+    (type === "military_flight" &&
+      severity >= 85 &&
+      /\b(bomber|special ops|airborne command|tacamo|nuclear)\b/i.test(combinedText)) ||
+    (type.startsWith("military_") && severity >= 75 && KEY_MOVEMENT_PATTERN.test(combinedText));
+
+  const isKeyEvent = isVerifiedBombing || isLikelyBombing || isMilitaryMovement;
+  const reason = isVerifiedBombing
+    ? "Verified bombing/strike"
+    : isLikelyBombing
+      ? "Likely high-impact bombing"
+      : isMilitaryMovement
+        ? "Military movement signal"
+        : null;
+
+  let score = severity;
+  if (isVerifiedBombing) score += 400;
+  else if (isLikelyBombing) score += 320;
+  else if (isMilitaryMovement) score += 260;
+  if (hasVerificationSignal) score += 40;
+  if (confidence >= 0.85) score += 25;
+  if ((numSources ?? 0) >= 3) score += 20;
+
+  return { isKeyEvent, reason, score };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return null;
+}
+
+function extractStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function sortByMapPriority(a: Record<string, unknown>, b: Record<string, unknown>): number {
+  const scoreA = typeof a.map_priority === "number" ? a.map_priority : 0;
+  const scoreB = typeof b.map_priority === "number" ? b.map_priority : 0;
+  if (scoreA !== scoreB) return scoreB - scoreA;
+
+  const severityA = typeof a.severity === "number" ? a.severity : 0;
+  const severityB = typeof b.severity === "number" ? b.severity : 0;
+  if (severityA !== severityB) return severityB - severityA;
+
+  const tsA = typeof a.timestamp === "string" ? new Date(a.timestamp).getTime() : 0;
+  const tsB = typeof b.timestamp === "string" ? new Date(b.timestamp).getTime() : 0;
+  return tsB - tsA;
 }
 
 /**

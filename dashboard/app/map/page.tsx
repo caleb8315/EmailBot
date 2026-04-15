@@ -8,6 +8,7 @@ interface MapEvent {
   source: string;
   type: string;
   severity: number;
+  confidence?: number;
   title: string;
   summary: string;
   timestamp: string;
@@ -15,6 +16,9 @@ interface MapEvent {
   tags: string[];
   lat?: number | null;
   lng?: number | null;
+  is_key_event?: boolean;
+  key_event_reason?: string | null;
+  map_priority?: number;
 }
 
 type Category = "military" | "conflict" | "fire" | "quake" | "internet" | "other";
@@ -81,6 +85,10 @@ function timeAgo(iso: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function isKeyEvent(evt: MapEvent): boolean {
+  return evt.is_key_event === true || (typeof evt.map_priority === "number" && evt.map_priority >= 260);
 }
 
 function MapInner() {
@@ -155,9 +163,16 @@ function MapInner() {
     }
     markersRef.current.clear();
 
-    const filtered = events.filter(e =>
-      enabledSources.has(e.source) && enabledCats.has(categorize(e))
-    );
+    const filtered = events
+      .filter(e => enabledSources.has(e.source) && enabledCats.has(categorize(e)))
+      .sort((a, b) => {
+        const keyDelta = Number(isKeyEvent(b)) - Number(isKeyEvent(a));
+        if (keyDelta !== 0) return keyDelta;
+        const scoreA = a.map_priority ?? a.severity;
+        const scoreB = b.map_priority ?? b.severity;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
 
     for (const evt of filtered) {
       const coords = getCoords(evt);
@@ -168,12 +183,21 @@ function MapInner() {
       const srcCfg = SOURCE_CONFIG[evt.source];
       const markerColor = srcCfg?.color || cfg.color;
       const markerEmoji = srcCfg?.emoji || cfg.emoji;
-      const size = Math.max(20, Math.min(36, evt.severity / 3));
+      const keyEvent = isKeyEvent(evt);
+      const size = keyEvent
+        ? Math.max(28, Math.min(44, evt.severity / 2.4))
+        : Math.max(20, Math.min(36, evt.severity / 3));
 
       const el = document.createElement("div");
-      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 4px ${markerColor});transition:transform 0.15s;`;
+      el.style.cssText = `width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;cursor:pointer;filter:drop-shadow(0 0 ${keyEvent ? 8 : 4}px ${markerColor});transition:transform 0.15s;position:relative;border-radius:9999px;border:${keyEvent ? 2 : 0}px solid ${keyEvent ? "#FFD84D" : "transparent"};background:${keyEvent ? "rgba(0,0,0,0.42)" : "transparent"};`;
       el.textContent = markerEmoji;
-      el.title = evt.title;
+      el.title = keyEvent ? `[KEY EVENT] ${evt.title}` : evt.title;
+      if (keyEvent) {
+        const badge = document.createElement("span");
+        badge.textContent = "★";
+        badge.style.cssText = "position:absolute;top:-6px;right:-6px;font-size:10px;color:#FFD84D;filter:drop-shadow(0 0 4px #FFD84D);";
+        el.appendChild(badge);
+      }
       el.addEventListener("click", (e) => { e.stopPropagation(); setSelectedEvent(evt); });
       el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.4)"; });
       el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
@@ -207,6 +231,7 @@ function MapInner() {
   };
 
   const geoEvents = events.filter(e => getCoords(e) && enabledSources.has(e.source) && enabledCats.has(categorize(e)));
+  const keyGeoEvents = geoEvents.filter(isKeyEvent);
 
   const sourceCounts: Record<string, number> = {};
   for (const e of geoEvents) { sourceCounts[e.source] = (sourceCounts[e.source] || 0) + 1; }
@@ -229,6 +254,9 @@ function MapInner() {
         <div className="bg-black/85 backdrop-blur-md rounded-xl px-3 py-2 flex items-center gap-3 flex-1 min-w-0">
           <span className="text-[#00FF41] font-mono font-bold text-sm">{geoEvents.length}</span>
           <span className="text-gray-500 text-[10px]">events on map</span>
+          <span className="text-[#FFD84D] text-[10px] font-bold uppercase tracking-wide">
+            ★ {keyGeoEvents.length} key
+          </span>
           <div className="flex-1" />
           {discoveredSources.slice(0, 6).map(src => {
             const cfg = SOURCE_CONFIG[src];
@@ -351,6 +379,16 @@ function MapInner() {
               </span>
               <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(selectedEvent.timestamp)}</span>
             </div>
+
+            {isKeyEvent(selectedEvent) && (
+              <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2 py-0.5 text-[10px] text-yellow-300">
+                <span>★</span>
+                <span className="font-bold uppercase tracking-wide">Key Event</span>
+                {selectedEvent.key_event_reason && (
+                  <span className="text-yellow-200/90">— {selectedEvent.key_event_reason}</span>
+                )}
+              </div>
+            )}
 
             <p className="text-sm text-gray-100 font-semibold leading-snug mb-2 pr-8">{selectedEvent.title}</p>
 
