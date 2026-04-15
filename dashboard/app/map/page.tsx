@@ -109,6 +109,7 @@ function MapInner() {
   const [showSatellite, setShowSatellite] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterMode, setFilterMode] = useState<"source" | "category">("source");
+  const [keyEventsOnly, setKeyEventsOnly] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -165,6 +166,7 @@ function MapInner() {
 
     const filtered = events
       .filter(e => enabledSources.has(e.source) && enabledCats.has(categorize(e)))
+      .filter(e => !keyEventsOnly || isKeyEvent(e))
       .sort((a, b) => {
         const keyDelta = Number(isKeyEvent(b)) - Number(isKeyEvent(a));
         if (keyDelta !== 0) return keyDelta;
@@ -209,7 +211,7 @@ function MapInner() {
         markersRef.current.set(evt.source, existing);
       } catch {}
     }
-  }, [events, enabledSources, enabledCats, mapReady]);
+  }, [events, enabledSources, enabledCats, keyEventsOnly, mapReady]);
 
   const toggleSource = (src: string) => {
     setEnabledSources(prev => { const next = new Set(prev); if (next.has(src)) next.delete(src); else next.add(src); return next; });
@@ -230,7 +232,9 @@ function MapInner() {
     } catch {}
   };
 
-  const geoEvents = events.filter(e => getCoords(e) && enabledSources.has(e.source) && enabledCats.has(categorize(e)));
+  const geoEvents = events
+    .filter(e => getCoords(e) && enabledSources.has(e.source) && enabledCats.has(categorize(e)))
+    .filter(e => !keyEventsOnly || isKeyEvent(e));
   const keyGeoEvents = geoEvents.filter(isKeyEvent);
 
   const sourceCounts: Record<string, number> = {};
@@ -284,6 +288,14 @@ function MapInner() {
             }`}
           >
             <span>🛰</span> Satellite Imagery {showSatellite ? "ON" : "OFF"}
+          </button>
+          <button
+            onClick={() => setKeyEventsOnly(v => !v)}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${
+              keyEventsOnly ? "text-yellow-300 bg-yellow-500/10" : "text-gray-500"
+            }`}
+          >
+            <span>★</span> Key Events Only {keyEventsOnly ? "ON" : "OFF"}
           </button>
 
           <div className="border-t border-white/5 my-1" />
