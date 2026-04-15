@@ -27,6 +27,10 @@ interface FusedSignal {
   headline: string;
   summary: string;
   category: string;
+  verification_label?: "VERIFIED" | "DEVELOPING" | "UNVERIFIED" | "QUARANTINED" | "BLOCKED" | null;
+  thread_label?: string | null;
+  thread_trajectory?: string | null;
+  thread_days?: number | null;
   severity: number;
   confidence: number;
   alert_tier: string;
@@ -826,11 +830,19 @@ function OpsCenter() {
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${tierColor(s.alert_tier)}20`, color: tierColor(s.alert_tier) }}>
                   {s.alert_tier}
                 </span>
+                {s.verification_label && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 text-gray-300">
+                    {s.verification_label}
+                  </span>
+                )}
                 <span className="text-[10px] text-gray-500 font-mono">{Math.round(s.confidence * 100)}%</span>
                 <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(s.created_at)}</span>
               </div>
               <p className="text-xs text-gray-100 font-semibold leading-snug">{s.headline}</p>
               {s.summary && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed line-clamp-2">{s.summary}</p>}
+              {s.thread_label && (
+                <p className="text-[10px] text-[#00C2FF]/90 mt-1 font-mono">Thread: {s.thread_label}</p>
+              )}
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {s.source_engines.map(e => (
                   <span key={e} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500">{e.replace("_", " ")}</span>

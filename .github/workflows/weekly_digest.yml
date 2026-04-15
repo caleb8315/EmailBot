@@ -23,7 +23,7 @@ jobs:
         run: |
           set -e
           if [ -z "${EMAIL_SMTP_HOST:-}" ] || [ -z "${EMAIL_SMTP_USER:-}" ] || [ -z "${EMAIL_SMTP_PASS:-}" ] || [ -z "${EMAIL_TO:-}" ]; then
-            echo "::error::Email delivery not configured: add repository secrets SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_TO."
+            echo "::error::Email delivery not configured: add EMAIL_SMTP_HOST/EMAIL_SMTP_USER/EMAIL_SMTP_PASS (or SMTP_HOST/SMTP_USER/SMTP_PASS) and EMAIL_TO."
             exit 1
           fi
           echo "Preflight OK — SMTP configured"

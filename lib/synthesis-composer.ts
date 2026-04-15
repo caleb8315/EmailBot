@@ -7,11 +7,19 @@
 import { trySharedSupabase } from './shared/supabase';
 import { startEngineRun, finishEngineRun } from './shared/engine-run';
 import type { AlertTier } from './types';
+import type { SourceConfig, SourcesConfig } from '../src/types';
+import { clusterStories } from './briefing_story_cluster';
+import { annotateClusterThreads } from './briefing_threading';
+import sourcesConfig from '../config/sources.json';
 
 export interface FusedSignal {
   headline: string;
   summary: string;
   category: string;
+  verification_label?: 'VERIFIED' | 'DEVELOPING' | 'UNVERIFIED' | 'QUARANTINED' | 'BLOCKED';
+  thread_label?: string;
+  thread_trajectory?: string;
+  thread_days?: number;
   severity: number;
   confidence: number;
   alert_tier: AlertTier;
@@ -31,6 +39,10 @@ interface CorroborationMeta {
   has_pattern_match: boolean;
   contradiction_flags: string[];
   freshness_hours: number;
+  verification_label?: 'VERIFIED' | 'DEVELOPING' | 'UNVERIFIED' | 'QUARANTINED' | 'BLOCKED';
+  thread_label?: string;
+  thread_trajectory?: string;
+  thread_days?: number;
 }
 
 interface ArticleRow {
@@ -141,6 +153,125 @@ function clusterByTitle(
   }));
 }
 
+interface SignalCluster {
+  articles: ArticleRow[];
+  events: EventRow[];
+  headline: string;
+  category: string;
+  verification_label: 'VERIFIED' | 'DEVELOPING' | 'UNVERIFIED' | 'QUARANTINED' | 'BLOCKED';
+  source_count: number;
+  thread_label?: string;
+  thread_trajectory?: string;
+  thread_days?: number;
+}
+
+function normalizeTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 2);
+}
+
+function headlineOverlap(a: string, b: string): number {
+  const left = new Set(normalizeTokens(a));
+  const right = new Set(normalizeTokens(b));
+  if (left.size === 0 || right.size === 0) return 0;
+  let overlap = 0;
+  for (const token of left) {
+    if (right.has(token)) overlap += 1;
+  }
+  const denominator = Math.max(left.size, right.size);
+  return (overlap / denominator) * 100;
+}
+
+function sourceConfigList(): SourceConfig[] {
+  const config = sourcesConfig as SourcesConfig;
+  return Array.isArray(config.sources) ? config.sources : [];
+}
+
+function sourceNameToCategory(sources: SourceConfig[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const source of sources) {
+    map.set(source.name.trim().toLowerCase(), source.briefing_category ?? source.category ?? 'news');
+  }
+  return map;
+}
+
+async function clusterSignals(articles: ArticleRow[], events: EventRow[]): Promise<SignalCluster[]> {
+  const enableSmartClustering = process.env.ENABLE_TS_STORY_CLUSTERING !== 'false';
+  const enableThreading = process.env.ENABLE_TS_THREADING !== 'false';
+  if (!enableSmartClustering) {
+    return clusterByTitle(articles, events).map((cluster) => ({
+      ...cluster,
+      category: cluster.events[0]?.type ?? 'news',
+      verification_label: 'DEVELOPING',
+      source_count: new Set([
+        ...cluster.articles.map((a) => a.source.toLowerCase()),
+        ...cluster.events.map((e) => e.source.toLowerCase()),
+      ]).size,
+    }));
+  }
+
+  const sourceList = sourceConfigList();
+  const categoryBySource = sourceNameToCategory(sourceList);
+  const articleById = new Map(articles.map((article) => [article.id, article]));
+  const storyInputs = articles.map((article) => ({
+    id: article.id,
+    title: article.title,
+    source: article.source,
+    summary: article.summary,
+    category: categoryBySource.get(article.source.trim().toLowerCase()) ?? 'news',
+    published_at: article.fetched_at,
+  }));
+
+  const storyClusters = clusterStories(storyInputs, sourceList);
+  const baseClusters: SignalCluster[] = storyClusters.map((cluster) => ({
+    articles: cluster.story_ids
+      .map((storyId) => articleById.get(storyId))
+      .filter((article): article is ArticleRow => Boolean(article)),
+    events: [],
+    headline: cluster.headline,
+    category: cluster.category,
+    verification_label: cluster.label,
+    source_count: cluster.source_count,
+  }));
+
+  for (const event of events) {
+    let matchedCluster: SignalCluster | null = null;
+    let bestScore = 0;
+    for (const cluster of baseClusters) {
+      const score = headlineOverlap(event.title, cluster.headline);
+      if (score > bestScore) {
+        bestScore = score;
+        matchedCluster = cluster;
+      }
+    }
+    if (matchedCluster && bestScore >= 35) {
+      matchedCluster.events.push(event);
+      matchedCluster.source_count = new Set([
+        ...matchedCluster.articles.map((article) => article.source.toLowerCase()),
+        ...matchedCluster.events.map((row) => row.source.toLowerCase()),
+      ]).size;
+      continue;
+    }
+    baseClusters.push({
+      articles: [],
+      events: [event],
+      headline: event.title,
+      category: event.type,
+      verification_label: 'DEVELOPING',
+      source_count: 1,
+    });
+  }
+
+  if (enableThreading && baseClusters.length > 0) {
+    await annotateClusterThreads(baseClusters);
+  }
+
+  return baseClusters;
+}
+
 export async function composeSynthesis(): Promise<FusedSignal[]> {
   const runId = await startEngineRun('digest', { type: 'synthesis' });
 
@@ -183,7 +314,7 @@ export async function composeSynthesis(): Promise<FusedSignal[]> {
   const hypotheses: HypothesisRow[] = hyposRes.data ?? [];
   const arcs: ArcRow[] = arcsRes.data ?? [];
 
-  const clusters = clusterByTitle(articles, events);
+  const clusters = await clusterSignals(articles, events);
   const signals: FusedSignal[] = [];
 
   for (const cluster of clusters) {
@@ -214,6 +345,10 @@ export async function composeSynthesis(): Promise<FusedSignal[]> {
       has_pattern_match: hasPattern,
       contradiction_flags: [],
       freshness_hours: hoursAgo(freshestIso),
+      verification_label: cluster.verification_label,
+      thread_label: cluster.thread_label,
+      thread_trajectory: cluster.thread_trajectory,
+      thread_days: cluster.thread_days,
     };
 
     const severity = Math.max(
@@ -227,7 +362,11 @@ export async function composeSynthesis(): Promise<FusedSignal[]> {
     signals.push({
       headline: cluster.headline,
       summary: topArticle?.summary ?? topEvent?.summary ?? '',
-      category: topEvent?.type ?? 'news',
+      category: cluster.category || topEvent?.type || 'news',
+      verification_label: cluster.verification_label,
+      thread_label: cluster.thread_label,
+      thread_trajectory: cluster.thread_trajectory,
+      thread_days: cluster.thread_days,
       severity,
       confidence,
       alert_tier: tier,
@@ -284,6 +423,8 @@ export async function composeSynthesis(): Promise<FusedSignal[]> {
       beliefs_count: beliefs.length,
       hypotheses_active: hypotheses.length,
       arcs_active: arcs.length,
+      smart_clustering_enabled: process.env.ENABLE_TS_STORY_CLUSTERING !== 'false',
+      threading_enabled: process.env.ENABLE_TS_THREADING !== 'false',
     },
   });
 
@@ -305,8 +446,9 @@ export function formatSynthesisDigestSection(signals: FusedSignal[]): string {
   if (flash.length > 0) {
     lines.push('=== FLASH SIGNALS ===');
     for (const s of flash) {
-      lines.push(`[${s.severity}/${Math.round(s.confidence * 100)}%] ${s.headline}`);
+      lines.push(`[${s.severity}/${Math.round(s.confidence * 100)}%][${s.verification_label ?? 'DEVELOPING'}] ${s.headline}`);
       if (s.summary) lines.push(`  ${s.summary.slice(0, 200)}`);
+      if (s.thread_label) lines.push(`  Thread: ${s.thread_label}`);
       lines.push(`  Engines: ${s.source_engines.join(', ')} | Sources: ${s.corroboration.source_diversity}`);
       lines.push('');
     }
@@ -315,8 +457,9 @@ export function formatSynthesisDigestSection(signals: FusedSignal[]): string {
   if (priority.length > 0) {
     lines.push('=== PRIORITY SIGNALS ===');
     for (const s of priority.slice(0, 8)) {
-      lines.push(`[${s.severity}/${Math.round(s.confidence * 100)}%] ${s.headline}`);
+      lines.push(`[${s.severity}/${Math.round(s.confidence * 100)}%][${s.verification_label ?? 'DEVELOPING'}] ${s.headline}`);
       if (s.summary) lines.push(`  ${s.summary.slice(0, 150)}`);
+      if (s.thread_label) lines.push(`  Thread: ${s.thread_label}`);
       lines.push('');
     }
   }

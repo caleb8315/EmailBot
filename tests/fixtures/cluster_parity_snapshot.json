@@ -1,0 +1,89 @@
+{
+  "articles": [
+    {
+      "id": "story-a1",
+      "uid": "story-a1",
+      "title": "US and UK launch joint strikes on Houthi sites in Yemen",
+      "publisher": "Reuters",
+      "source": "Reuters",
+      "category": "World & Geopolitics",
+      "summary": "U.S. and U.K. forces struck multiple Houthi targets in Yemen overnight.",
+      "entities": {
+        "PERSON": [],
+        "ORG": ["U.S.", "U.K.", "Houthis"],
+        "GPE": ["Yemen"]
+      },
+      "source_tier": 1,
+      "source_lean": "center",
+      "link": "https://example.com/story-a1"
+    },
+    {
+      "id": "story-a2",
+      "uid": "story-a2",
+      "title": "AP: US-UK coalition hits Houthi positions across Yemen",
+      "publisher": "AP News",
+      "source": "AP News",
+      "category": "World & Geopolitics",
+      "summary": "The coalition said it targeted launch and radar sites linked to Houthi attacks.",
+      "entities": {
+        "PERSON": [],
+        "ORG": ["U.S.", "U.K.", "Houthis"],
+        "GPE": ["Yemen"]
+      },
+      "source_tier": 1,
+      "source_lean": "center",
+      "link": "https://example.com/story-a2"
+    },
+    {
+      "id": "story-b1",
+      "uid": "story-b1",
+      "title": "Bitcoin rallies above $80,000 as ETF inflows accelerate",
+      "publisher": "Bloomberg",
+      "source": "Bloomberg",
+      "category": "Crypto",
+      "summary": "Spot ETF demand and short covering lifted Bitcoin sharply in U.S. trading.",
+      "entities": {
+        "PERSON": [],
+        "ORG": ["Bitcoin ETF"],
+        "GPE": ["United States"]
+      },
+      "source_tier": 1,
+      "source_lean": "center",
+      "link": "https://example.com/story-b1"
+    },
+    {
+      "id": "story-b2",
+      "uid": "story-b2",
+      "title": "CoinDesk: Bitcoin tops $80K after strong ETF demand",
+      "publisher": "CoinDesk",
+      "source": "CoinDesk",
+      "category": "Crypto",
+      "summary": "Institutional ETF inflows helped push BTC to a fresh local high.",
+      "entities": {
+        "PERSON": [],
+        "ORG": ["Bitcoin ETF"],
+        "GPE": ["United States"]
+      },
+      "source_tier": 2,
+      "source_lean": "center",
+      "link": "https://example.com/story-b2"
+    },
+    {
+      "id": "story-c1",
+      "uid": "story-c1",
+      "title": "Unverified claim says secret base discovered under Antarctic ice",
+      "publisher": "ZeroHedge",
+      "source": "ZeroHedge",
+      "category": "Conspiracy / Unverified Signals",
+      "summary": "A speculative report alleges a hidden facility but provides no corroborated evidence.",
+      "entities": {
+        "PERSON": [],
+        "ORG": [],
+        "GPE": ["Antarctica"]
+      },
+      "source_tier": 3,
+      "source_lean": "right",
+      "link": "https://example.com/story-c1"
+    }
+  ]
+}

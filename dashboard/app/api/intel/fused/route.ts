@@ -35,7 +35,32 @@ export async function GET(req: Request) {
       return NextResponse.json({ signals: [], error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ signals: data ?? [] });
+    const signals = (data ?? []).map((row: any) => {
+      const corroboration = row?.corroboration && typeof row.corroboration === "object"
+        ? row.corroboration
+        : {};
+      return {
+        ...row,
+        verification_label:
+          row?.verification_label ??
+          corroboration?.verification_label ??
+          null,
+        thread_label:
+          row?.thread_label ??
+          corroboration?.thread_label ??
+          null,
+        thread_trajectory:
+          row?.thread_trajectory ??
+          corroboration?.thread_trajectory ??
+          null,
+        thread_days:
+          row?.thread_days ??
+          corroboration?.thread_days ??
+          null,
+      };
+    });
+
+    return NextResponse.json({ signals });
   } catch (e) {
     return NextResponse.json({ signals: [], error: String(e) }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import type { Belief, Hypothesis, DreamtimeScenario } from './types';
+import { startEngineRun, finishEngineRun } from './shared/engine-run';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -44,45 +45,50 @@ ${recentEventSummary || '(limited recent data)'}
 
 export async function runDreamtimeEngine(): Promise<DreamtimeScenario[]> {
   console.log('[dreamtime] === DREAMTIME ENGINE STARTING ===');
-
-  const sb = getSupabase();
-
-  // Load current world model
-  const { data: beliefs } = await sb
-    .from('beliefs')
-    .select('*')
-    .eq('status', 'active')
-    .order('confidence', { ascending: false })
-    .limit(20);
-
-  const { data: hypotheses } = await sb
-    .from('hypotheses')
-    .select('*')
-    .eq('status', 'active')
-    .order('confidence', { ascending: false })
-    .limit(10);
-
-  // Get recent event type summary
-  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-  const { data: recentEvents } = await sb
-    .from('intel_events')
-    .select('source, type, severity, country_code, title')
-    .gte('timestamp', threeDaysAgo)
-    .gte('severity', 40)
-    .order('severity', { ascending: false })
-    .limit(30);
-
-  const eventSummary = (recentEvents || [])
-    .map(e => `- [${e.source}/${e.type}] ${e.title} (severity ${e.severity}, ${e.country_code})`)
-    .join('\n');
-
-  const context = buildDreamtimeContext(
-    (beliefs || []) as Belief[],
-    (hypotheses || []) as Hypothesis[],
-    eventSummary,
-  );
+  const runId = await startEngineRun('dreamtime', { stage: 'scenario_generation' });
+  let recordsIn = 0;
+  let recordsOut = 0;
+  let aiCallsUsed = 0;
 
   try {
+    const sb = getSupabase();
+
+    // Load current world model
+    const { data: beliefs } = await sb
+      .from('beliefs')
+      .select('*')
+      .eq('status', 'active')
+      .order('confidence', { ascending: false })
+      .limit(20);
+
+    const { data: hypotheses } = await sb
+      .from('hypotheses')
+      .select('*')
+      .eq('status', 'active')
+      .order('confidence', { ascending: false })
+      .limit(10);
+
+    // Get recent event type summary
+    const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+    const { data: recentEvents } = await sb
+      .from('intel_events')
+      .select('source, type, severity, country_code, title')
+      .gte('timestamp', threeDaysAgo)
+      .gte('severity', 40)
+      .order('severity', { ascending: false })
+      .limit(30);
+    recordsIn = (beliefs || []).length + (hypotheses || []).length + (recentEvents || []).length;
+
+    const eventSummary = (recentEvents || [])
+      .map(e => `- [${e.source}/${e.type}] ${e.title} (severity ${e.severity}, ${e.country_code})`)
+      .join('\n');
+
+    const context = buildDreamtimeContext(
+      (beliefs || []) as Belief[],
+      (hypotheses || []) as Hypothesis[],
+      eventSummary,
+    );
+
     const response = await callDreamtimeLLM(`
 You are Jeff's Dreamtime Engine. It is 3am. You have access to Jeff's full current world model.
 Your job is to find what everyone is missing.
@@ -105,6 +111,7 @@ Scenario 3 (FADING_CONSENSUS): The thing everyone expects — explain why it won
 
 Return only valid JSON with a "scenarios" array.
     `);
+    aiCallsUsed = 1;
 
     const parsed = JSON.parse(response) as { scenarios: DreamtimeScenario[] };
     const scenarios = (parsed.scenarios || []).map(s => ({
@@ -128,10 +135,32 @@ Return only valid JSON with a "scenarios" array.
       });
     }
 
+    recordsOut = scenarios.length;
+    await finishEngineRun(runId, {
+      status: "success",
+      records_in: recordsIn,
+      records_out: recordsOut,
+      ai_calls_used: aiCallsUsed,
+      meta: {
+        scenarios_generated: scenarios.length,
+        beliefs_considered: (beliefs || []).length,
+        hypotheses_considered: (hypotheses || []).length,
+      },
+    });
+
     console.log(`[dreamtime] Generated ${scenarios.length} scenarios`);
     return scenarios;
   } catch (err) {
-    console.error('[dreamtime] Failed:', err instanceof Error ? err.message : String(err));
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    await finishEngineRun(runId, {
+      status: "error",
+      records_in: recordsIn,
+      records_out: recordsOut,
+      ai_calls_used: aiCallsUsed,
+      errors: [errorMessage],
+      meta: { stage: "dreamtime" },
+    });
+    console.error('[dreamtime] Failed:', errorMessage);
     return [];
   }
 }

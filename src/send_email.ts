@@ -397,19 +397,20 @@ async function generateBriefing(
   _sources: SourceRegistry[],
   preferences: UserPreferences,
   horizon: "daily" | "weekly" = "daily"
-): Promise<BriefingData | null> {
-  if (articles.length === 0) return null;
+): Promise<{ briefing: BriefingData | null; aiCallsUsed: number }> {
+  if (articles.length === 0) return { briefing: null, aiCallsUsed: 0 };
+  let aiCallsUsed = 0;
 
   const budgetAvailable = await canMakeAICall("digest");
   if (!budgetAvailable) {
     logger.warn("Digest AI budget exhausted — skipping AI briefing generation");
-    return null;
+    return { briefing: null, aiCallsUsed };
   }
 
   const groq = createGroqClient();
   if (!groq) {
     logger.warn("No GROQ_API_KEY — skipping AI briefing");
-    return null;
+    return { briefing: null, aiCallsUsed };
   }
 
   let triage: TriageResult | null = null;
@@ -417,9 +418,10 @@ async function generateBriefing(
     logger.info("Digest Call 1/2: triaging articles via Groq");
     triage = await triageArticles(groq, articles, preferences, horizon);
     await recordAICall("digest");
+    aiCallsUsed += 1;
     if (!triage || triage.key_signals.length === 0) {
       logger.warn("Triage returned no signals");
-      return null;
+      return { briefing: null, aiCallsUsed };
     }
     logger.info("Triage complete", {
       signals: triage.key_signals.length,
@@ -429,7 +431,7 @@ async function generateBriefing(
     logger.error("Digest triage (Call 1) failed", {
       error: err instanceof Error ? err.message : String(err),
     });
-    return null;
+    return { briefing: null, aiCallsUsed };
   }
 
   let deep: Omit<BriefingData, "one_sentence" | "key_signals" | "blindspots"> | null =
@@ -438,6 +440,7 @@ async function generateBriefing(
     logger.info("Digest Call 2/2: generating deep briefing via Groq");
     deep = await generateDeepBriefing(groq, triage, preferences, horizon);
     await recordAICall("digest");
+    aiCallsUsed += 1;
     logger.info("Deep briefing complete");
   } catch (err) {
     logger.warn("Deep briefing (Call 2) failed — using triage-only data", {
@@ -461,7 +464,7 @@ async function generateBriefing(
   };
 
   logger.info(`AI briefing generated via Groq/${GROQ_DIGEST_MODEL} (2-call split)`);
-  return parsed;
+  return { briefing: parsed, aiCallsUsed };
 }
 
 // ── Weather HTML Block ──
@@ -1118,6 +1121,12 @@ async function sendDigest(
   mode: "daily" | "weekly",
   interests: string[] = []
 ): Promise<boolean> {
+  const { startEngineRun, finishEngineRun } = await import("../lib/shared/engine-run");
+  const engine = mode === "weekly" ? "weekly_digest" : "digest";
+  const engineRunId = await startEngineRun(engine, { mode, stage: "send_digest" });
+  let aiCallsUsed = 0;
+  let recordsIn = 0;
+  let recordsOut = 0;
   try {
     logger.info("Building intelligence briefing", { mode });
 
@@ -1129,6 +1138,14 @@ async function sendDigest(
         level: "error",
         source: "digest",
         message: `${mode} digest skipped: no delivery channel configured`,
+      });
+      await finishEngineRun(engineRunId, {
+        status: "error",
+        records_in: recordsIn,
+        records_out: recordsOut,
+        ai_calls_used: aiCallsUsed,
+        errors: ["No digest delivery channel configured"],
+        meta: { mode, reason: "no_delivery_channel" },
       });
       return false;
     }
@@ -1161,6 +1178,7 @@ async function sendDigest(
       getDailyUsageReport(),
       loadEnhancements(),
     ]);
+    recordsIn = recentArticles.length;
 
     const topCount = mode === "weekly" ? 30 : 20;
     const selection = selectBalancedDigestArticles(
@@ -1169,6 +1187,7 @@ async function sendDigest(
       topCount
     );
     const topArticles = selection.selected;
+    recordsOut = topArticles.length;
 
     logger.info("Digest inputs collected", {
       mode,
@@ -1183,12 +1202,14 @@ async function sendDigest(
       blockedSourceSkipped: selection.meta.blockedSourceSkipped,
     });
 
-    const briefing = await generateBriefing(
+    const briefingResult = await generateBriefing(
       topArticles,
       sources,
       preferences,
       mode
     );
+    const briefing = briefingResult.briefing;
+    aiCallsUsed = briefingResult.aiCallsUsed;
 
     // Run synthesis composer to produce fused signals from all engines
     let synthesisSection = "";
@@ -1293,6 +1314,14 @@ async function sendDigest(
         source: "digest",
         message: `${mode} digest had no delivery channel`,
       });
+      await finishEngineRun(engineRunId, {
+        status: "error",
+        records_in: recordsIn,
+        records_out: recordsOut,
+        ai_calls_used: aiCallsUsed,
+        errors: ["No digest delivery channel succeeded"],
+        meta: { mode, email_ok: emailOk, telegram_ok: telegramOk },
+      });
       return false;
     }
 
@@ -1340,6 +1369,19 @@ async function sendDigest(
       },
     });
 
+    await finishEngineRun(engineRunId, {
+      status: "success",
+      records_in: recordsIn,
+      records_out: recordsOut,
+      ai_calls_used: aiCallsUsed,
+      meta: {
+        mode,
+        channels,
+        briefing_generated: Boolean(briefing),
+        shortlist_count: topArticles.length,
+      },
+    });
+
     logger.info("Digest complete", { mode, channels });
     return true;
   } catch (err) {
@@ -1349,6 +1391,14 @@ async function sendDigest(
       level: "error",
       source: "digest",
       message: `${mode} digest failed: ${msg}`,
+    });
+    await finishEngineRun(engineRunId, {
+      status: "error",
+      records_in: recordsIn,
+      records_out: recordsOut,
+      ai_calls_used: aiCallsUsed,
+      errors: [msg],
+      meta: { mode },
     });
     return false;
   }
