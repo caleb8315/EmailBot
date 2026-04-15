@@ -6,6 +6,13 @@ const KEY_BOMBING_PATTERN =
   /\b(airstrike|air strike|drone strike|missile|shell(ing)?|artiller(y|ies)|bomb(ing|ed)?|blast|explosion|detonat(ed|ion))\b/i;
 const KEY_MOVEMENT_PATTERN =
   /\b(troop(s)?|deployment|convoy|staging|buildup|sortie|military movement|naval movement)\b/i;
+const VERIFIED_BOMBING_MIN_CONFIDENCE = 0.8;
+const VERIFIED_BOMBING_MIN_SOURCES = 3;
+const VERIFIED_BOMBING_MIN_ARTICLES = 6;
+const VERIFIED_BOMBING_MIN_SEVERITY = 70;
+const LIKELY_BOMBING_MIN_CONFIDENCE = 0.7;
+const LIKELY_BOMBING_MIN_SEVERITY = 88;
+const MOVEMENT_MIN_CONFIDENCE = 0.75;
 const HIGH_SIGNAL_MILITARY_TYPES = new Set([
   "doomsday_plane",
   "tanker_surge",
@@ -124,28 +131,49 @@ function classifyMapPriority(e: Record<string, unknown>): {
     typeof rawData.verification_status === "string" ? rawData.verification_status : "";
 
   const hasBombingSignal = type === "airstrike" || KEY_BOMBING_PATTERN.test(combinedText);
-  const hasVerificationSignal =
+  const hasVerifiedSignal =
     verificationStatus === "verified" ||
     tags.includes("verified") ||
-    tags.includes("promoted_from_quarantine") ||
-    confidence >= 0.75 ||
-    ((numSources ?? 0) >= 2 && (numArticles ?? 0) >= 4);
+    tags.includes("promoted_from_quarantine");
+  const hasStrongCorroboration =
+    confidence >= VERIFIED_BOMBING_MIN_CONFIDENCE &&
+    (numSources ?? 0) >= VERIFIED_BOMBING_MIN_SOURCES &&
+    (numArticles ?? 0) >= VERIFIED_BOMBING_MIN_ARTICLES;
+  const hasModerateCorroboration =
+    confidence >= LIKELY_BOMBING_MIN_CONFIDENCE &&
+    (numSources ?? 0) >= 2 &&
+    (numArticles ?? 0) >= 4;
 
-  const isVerifiedBombing = hasBombingSignal && hasVerificationSignal && severity >= 60;
-  const isLikelyBombing = hasBombingSignal && severity >= 80;
+  const isVerifiedBombing =
+    hasBombingSignal &&
+    severity >= VERIFIED_BOMBING_MIN_SEVERITY &&
+    (hasVerifiedSignal || hasStrongCorroboration);
+  const isLikelyBombing =
+    hasBombingSignal &&
+    severity >= LIKELY_BOMBING_MIN_SEVERITY &&
+    hasModerateCorroboration;
+  const isSatelliteStrikeSignature =
+    (e.source === "firms" || e.source === "sentinel") &&
+    tags.includes("possible_strike_signature") &&
+    confidence >= VERIFIED_BOMBING_MIN_CONFIDENCE &&
+    severity >= 78;
 
   const isMilitaryMovement =
-    (HIGH_SIGNAL_MILITARY_TYPES.has(type) && severity >= 65) ||
+    (HIGH_SIGNAL_MILITARY_TYPES.has(type) &&
+      severity >= 70 &&
+      confidence >= MOVEMENT_MIN_CONFIDENCE) ||
     (type === "military_flight" &&
       severity >= 85 &&
       /\b(bomber|special ops|airborne command|tacamo|nuclear)\b/i.test(combinedText)) ||
     (type.startsWith("military_") && severity >= 75 && KEY_MOVEMENT_PATTERN.test(combinedText));
 
-  const isKeyEvent = isVerifiedBombing || isLikelyBombing || isMilitaryMovement;
+  const isKeyEvent = isVerifiedBombing || isLikelyBombing || isSatelliteStrikeSignature || isMilitaryMovement;
   const reason = isVerifiedBombing
     ? "Verified bombing/strike"
     : isLikelyBombing
       ? "Likely high-impact bombing"
+      : isSatelliteStrikeSignature
+        ? "Satellite strike signature"
       : isMilitaryMovement
         ? "Military movement signal"
         : null;
@@ -153,8 +181,9 @@ function classifyMapPriority(e: Record<string, unknown>): {
   let score = severity;
   if (isVerifiedBombing) score += 400;
   else if (isLikelyBombing) score += 320;
+  else if (isSatelliteStrikeSignature) score += 300;
   else if (isMilitaryMovement) score += 260;
-  if (hasVerificationSignal) score += 40;
+  if (hasVerifiedSignal || hasStrongCorroboration) score += 40;
   if (confidence >= 0.85) score += 25;
   if ((numSources ?? 0) >= 3) score += 20;
 

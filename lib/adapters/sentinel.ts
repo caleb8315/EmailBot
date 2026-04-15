@@ -139,31 +139,44 @@ export class SentinelAdapter extends BaseAdapter {
     }
 
     const events: IntelEvent[] = [];
-    const today = new Date().toISOString().split('T')[0];
-    const baseline = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    // Only check high-priority locations each run to conserve processing units
-    const locationsToCheck = WATCH_LOCATIONS.filter(l => l.priority === 'high');
+    const dates = this.buildDateWindows();
+    // Keep requests in free-tier bounds while increasing coverage:
+    // always include high-priority locations + rotating medium-priority subset.
+    const locationsToCheck = this.selectLocationsForRun();
 
     for (const location of locationsToCheck) {
       try {
-        const changeScore = await this.checkLocationChange(token, location, today, baseline);
+        const changeScore = await this.checkLocationChange(token, location, dates.currentDate, dates.baselineDate);
 
         if (changeScore !== null && changeScore > 0.15) {
-          const severity = Math.min(100, Math.round(changeScore * 200));
+          const severity = this.scoreSeverity(changeScore, location.priority);
+          const confidence = this.scoreConfidence(changeScore, location.priority);
+          const highValueLocation = location.priority === 'high';
+          const tags = ['sentinel', 'satellite', 'change_detection', location.priority, 'free_satellite'];
+          if (highValueLocation) tags.push('strategic_site');
+          if (changeScore >= 0.22) tags.push('possible_military_movement');
+
           events.push({
             source: 'sentinel',
             type: 'satellite_change',
             severity,
-            confidence: 0.7,
+            confidence,
             lat: location.lat,
             lng: location.lng,
             country_code: location.country || getCountryFromPosition(location.lat, location.lng),
             timestamp: new Date().toISOString(),
             title: `Satellite change detected: ${location.name}`,
-            summary: `Change score: ${(changeScore * 100).toFixed(1)}% vs 14-day baseline. Priority: ${location.priority}`,
-            tags: ['sentinel', 'satellite', 'change_detection', location.priority],
-            raw_data: { location: location.name, change_score: changeScore, baseline_date: baseline, current_date: today },
+            summary: `Change score ${(changeScore * 100).toFixed(1)}% vs ${dates.baselineDays}-day baseline at strategic area (${location.priority} priority).`,
+            tags,
+            raw_data: {
+              location: location.name,
+              priority: location.priority,
+              change_score: changeScore,
+              baseline_date: dates.baselineDate,
+              baseline_days: dates.baselineDays,
+              current_date: dates.currentDate,
+              free_tier_mode: true,
+            },
           });
         }
       } catch (err) {
@@ -173,6 +186,42 @@ export class SentinelAdapter extends BaseAdapter {
 
     this.log(`Checked ${locationsToCheck.length} locations, ${events.length} changes detected`);
     return events;
+  }
+
+  private buildDateWindows(): { currentDate: string; baselineDate: string; baselineDays: number } {
+    const now = new Date();
+    // Slightly wider baseline than 14d reduces false positives from short-term weather.
+    const baselineDays = 21;
+    const currentDate = now.toISOString().split('T')[0];
+    const baselineDate = new Date(
+      Date.now() - baselineDays * 24 * 60 * 60 * 1000,
+    ).toISOString().split('T')[0];
+    return { currentDate, baselineDate, baselineDays };
+  }
+
+  private selectLocationsForRun(): typeof WATCH_LOCATIONS {
+    const highs = WATCH_LOCATIONS.filter(l => l.priority === 'high');
+    const mediums = WATCH_LOCATIONS.filter(l => l.priority !== 'high');
+    if (mediums.length === 0) return highs;
+
+    // Rotate medium-priority checks by UTC day to improve global coverage for free.
+    const daySeed = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+    const start = daySeed % mediums.length;
+    const mediumCount = Math.min(6, mediums.length);
+    const selectedMediums = Array.from({ length: mediumCount }, (_, idx) => mediums[(start + idx) % mediums.length]);
+    return [...highs, ...selectedMediums];
+  }
+
+  private scoreSeverity(changeScore: number, priority: string): number {
+    const base = Math.round(changeScore * 240);
+    const strategicBoost = priority === 'high' ? 10 : 0;
+    return Math.max(20, Math.min(100, base + strategicBoost));
+  }
+
+  private scoreConfidence(changeScore: number, priority: string): number {
+    const base = Math.min(0.92, 0.55 + changeScore * 1.4);
+    const priorityBoost = priority === 'high' ? 0.04 : 0;
+    return Math.min(0.95, Math.max(0.55, base + priorityBoost));
   }
 
   private async checkLocationChange(
