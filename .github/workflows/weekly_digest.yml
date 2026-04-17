@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Preflight — SMTP secrets check
+      - name: Preflight — SMTP secrets present
         env:
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST || secrets.SMTP_HOST }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER || secrets.SMTP_USER }}
@@ -26,7 +26,7 @@ jobs:
             echo "::error::Email delivery not configured: add repository secrets SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_TO."
             exit 1
           fi
-          echo "Preflight OK — SMTP configured"
+          echo "Preflight OK — SMTP secrets present"
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -36,6 +36,19 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Preflight — SMTP login (transport.verify)
+        continue-on-error: true
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+        run: npx ts-node src/verify_smtp.ts
 
       - name: Send weekly recap
         env:
