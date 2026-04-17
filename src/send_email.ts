@@ -9,7 +9,7 @@ import {
   saveDigestArchive,
   logSystemEvent,
 } from "./memory";
-import { createSmtpTransport } from "./smtp";
+import { createSmtpTransport, diagnoseSmtpError, resolveSmtpConfig } from "./smtp";
 import { selectBalancedDigestArticles } from "./scoring";
 import { formatDigestPlainText, sendDigestTelegram } from "./telegram_digest";
 import {
@@ -1242,19 +1242,40 @@ async function sendDigest(
     // ── Send email ──
     const transport = createTransport();
     let emailOk = false;
+    let emailError: string | null = null;
     if (transport) {
-      const from = (
-        process.env.EMAIL_FROM ||
-        process.env.EMAIL_SMTP_USER ||
-        process.env.SMTP_USER ||
-        ""
-      ).trim();
-      const to = (process.env.EMAIL_TO || "").trim();
+      const smtpCfg = resolveSmtpConfig();
+      const from = smtpCfg.from;
+      const to = smtpCfg.to;
       if (from && to) {
-        await transport.sendMail({ from, to, subject, html, text });
-        await markEmailed(topArticles.map((a) => a.url));
-        logger.info("Digest email sent", { mode, to, articles: topArticles.length });
-        emailOk = true;
+        try {
+          await transport.sendMail({ from, to, subject, html, text });
+          await markEmailed(topArticles.map((a) => a.url));
+          logger.info("Digest email sent", { mode, to, articles: topArticles.length });
+          emailOk = true;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const hint = diagnoseSmtpError(err, smtpCfg);
+          emailError = hint ? `${message} — ${hint}` : message;
+          logger.error("Digest email send failed — continuing with other channels", {
+            mode,
+            smtpHost: smtpCfg.host,
+            smtpUser: smtpCfg.user,
+            error: message,
+            hint: hint ?? undefined,
+          });
+          await logSystemEvent({
+            level: "error",
+            source: "digest",
+            message: `${mode} digest email delivery failed`,
+            meta: {
+              smtp_host: smtpCfg.host,
+              smtp_user: smtpCfg.user,
+              error: message,
+              hint: hint ?? null,
+            },
+          });
+        }
       } else {
         logger.warn("EMAIL_FROM or EMAIL_TO missing — skipping email");
       }
@@ -1287,11 +1308,13 @@ async function sendDigest(
     }
 
     if (!emailOk && !telegramOk) {
-      logger.error("No delivery channel succeeded");
+      logger.error("No delivery channel succeeded", emailError ? { emailError } : undefined);
       await logSystemEvent({
         level: "error",
         source: "digest",
-        message: `${mode} digest had no delivery channel`,
+        message: `${mode} digest had no delivery channel${
+          emailError ? `: ${emailError}` : ""
+        }`,
       });
       return false;
     }
@@ -1322,6 +1345,7 @@ async function sendDigest(
         enhancement_markets: enhancements.marketSnapshot.length > 0,
         enhancement_calendar: enhancements.economicCalendar.length > 0,
         enhancement_fact: Boolean(enhancements.dailyFact),
+        email_error: emailError,
       },
     });
 
