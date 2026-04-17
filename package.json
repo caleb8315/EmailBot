@@ -11,6 +11,8 @@
     "chat": "ts-node src/chat_handler.ts --listen",
     "bot": "ts-node src/chat_handler.ts --listen",
     "typecheck": "tsc --noEmit",
+    "test": "ts-node tests/unit.test.ts && ts-node lib/__tests__/verification.test.ts",
+    "test:unit": "ts-node tests/unit.test.ts",
     "test:verification": "ts-node lib/__tests__/verification.test.ts",
     "test:telegram": "node --env-file=.env ./node_modules/ts-node/dist/bin.js src/test_telegram.ts"
   },

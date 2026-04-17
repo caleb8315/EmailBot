@@ -130,7 +130,10 @@ function digestTelegramConfigured(): boolean {
 function safeParseJSON(text: string): Record<string, unknown> {
   let cleaned = text.trim();
   if (cleaned.startsWith("```")) {
-    cleaned = cleaned.split("\n", 2).pop()!;
+    const firstNewline = cleaned.indexOf("\n");
+    if (firstNewline >= 0) {
+      cleaned = cleaned.slice(firstNewline + 1);
+    }
     cleaned = cleaned.replace(/```\s*$/, "").trim();
   }
 
