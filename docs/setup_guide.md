@@ -130,7 +130,9 @@ cp .env.example .env
 | `MAX_DAILY_PIPELINE_AI_CALLS` | No          | `30`                                                       | Pipeline-specific daily cap                                                             |
 | `MAX_DAILY_DIGEST_AI_CALLS`   | No          | `4`                                                        | Digest-specific daily cap                                                               |
 | `PREFILTER_THRESHOLD`         | No          | `55`                                                       | Minimum score to pass prefilter                                                         |
-| `ALERT_COOLDOWN_HOURS`        | No          | `4`                                                        | Hours between Telegram alerts                                                           |
+| `ALERT_COOLDOWN_HOURS`        | No          | `1`                                                        | Minimum gap between any two Telegram alerts (global throttle)                           |
+| `STORY_ALERT_COOLDOWN_HOURS`  | No          | `24`                                                       | Per-story cooldown — suppresses repeat alerts on the same story (matched by normalized title) even if the URL changes |
+| `LIVE_BLOG_COOLDOWN_HOURS`    | No          | `48`                                                       | Longer cooldown applied to live-blog articles (e.g. Guardian `/live/`, titles with `live:`) so daily reruns don't spam |
 
 
 ---
@@ -194,6 +196,7 @@ npm run typecheck
 | "AI budget exhausted"                           | Normal — default global cap is 30/day with chat capped at 20/day. Resets at midnight UTC.                       |
 | Email not sending                               | Verify SMTP credentials. For Gmail, use App Passwords, not your main password.                                  |
 | Telegram bot not responding                     | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once.                               |
+| Same story alerts every hour (live blogs)       | Live-blog URLs from Guardian/BBC churn daily, defeating URL dedup. The story-signature cooldown (`STORY_ALERT_COOLDOWN_HOURS`, `LIVE_BLOG_COOLDOWN_HOURS`) catches them; tune those envs if a story still repeats. |
 | Dashboard preference edits do not affect digest | Set `PREFERENCE_USER_ID` (or align `TELEGRAM_CHAT_ID`) so dashboard and digest read/write the same profile row. |
 | No articles fetched                             | Some RSS feeds may be down. Check `config/sources.json` for working feeds.                                      |
 | TypeScript errors                               | Run `npm run typecheck` and fix any reported issues.                                                            |
