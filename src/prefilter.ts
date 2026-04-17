@@ -151,14 +151,6 @@ const NOISE_KEYWORDS = [
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return "";
-  }
-}
-
 export function computeTitleSimilarity(a: string, b: string): number {
   const wordsA = new Set(
     a.toLowerCase().split(/\s+/).filter((w) => w.length > 2)
@@ -383,47 +375,52 @@ function computePrefilterScore(
 
 // ── Cross-source corroboration ──────────────────────────────────
 
-interface CorroborationMap {
-  [normalizedTitle: string]: { sources: Set<string>; indices: number[] };
+interface CorroborationGroup {
+  sources: Set<string>;
+  indices: number[];
 }
 
-function buildCorroborationMap(articles: RawArticle[]): CorroborationMap {
-  const groups: CorroborationMap = {};
-  const assigned: number[] = new Array(articles.length).fill(-1);
+interface CorroborationIndex {
+  groups: CorroborationGroup[];
+  /** articleIndex -> groups[] index */
+  byArticle: Int32Array;
+}
+
+function buildCorroborationIndex(articles: RawArticle[]): CorroborationIndex {
+  const groups: CorroborationGroup[] = [];
+  const byArticle = new Int32Array(articles.length).fill(-1);
 
   for (let i = 0; i < articles.length; i++) {
-    if (assigned[i] >= 0) continue;
+    if (byArticle[i] >= 0) continue;
 
-    const groupKey = articles[i].title;
-    groups[groupKey] = {
+    const group: CorroborationGroup = {
       sources: new Set([articles[i].source]),
       indices: [i],
     };
-    assigned[i] = i;
+    const groupIdx = groups.length;
+    groups.push(group);
+    byArticle[i] = groupIdx;
 
     for (let j = i + 1; j < articles.length; j++) {
-      if (assigned[j] >= 0) continue;
+      if (byArticle[j] >= 0) continue;
       if (computeTitleSimilarity(articles[i].title, articles[j].title) > 55) {
-        groups[groupKey].sources.add(articles[j].source);
-        groups[groupKey].indices.push(j);
-        assigned[j] = i;
+        group.sources.add(articles[j].source);
+        group.indices.push(j);
+        byArticle[j] = groupIdx;
       }
     }
   }
 
-  return groups;
+  return { groups, byArticle };
 }
 
 function getCorroborationCount(
   articleIndex: number,
-  corrobMap: CorroborationMap
+  index: CorroborationIndex
 ): number {
-  for (const group of Object.values(corrobMap)) {
-    if (group.indices.includes(articleIndex)) {
-      return group.sources.size;
-    }
-  }
-  return 1;
+  const groupIdx = index.byArticle[articleIndex];
+  if (groupIdx < 0) return 1;
+  return index.groups[groupIdx].sources.size;
 }
 
 // ── Main export ─────────────────────────────────────────────────
@@ -436,7 +433,7 @@ export function prefilterArticles(
   const seenTitles: string[] = [];
   const results: FilteredArticle[] = [];
 
-  const corrobMap = buildCorroborationMap(articles);
+  const corrobIndex = buildCorroborationIndex(articles);
 
   for (let i = 0; i < articles.length; i++) {
     const article = articles[i];
@@ -449,7 +446,7 @@ export function prefilterArticles(
       );
       const passedPrefilter = prefilterScore >= PREFILTER_THRESHOLD;
 
-      const corroborationCount = getCorroborationCount(i, corrobMap);
+      const corroborationCount = getCorroborationCount(i, corrobIndex);
 
       const { score: heuristicImportance, factors } =
         computeHeuristicImportance(article, prefs, corroborationCount);
