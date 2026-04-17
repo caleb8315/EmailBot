@@ -129,46 +129,62 @@ const MARKET_SYMBOLS: Array<{ symbol: string; label: string }> = [
   { symbol: "CL=F", label: "OIL" },
 ];
 
-interface YahooQuoteResponse {
-  quoteResponse?: {
+// Yahoo's older /v7/finance/quote endpoint now returns 401 unless the caller
+// holds a valid cookie + crumb pair, which is fragile inside GitHub Actions.
+// The chart endpoint is still public, returns the current price and previous
+// close in `meta`, and lets us derive changePercent ourselves.
+interface YahooChartResponse {
+  chart?: {
     result?: Array<{
-      symbol?: string;
-      regularMarketPrice?: number;
-      regularMarketChangePercent?: number;
-      currency?: string;
+      meta?: {
+        regularMarketPrice?: number;
+        chartPreviousClose?: number;
+        previousClose?: number;
+        currency?: string;
+      };
     }>;
+    error?: { code?: string; description?: string } | null;
+  };
+}
+
+async function fetchSingleChart(
+  item: { symbol: string; label: string }
+): Promise<MarketQuote | null> {
+  const url =
+    "https://query1.finance.yahoo.com/v8/finance/chart/" +
+    `${encodeURIComponent(item.symbol)}?interval=1d&range=5d`;
+  const data = await fetchJsonWithTimeout<YahooChartResponse>(url);
+  const meta = data?.chart?.result?.[0]?.meta;
+  if (!meta) return null;
+
+  const price = Number(meta.regularMarketPrice);
+  if (!Number.isFinite(price)) return null;
+
+  const previousClose = Number(
+    meta.chartPreviousClose ?? meta.previousClose ?? NaN
+  );
+  let changePercent: number | null = null;
+  if (Number.isFinite(previousClose) && previousClose > 0) {
+    changePercent = Number((((price - previousClose) / previousClose) * 100).toFixed(2));
+  }
+
+  return {
+    symbol: item.symbol,
+    label: item.label,
+    price,
+    changePercent,
+    currency: meta.currency ?? null,
   };
 }
 
 export async function fetchMarketSnapshot(): Promise<MarketQuote[]> {
-  const symbols = MARKET_SYMBOLS.map((s) => s.symbol).join(",");
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
-    symbols
-  )}`;
-  const data = await fetchJsonWithTimeout<YahooQuoteResponse>(url);
-  const rows = data?.quoteResponse?.result ?? [];
-  if (rows.length === 0) return [];
-
-  const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
+  const results = await Promise.allSettled(MARKET_SYMBOLS.map(fetchSingleChart));
   const quotes: MarketQuote[] = [];
-
-  for (const item of MARKET_SYMBOLS) {
-    const row = bySymbol.get(item.symbol);
-    if (!row) continue;
-    const price = Number(row.regularMarketPrice);
-    if (!Number.isFinite(price)) continue;
-    const changePercentRaw = Number(row.regularMarketChangePercent);
-    quotes.push({
-      symbol: item.symbol,
-      label: item.label,
-      price,
-      changePercent: Number.isFinite(changePercentRaw)
-        ? Number(changePercentRaw.toFixed(2))
-        : null,
-      currency: row.currency ?? null,
-    });
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value) {
+      quotes.push(result.value);
+    }
   }
-
   return quotes;
 }
 
