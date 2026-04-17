@@ -193,6 +193,8 @@ npm run typecheck
 | "SUPABASE_URL required"                         | Check `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`                                            |
 | "AI budget exhausted"                           | Normal — default global cap is 30/day with chat capped at 20/day. Resets at midnight UTC.                       |
 | Email not sending                               | Verify SMTP credentials. For Gmail, use App Passwords, not your main password.                                  |
+| `534-5.7.9 Please log in with your web browser` | Gmail rejected the login. Your `SMTP_PASS` is not a valid App Password. Enable 2-Step Verification, create an App Password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (Mail → Other), and update `SMTP_PASS` / `EMAIL_SMTP_PASS` with the 16-character value (no spaces). `SMTP_USER` must match the account that generated the App Password. Run `npx ts-node src/verify_smtp.ts` locally to confirm. |
+| `535-5.7.8 Username and Password not accepted`  | Same root cause as the `5.7.9` error above — generate a new Gmail App Password and retry.                        |
 | Telegram bot not responding                     | Ensure `TELEGRAM_BOT_TOKEN` is correct and you've messaged the bot at least once.                               |
 | Dashboard preference edits do not affect digest | Set `PREFERENCE_USER_ID` (or align `TELEGRAM_CHAT_ID`) so dashboard and digest read/write the same profile row. |
 | No articles fetched                             | Some RSS feeds may be down. Check `config/sources.json` for working feeds.                                      |
