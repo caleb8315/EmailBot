@@ -1,14 +1,37 @@
 import https from "https";
 import { createLogger } from "./logger";
-import { getLastAlertTime, markAlerted, logSystemEvent } from "./memory";
+import {
+  getLastAlertTime,
+  getRecentAlertedArticles,
+  markAlerted,
+  logSystemEvent,
+} from "./memory";
 import { createSmtpTransport } from "./smtp";
 import { shouldAlert, getAlertThresholds } from "./scoring";
+import { isLiveBlog, storySignature } from "./story_id";
 import type { ArticleHistory } from "./types";
 
 const logger = createLogger("send_telegram");
 
+// Global gate between *any* two alerts. Kept short — per-story dedup does
+// the heavy lifting below.
 const ALERT_COOLDOWN_HOURS = parseInt(
-  process.env.ALERT_COOLDOWN_HOURS ?? "2",
+  process.env.ALERT_COOLDOWN_HOURS ?? "1",
+  10
+);
+
+// Per-story cooldown. If we already alerted on the same story signature
+// within this window, skip — this stops live blogs like "Middle East
+// crisis live: …" from re-alerting every hour when the URL slug changes.
+const STORY_ALERT_COOLDOWN_HOURS = parseInt(
+  process.env.STORY_ALERT_COOLDOWN_HOURS ?? "24",
+  10
+);
+
+// Live blogs are still "one story" even across calendar days, so give them
+// a longer suppression window by default.
+const LIVE_BLOG_COOLDOWN_HOURS = parseInt(
+  process.env.LIVE_BLOG_COOLDOWN_HOURS ?? "48",
   10
 );
 
@@ -160,7 +183,7 @@ function sendTelegramMessage(
   });
 }
 
-async function isCooldownActive(): Promise<boolean> {
+async function isGlobalCooldownActive(): Promise<boolean> {
   try {
     const lastAlert = await getLastAlertTime();
     if (!lastAlert) return false;
@@ -179,6 +202,67 @@ async function isCooldownActive(): Promise<boolean> {
     return active;
   } catch (err) {
     logger.error("Cooldown check failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
+}
+
+/**
+ * Returns true when we've already alerted on the same story recently.
+ * Matches against URL (exact) and story signature (normalized title) — the
+ * latter catches live-blog URL churn that defeats simple URL dedup.
+ */
+async function isStoryAlreadyAlerted(
+  article: ArticleHistory
+): Promise<boolean> {
+  try {
+    const live = isLiveBlog(article.title, article.url);
+    const lookbackHours = live
+      ? Math.max(STORY_ALERT_COOLDOWN_HOURS, LIVE_BLOG_COOLDOWN_HOURS)
+      : STORY_ALERT_COOLDOWN_HOURS;
+
+    const recent = await getRecentAlertedArticles(lookbackHours);
+    if (recent.length === 0) return false;
+
+    if (recent.some((r) => r.url === article.url)) {
+      logger.info("Story already alerted by URL — skipping", {
+        url: article.url,
+        cooldownHours: lookbackHours,
+      });
+      return true;
+    }
+
+    const incomingSig = storySignature(article.title, article.url);
+    if (!incomingSig) return false;
+
+    const perStoryWindow = live
+      ? LIVE_BLOG_COOLDOWN_HOURS
+      : STORY_ALERT_COOLDOWN_HOURS;
+    const cutoff = Date.now() - perStoryWindow * 60 * 60 * 1000;
+
+    const match = recent.find((r) => {
+      const ts = r.processed_at ? new Date(r.processed_at).getTime() : 0;
+      if (ts < cutoff) return false;
+      const sig = storySignature(r.title ?? "", r.url);
+      return sig !== "" && sig === incomingSig;
+    });
+
+    if (match) {
+      logger.info("Story already alerted by signature — skipping", {
+        title: article.title.slice(0, 80),
+        signature: incomingSig,
+        previousTitle: (match.title ?? "").slice(0, 80),
+        previousUrl: match.url,
+        cooldownHours: perStoryWindow,
+        live,
+      });
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    logger.error("Story cooldown check failed", {
       error: err instanceof Error ? err.message : String(err),
     });
     return false;
@@ -205,7 +289,8 @@ export async function sendAlertIfNeeded(
     const config = getConfig();
     if (!config) return false;
 
-    if (await isCooldownActive()) return false;
+    if (await isStoryAlreadyAlerted(article)) return false;
+    if (await isGlobalCooldownActive()) return false;
 
     const message = formatAlertMessage(article);
     const sent = await sendTelegramMessage(

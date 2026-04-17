@@ -145,7 +145,24 @@ export async function saveArticle(
 ): Promise<void> {
   try {
     const sb = getClient();
-    const { error } = await sb.from("article_history").upsert(article, {
+    // Re-reading an existing URL on later pipeline runs should not reset
+    // `alerted` / `emailed` back to `false`. Check if the row exists and, if
+    // it does, preserve those flags.
+    const { data: existing } = await sb
+      .from("article_history")
+      .select("alerted,emailed")
+      .eq("url", article.url)
+      .maybeSingle();
+
+    const payload = existing
+      ? {
+          ...article,
+          alerted: existing.alerted === true ? true : article.alerted,
+          emailed: existing.emailed === true ? true : article.emailed,
+        }
+      : article;
+
+    const { error } = await sb.from("article_history").upsert(payload, {
       onConflict: "url",
     });
 
@@ -390,6 +407,38 @@ export async function getLastAlertTime(): Promise<Date | null> {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
+  }
+}
+
+export async function getRecentAlertedArticles(
+  hours: number
+): Promise<Array<Pick<ArticleHistory, "url" | "title" | "processed_at">>> {
+  try {
+    const sb = getClient();
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await sb
+      .from("article_history")
+      .select("url,title,processed_at")
+      .eq("alerted", true)
+      .gte("processed_at", since)
+      .order("processed_at", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      logger.error("Failed to fetch recent alerted articles", {
+        error: error.message,
+      });
+      return [];
+    }
+    return (data ?? []) as Array<
+      Pick<ArticleHistory, "url" | "title" | "processed_at">
+    >;
+  } catch (err) {
+    logger.error("getRecentAlertedArticles failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
   }
 }
 
