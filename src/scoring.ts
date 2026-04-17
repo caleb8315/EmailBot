@@ -3,7 +3,6 @@ import type { ArticleHistory, UserPreferences } from "./types";
 import {
   extractCanonicalDomain,
   isDomainMatch,
-  isDomainBlocked,
 } from "../lib/verification";
 
 const logger = createLogger("scoring");
@@ -102,11 +101,8 @@ function countTermMatches(text: string, terms: string[]): number {
   return matches;
 }
 
-function includesSourceHint(
-  source: string,
-  url: string,
-  hints: string[]
-): boolean {
+function includesSourceHint(url: string, hints: string[]): boolean {
+  if (hints.length === 0) return false;
   const domain = extractCanonicalDomain(url);
   return hints.some((hint) => isDomainMatch(domain, hint));
 }
@@ -172,16 +168,8 @@ export function selectBalancedDigestArticles(
     const dislikeHits = countTermMatches(text, dislikes);
     const boostHits = countTermMatches(text, boostedHints);
     const ignoreHits = countTermMatches(text, ignoredHints);
-    const trustedSource = includesSourceHint(
-      article.source,
-      article.url,
-      trustedSources
-    );
-    const blockedSource = includesSourceHint(
-      article.source,
-      article.url,
-      blockedSources
-    );
+    const trustedSource = includesSourceHint(article.url, trustedSources);
+    const blockedSource = includesSourceHint(article.url, blockedSources);
     const recency = recencyScore(article.fetched_at);
     const importance = article.importance_score ?? article.compositeScore;
     const credibility = article.credibility_score ?? 5;
