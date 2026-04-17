@@ -18,7 +18,7 @@
     "test:telegram": "node --env-file=.env ./node_modules/ts-node/dist/bin.js src/test_telegram.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
+    "@supabase/supabase-js": "^2.103.3",
     "dotenv": "^17.4.2",
     "nodemailer": "^6.9.16",
     "openai": "^4.77.0",
