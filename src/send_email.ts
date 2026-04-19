@@ -193,7 +193,7 @@ interface TriageResult {
   blindspots: string[];
 }
 
-const TRIAGE_INPUT_LIMIT = 15;
+const TRIAGE_INPUT_LIMIT = 12;
 
 function toCleanList(values: string[] | undefined | null): string[] {
   if (!Array.isArray(values)) return [];
@@ -259,10 +259,10 @@ async function triageArticles(
     .slice(0, TRIAGE_INPUT_LIMIT)
     .map((a, i) => ({
       n: i + 1,
-      t: a.title,
+      t: a.title.slice(0, 100),
       s: a.source,
       u: a.url,
-      sum: (a.summary || "").slice(0, 80),
+      sum: (a.summary || "").slice(0, 50),
     }));
 
   const sections = BRIEFING_SECTIONS.join(", ");
@@ -274,19 +274,17 @@ async function triageArticles(
       : '"one_sentence": THE single most important development today in one punchy sentence';
   const briefingLabel = horizon === "weekly" ? "weekly recap" : "daily briefing";
 
-  const systemPrompt = `You are an elite intelligence analyst producing a ${briefingLabel}.
+  const systemPrompt = `Elite intelligence analyst producing a ${briefingLabel}.
 
-Reader preference profile:
+Reader profile:
 ${preferenceGuidance}
 
-Given ${horizonLabel}'s ${articleData.length} articles, rank and analyze them. Return JSON with:
+Analyze ${horizonLabel}'s ${articleData.length} articles. Return JSON:
 - ${oneSentenceRule}
-- "key_signals": 6-8 most important stories ranked. Each: title, url (from input "u"), source, category (from: ${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3 keywords), "summary" (1-2 sentences, specific facts), "why_it_matters" (1 sentence, strategic significance)
-- "blindspots": 2-3 important topics with NO coverage today
+- "key_signals": 6-8 ranked stories. Each: title, url (from "u"), source, category (${sections}), importance (HIGH/MEDIUM/LOW), trend (rising/falling/stable/new), source_count, tags (2-3), "summary" (1-2 sentences), "why_it_matters" (1 sentence)
+- "blindspots": 2-3 uncovered topics
 
-Critical balancing rule: keep this briefing globally smart. Always include major world/market/geopolitical shifts even when outside preferences, while still prioritizing the reader's interests.
-
-Be concise and specific. Return ONLY valid JSON.`;
+Balance: include major global/market/geopolitical shifts even outside preferences. Be specific. ONLY valid JSON.`;
 
   const response = await withLLMRetry(
     "digest_triage_groq",
