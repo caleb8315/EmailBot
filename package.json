@@ -21,7 +21,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^17.4.2",
     "nodemailer": "^6.9.16",
-    "openai": "^4.77.0",
+    "openai": "^6.34.0",
     "rss-parser": "^3.13.0",
     "zod": "^3.24.1"
   },
