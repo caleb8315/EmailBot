@@ -52,7 +52,7 @@ export default function HypothesesPage() {
 
         {hypotheses.length === 0 ? (
           <p className="text-sm text-gray-600 py-12 text-center">
-            No active hypotheses. They form automatically when pattern matches fire.
+            No active hypotheses. They are created when the ingestion rules engine matches a pattern (see Intel ingestion workflow); evidence updates them over time.
           </p>
         ) : (
           <div className="space-y-4">

@@ -180,6 +180,9 @@ export async function runRulesEngine(
 
   const matches: PatternMatch[] = [];
   const sb = getSupabase();
+  if (!newEvents.some(e => e.id)) {
+    console.warn('[rules-engine] Incoming events lack DB ids — pattern matches may be skipped for correlation quality');
+  }
 
   // Get recent events from DB for wider time window matching
   const { data: recentDb } = await sb
@@ -259,18 +262,8 @@ export async function runRulesEngine(
     return true;
   });
 
-  // Store correlations
-  for (const match of deduped) {
-    await sb.from('correlations').insert({
-      pattern_name: match.pattern.name,
-      event_ids: match.events.map(e => e.id).filter(Boolean),
-      sources: [...new Set(match.events.map(e => e.source))],
-      region: match.region.name,
-      country_code: match.region.name?.length === 2 ? match.region.name : null,
-      time_window_hours: match.pattern.timeWindowHours,
-      severity_composite: match.composite_severity,
-    });
-  }
+  // Correlation rows are written by pattern-intel after the narrative + hypothesis
+  // step so event_ids, narrative, and hypothesis_id stay consistent.
 
   console.log(`[rules-engine] ${deduped.length} pattern matches from ${newEvents.length} new events`);
   return deduped;

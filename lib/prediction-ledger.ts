@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Prediction } from './types';
+import { recordPatternOutcomeFromResolution } from './pattern-calibration';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -88,6 +89,10 @@ export async function resolvePrediction(
   // Update user profile calibration
   if (brierScore !== null) {
     await updateCalibration(pred.predictor, brierScore, pred.tags, pred.region);
+  }
+
+  if (pred.predictor === 'jeff') {
+    await recordPatternOutcomeFromResolution(pred.tags as string[], outcome);
   }
 }
 

@@ -31,7 +31,7 @@ import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
 import { updateAllHypotheses } from './hypothesis-board';
 import { detectAndUpdateNarrativeArcs } from './narrative-arc';
 import { detectAnomalies } from './anomaly-detector';
-import { dispatchPatternAlert, dispatchAnomalyAlert, buildStructuredPrompt } from './alerts';
+import { dispatchPatternAlert, dispatchAnomalyAlert } from './alerts';
 import { callLLM } from './llm';
 import {
   assignVerificationToEvent,
@@ -104,15 +104,21 @@ function computeExpiry(severity: number, type: string, verificationStatus?: stri
   return new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
 }
 
-async function storeEvents(events: IntelEvent[]): Promise<number> {
-  if (events.length === 0) return 0;
+/**
+ * Persists intel_events and returns the same events with `id` set from DB rows
+ * (order-preserving), so downstream rules/correlations reference real UUIDs.
+ */
+async function storeEvents(events: IntelEvent[]): Promise<{ stored: number; events: IntelEvent[] }> {
+  if (events.length === 0) return { stored: 0, events: [] };
 
   const sb = getSupabase();
   let stored = 0;
+  const out: IntelEvent[] = [];
 
   // Batch insert in chunks of 200 to stay within Supabase limits
   for (let i = 0; i < events.length; i += 200) {
-    const batch = events.slice(i, i + 200).map(e => {
+    const slice = events.slice(i, i + 200);
+    const batch = slice.map(e => {
       const hasCoords = typeof e.lat === 'number' && typeof e.lng === 'number' &&
                         isFinite(e.lat) && isFinite(e.lng) &&
                         Math.abs(e.lat) <= 90 && Math.abs(e.lng) <= 180 &&
@@ -136,19 +142,29 @@ async function storeEvents(events: IntelEvent[]): Promise<number> {
       };
     });
 
-    const { error, count } = await sb
+    const { data: inserted, error } = await sb
       .from('intel_events')
       .insert(batch)
       .select('id');
 
     if (error) {
       console.error(`[ingest] Store batch error: ${error.message}`);
-    } else {
-      stored += count ?? batch.length;
+      for (const e of slice) out.push({ ...e });
+      continue;
     }
+    const rows = inserted || [];
+    const n = Math.min(slice.length, rows.length);
+    for (let j = 0; j < n; j++) {
+      const id = (rows[j] as { id: string }).id;
+      out.push({ ...slice[j], id });
+    }
+    for (let j = n; j < slice.length; j++) {
+      out.push({ ...slice[j] });
+    }
+    stored += rows.length;
   }
 
-  return stored;
+  return { stored, events: out };
 }
 
 async function cleanupExpiredEvents(): Promise<void> {
@@ -266,10 +282,13 @@ export async function runIngestion(): Promise<{
   }
   console.log(`[ingest] ${allEvents.length} total → ${significant.length} significant → ${deduped.length} deduped → ${verified.length} verified, ${quarantined.length} quarantined`);
 
-  // Store verified events to Supabase
+  // Store verified events to Supabase (attach DB ids for correlations / evidence)
   let totalStored = 0;
+  let verifiedWithIds: IntelEvent[] = verified;
   try {
-    totalStored = await storeEvents(verified);
+    const storedResult = await storeEvents(verified);
+    totalStored = storedResult.stored;
+    verifiedWithIds = storedResult.events;
   } catch (err) {
     console.error(`[ingest] Storage failed: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -281,8 +300,8 @@ export async function runIngestion(): Promise<{
         ...e,
         tags: [...e.tags, 'quarantined'],
       }));
-      await storeEvents(quarantinedTagged);
-      console.log(`[ingest] Stored ${quarantined.length} quarantined events for later recheck`);
+      const qRes = await storeEvents(quarantinedTagged);
+      console.log(`[ingest] Stored ${qRes.stored} quarantined events for later recheck`);
     } catch (err) {
       console.error(`[ingest] Quarantine storage failed: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -301,7 +320,7 @@ export async function runIngestion(): Promise<{
       let promoted = 0;
       for (const row of pendingRows) {
         const titleWords = row.title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
-        const matchingNew = verified.filter(e =>
+        const matchingNew = verifiedWithIds.filter(e =>
           titleWords.some((w: string) => e.title.toLowerCase().includes(w))
         );
         if (matchingNew.length > 0) {
@@ -320,14 +339,15 @@ export async function runIngestion(): Promise<{
   }
 
   // ── Intelligence loop: Rules → Beliefs → Hypotheses → Arcs → Anomalies → Alerts ──
-  // Only run intelligence loop on verified/developing events
-  if (verified.length > 0) {
+  // Only run on stored verified rows (need event ids for correlations, evidence, ledger links)
+  const verifiedForIntel = verifiedWithIds.filter(e => e.id);
+  if (verifiedForIntel.length > 0) {
     try {
       // 1. Rules engine: detect patterns
-      const patternMatches = await runRulesEngine(verified);
+      const patternMatches = await runRulesEngine(verifiedForIntel);
       console.log(`[ingest] Rules engine: ${patternMatches.length} pattern matches`);
 
-      // 2. Generate narratives and dispatch alerts for pattern matches
+      // 2. One LLM call per match: narrative + structured intel (hypotheses, prediction, correlation)
       for (const match of patternMatches) {
         try {
           const allEventsVerified = match.events.every(
@@ -337,28 +357,32 @@ export async function runIngestion(): Promise<{
             console.log(`[ingest] Skipping alert for ${match.pattern.name}: contains unverified events`);
             continue;
           }
-          const prompt = buildStructuredPrompt(match);
-          const narrative = await callLLM(prompt, 'narrative');
+          const { buildPatternIntelPrompt, parsePatternIntelResponse, persistPatternIntel } = await import('./pattern-intel');
+          const prompt = buildPatternIntelPrompt(match);
+          const raw = await callLLM(prompt, 'narrative', { json: true });
+          const parsed = parsePatternIntelResponse(raw, match);
+          const narrative = parsed.narrative_paragraphs || '';
           await dispatchPatternAlert(match, narrative);
+          await persistPatternIntel(match, parsed, narrative);
         } catch (err) {
           console.error(`[ingest] Alert dispatch failed:`, err instanceof Error ? err.message : String(err));
         }
       }
 
       // 3. Update beliefs against new events
-      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(verified);
+      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(verifiedForIntel);
       console.log(`[ingest] Beliefs updated: ${beliefResult.updated}, conflicts: ${beliefResult.conflictsFound}`);
 
       // 4. Update hypotheses
-      const hypoUpdated = await updateAllHypotheses(verified);
+      const hypoUpdated = await updateAllHypotheses(verifiedForIntel);
       console.log(`[ingest] Hypotheses updated: ${hypoUpdated}`);
 
       // 5. Check narrative arcs
-      const arcResult = await detectAndUpdateNarrativeArcs(verified);
+      const arcResult = await detectAndUpdateNarrativeArcs(verifiedForIntel);
       console.log(`[ingest] Arcs: ${arcResult.advanced} advanced, ${arcResult.created} created`);
 
       // 6. Anomaly detection
-      const anomalies = await detectAnomalies(verified);
+      const anomalies = await detectAnomalies(verifiedForIntel);
       for (const anomaly of anomalies) {
         await dispatchAnomalyAlert(anomaly);
       }

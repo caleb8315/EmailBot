@@ -56,11 +56,16 @@ export async function callLLM(
     : 'https://generativelanguage.googleapis.com/v1beta/openai/';
   const model = useGroq ? config.groqModel : config.geminiModel;
 
+  const maxTokens =
+    opts?.json && useCase === 'narrative'
+      ? Math.max(config.maxTokens, 900)
+      : config.maxTokens;
+
   const body: Record<string, unknown> = {
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: config.temperature,
-    max_tokens: config.maxTokens,
+    max_tokens: maxTokens,
   };
 
   if (opts?.json) {

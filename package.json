@@ -11,7 +11,7 @@
     "chat": "ts-node src/chat_handler.ts --listen",
     "bot": "ts-node src/chat_handler.ts --listen",
     "typecheck": "tsc --noEmit",
-    "test": "ts-node tests/unit.test.ts && ts-node lib/__tests__/verification.test.ts",
+    "test": "ts-node tests/unit.test.ts && ts-node lib/__tests__/verification.test.ts && ts-node lib/__tests__/pattern-intel.test.ts",
     "test:unit": "ts-node tests/unit.test.ts",
     "test:verification": "ts-node lib/__tests__/verification.test.ts",
     "test:story": "ts-node tests/story_id.test.ts",
