@@ -50,6 +50,20 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function humanizeStatement(statement: string): string {
+  const m = statement.match(/Within\s+(\d+)h,\s+follow-on events will corroborate pattern\s+"([^"]+)"\s+in\s+([^(]+)\(([^)]+)\)/i);
+  if (m) {
+    const hours = parseInt(m[1]);
+    const pattern = m[2].replace(/_/g, " ");
+    const region = m[3].trim();
+    const days = Math.round(hours / 24);
+    const timeframe = days >= 7 ? `${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? "s" : ""}` : `${days} day${days !== 1 ? "s" : ""}`;
+    const regionStr = region === "Global" ? "globally" : `in ${region}`;
+    return `Jeff predicts: the ${pattern} signal will be confirmed by follow-on events ${regionStr} within ${timeframe}.`;
+  }
+  return statement;
+}
+
 function importanceColor(score: number): string {
   if (score >= 8) return "#f87171";
   if (score >= 6) return "#fb923c";
@@ -388,7 +402,7 @@ export default function IntelPage() {
                   className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4 cursor-pointer"
                   onClick={() => toggleExpand(p.id)}
                 >
-                  <p className="text-sm text-gray-100">{p.statement}</p>
+                  <p className="text-sm text-gray-100 leading-relaxed">{humanizeStatement(p.statement)}</p>
                   <div className="mt-2 flex items-center gap-3 text-[11px] font-mono flex-wrap">
                     <span className="text-[#00FF41]">{Math.round(confidence * 100)}% CONFIDENCE</span>
                     {outcome && (
@@ -415,13 +429,20 @@ export default function IntelPage() {
                           {new Date(p.resolve_by).toLocaleDateString()}
                         </p>
                       )}
-                      {p.tags && p.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {p.tags.map(tag => (
-                            <span key={tag} className="px-1.5 py-0.5 rounded bg-white/5">{tag}</span>
-                          ))}
-                        </div>
-                      )}
+                      {p.tags && p.tags.length > 0 && (() => {
+                        const visible = p.tags.map((tag: string) => {
+                          if (tag.startsWith("intel_dedupe:") || tag.startsWith("source:") || tag === "pattern_match") return null;
+                          if (tag.startsWith("pattern:")) return tag.replace("pattern:", "").replace(/_/g, " ");
+                          return tag.replace(/_/g, " ");
+                        }).filter(Boolean);
+                        return visible.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {visible.map(tag => (
+                              <span key={tag} className="px-1.5 py-0.5 rounded bg-white/5 capitalize">{tag}</span>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
                       <Link
                         href="/predictions"
                         className="inline-block text-[#00FF41] hover:text-[#00C2FF] transition-colors"
