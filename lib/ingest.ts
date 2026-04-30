@@ -28,10 +28,16 @@ import { NHCAdapter } from './adapters/nhc';
 
 import { runRulesEngine } from './rules-engine';
 import { evaluateAllBeliefsAgainstNewEvents } from './belief-engine';
-import { updateAllHypotheses } from './hypothesis-board';
+import {
+  updateAllHypotheses,
+  createHypothesisFromPattern,
+} from './hypothesis-board';
 import { detectAndUpdateNarrativeArcs } from './narrative-arc';
 import { detectAnomalies } from './anomaly-detector';
 import { dispatchPatternAlert, dispatchAnomalyAlert, buildStructuredPrompt } from './alerts';
+import { detectNarrativeClusters, narrativeClustersToEvents } from './io-detector';
+import { forecastFromPattern } from './forecast-engine';
+import { deliberate } from './reasoning';
 import { callLLM } from './llm';
 import {
   assignVerificationToEvent,
@@ -319,51 +325,171 @@ export async function runIngestion(): Promise<{
     console.error(`[ingest] Quarantine recheck failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // ── Intelligence loop: Rules → Beliefs → Hypotheses → Arcs → Anomalies → Alerts ──
-  // Only run intelligence loop on verified/developing events
+  // ── Intelligence loop ──────────────────────────────────────────────
+  // Order:
+  //   0. Detect narrative clusters → emit narrative_cluster IntelEvents
+  //      (this is what closes the loop on the previously-orphaned IO
+  //      detector and lets the rules engine actually fire `io_campaign_detected`).
+  //   1. Rules engine
+  //   2. For each pattern match (high-stakes only by default):
+  //        - run a deliberation (draft → red-team → revise) for the alert
+  //        - spawn a primary + null hypothesis
+  //        - generate a stored forecast linked to the same trace
+  //        - dispatch the alert with the deliberated narrative
+  //   3. Update beliefs (with cross-source independence weighting)
+  //   4. Update hypotheses (now includes auto-created competing pairs)
+  //   5. Narrative arcs
+  //   6. Anomalies
+  //
+  // Anything that requires an LLM still routes through the budget gate
+  // in `callLLM` / `deliberate` so the cycle stays cheap on small days
+  // and only spends tokens when there's something worth deliberating.
   if (verified.length > 0) {
     try {
-      // 1. Rules engine: detect patterns
-      const patternMatches = await runRulesEngine(verified);
+      // 0. Narrative-cluster events from open-source narrative coordination
+      let augmented = verified;
+      try {
+        const clusters = detectNarrativeClusters(verified);
+        if (clusters.length > 0) {
+          const clusterEvents = narrativeClustersToEvents(clusters);
+          augmented = [...verified, ...clusterEvents];
+          console.log(
+            `[ingest] Narrative clusters: ${clusters.length} detected → emitted ${clusterEvents.length} events`,
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[ingest] Narrative cluster detection failed:`,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+
+      // 1. Rules engine
+      const patternMatches = await runRulesEngine(augmented);
       console.log(`[ingest] Rules engine: ${patternMatches.length} pattern matches`);
 
-      // 2. Generate narratives and dispatch alerts for pattern matches
+      // 2. Deliberation + hypothesis + forecast per match
+      const deepMode = process.env.DEEP_REASONING_PATTERNS !== 'false';
+      const autoHypotheses = process.env.AUTO_HYPOTHESES !== 'false';
+      const autoForecast = process.env.AUTO_FORECASTS !== 'false';
+
       for (const match of patternMatches) {
         try {
           const allEventsVerified = match.events.every(
-            e => e.verification?.status === 'verified' || e.verification?.status === 'developing'
+            (e) =>
+              e.verification?.status === 'verified' ||
+              e.verification?.status === 'developing',
           );
           if (!allEventsVerified) {
             console.log(`[ingest] Skipping alert for ${match.pattern.name}: contains unverified events`);
             continue;
           }
-          const prompt = buildStructuredPrompt(match);
-          const narrative = await callLLM(prompt, 'narrative');
+
+          // Deliberated narrative — gives a critique + revised paragraph
+          // and persists the full trace so we can audit *why* the alert
+          // was sent.
+          let narrative = '';
+          let traceId: string | null = null;
+          if (deepMode) {
+            const deliberation = await deliberate({
+              task: 'pattern_alert',
+              question: buildStructuredPrompt(match),
+              topic: match.pattern.name,
+              region: match.region.name,
+              tags: ['pattern_alert', match.pattern.name, match.pattern.alertTier],
+              inputs: {
+                pattern_name: match.pattern.name,
+                event_ids: match.events.map((e) => e.id).filter(Boolean),
+                composite_severity: match.composite_severity,
+              },
+              samples: match.pattern.alertTier === 'FLASH' ? 2 : 1,
+              critique: match.pattern.alertTier === 'FLASH' || match.pattern.alertTier === 'PRIORITY',
+              judge: false,
+              useCase: 'narrative',
+            });
+            narrative = deliberation.final;
+            traceId = deliberation.trace_id;
+          } else {
+            narrative = await callLLM(buildStructuredPrompt(match), 'narrative');
+          }
+
+          // Auto-spawn the primary + null hypothesis (idempotent).
+          let primaryHypothesisId: string | null = null;
+          if (autoHypotheses) {
+            try {
+              const created = await createHypothesisFromPattern(match, {
+                reasoning_trace_id: traceId ?? undefined,
+              });
+              primaryHypothesisId = created.primary_id;
+              if (created.primary_id) {
+                console.log(
+                  `[ingest] Hypothesis pair created for ${match.pattern.name} in ${match.region.name}`,
+                );
+              }
+            } catch (err) {
+              console.error(
+                '[ingest] auto-hypothesis failed:',
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          }
+
+          // Auto-forecast: produce a real prediction we can later score.
+          if (autoForecast) {
+            try {
+              const f = await forecastFromPattern(match, {
+                deepReasoning:
+                  deepMode &&
+                  (match.pattern.alertTier === 'FLASH' ||
+                    match.pattern.alertTier === 'PRIORITY'),
+                samples: match.pattern.alertTier === 'FLASH' ? 3 : 1,
+              });
+              if (f.prediction_id) {
+                console.log(
+                  `[ingest] Forecast logged: ${match.pattern.name} → ${(f.probability * 100).toFixed(0)}% by ${f.resolve_by}`,
+                );
+              }
+              void primaryHypothesisId;
+            } catch (err) {
+              console.error(
+                '[ingest] auto-forecast failed:',
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          }
+
           await dispatchPatternAlert(match, narrative);
         } catch (err) {
-          console.error(`[ingest] Alert dispatch failed:`, err instanceof Error ? err.message : String(err));
+          console.error(
+            `[ingest] Alert dispatch failed:`,
+            err instanceof Error ? err.message : String(err),
+          );
         }
       }
 
-      // 3. Update beliefs against new events
-      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(verified);
-      console.log(`[ingest] Beliefs updated: ${beliefResult.updated}, conflicts: ${beliefResult.conflictsFound}`);
+      // 3. Beliefs (with new cross-source independence weighting)
+      const beliefResult = await evaluateAllBeliefsAgainstNewEvents(augmented);
+      console.log(
+        `[ingest] Beliefs updated: ${beliefResult.updated}, conflicts: ${beliefResult.conflictsFound}`,
+      );
 
-      // 4. Update hypotheses
-      const hypoUpdated = await updateAllHypotheses(verified);
+      // 4. Hypotheses
+      const hypoUpdated = await updateAllHypotheses(augmented);
       console.log(`[ingest] Hypotheses updated: ${hypoUpdated}`);
 
-      // 5. Check narrative arcs
-      const arcResult = await detectAndUpdateNarrativeArcs(verified);
+      // 5. Narrative arcs
+      const arcResult = await detectAndUpdateNarrativeArcs(augmented);
       console.log(`[ingest] Arcs: ${arcResult.advanced} advanced, ${arcResult.created} created`);
 
-      // 6. Anomaly detection
-      const anomalies = await detectAnomalies(verified);
+      // 6. Anomalies
+      const anomalies = await detectAnomalies(augmented);
       for (const anomaly of anomalies) {
         await dispatchAnomalyAlert(anomaly);
       }
     } catch (err) {
-      console.error(`[ingest] Intelligence loop error: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `[ingest] Intelligence loop error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 

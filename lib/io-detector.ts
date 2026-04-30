@@ -1,6 +1,6 @@
 import type { IntelEvent } from './types';
 
-interface NarrativeCluster {
+export interface NarrativeCluster {
   articles: { title: string; source: string; timestamp: string }[];
   unique_sources: number;
   time_spread_minutes: number;
@@ -152,6 +152,39 @@ export function detectNarrativeClusters(
       };
     })
     .filter(c => c.unique_sources >= 3 && c.time_spread_minutes < 120);
+}
+
+/**
+ * Convert detected narrative clusters into `narrative_cluster` IntelEvents
+ * so that the rules engine can fire `io_campaign_detected` and the belief
+ * / hypothesis engines can see them. Until this wiring existed, the IO
+ * detector was effectively dead code: the rules engine listed
+ * `narrative_cluster` as a signal type that no producer ever emitted.
+ */
+export function narrativeClustersToEvents(
+  clusters: NarrativeCluster[],
+  opts: { country_code?: string } = {},
+): IntelEvent[] {
+  const now = new Date().toISOString();
+  return clusters.map((c) => ({
+    source: 'rss',
+    type: 'narrative_cluster',
+    severity: Math.min(100, Math.max(20, c.significance)),
+    confidence: c.fringe_first ? 0.7 : 0.55,
+    lat: 0,
+    lng: 0,
+    country_code: opts.country_code || 'XX',
+    timestamp: now,
+    title: c.narrative_summary.slice(0, 240),
+    summary: `${c.unique_sources} distinct sources within ${Math.round(c.time_spread_minutes)} min${c.fringe_first ? ' — fringe-first amplification detected' : ''}`,
+    raw_data: {
+      articles: c.articles.slice(0, 12),
+      unique_sources: c.unique_sources,
+      time_spread_minutes: c.time_spread_minutes,
+      fringe_first: c.fringe_first,
+    },
+    tags: ['narrative_cluster', ...(c.fringe_first ? ['fringe_first'] : [])],
+  }));
 }
 
 const STOP_WORDS = new Set([

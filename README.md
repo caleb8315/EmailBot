@@ -66,10 +66,23 @@ npm run email:weekly # weekly recap digest
 
 - `src/` — TypeScript pipeline, Telegram send, email digest, bot.  
 - `config/sources.json` — Node/RSS sources for the 5-minute pipeline.  
+- `lib/` — Reasoning brain: ingestion, belief engine, hypothesis board, narrative arcs, forecast engine, deliberation loop, reflection. See [`docs/BRAIN.md`](docs/BRAIN.md).
 - `news_intel/` — Python briefing engine and breaking checker.  
 - `preferences_updater.py` — CLI to merge `user_preferences.json` into `data/preferences.json`.  
 - `infra/` — optional VM bootstrap / rsync deploy.  
 - `dashboard/` — Next.js control panel (Vercel); root directory must be `dashboard` when deploying.
+
+## How smart is the brain?
+
+The reasoning stack is documented in [`docs/BRAIN.md`](docs/BRAIN.md). Highlights:
+
+- **Deliberation loop** (`lib/reasoning.ts`): every important LLM call runs draft → red-team critique → revise, with optional self-consistency samples and a judge pass. Outputs are calibrated against a historical reliability curve before being trusted.
+- **Forecast engine** (`lib/forecast-engine.ts`): every pattern match writes a real, scorable `predictions` row — Beta-prior from history, severity- and source-diversity-adjusted, with mechanism + falsifier.
+- **Auto-hypotheses** (`lib/hypothesis-board.ts`): primary + null hypothesis pairs, source-diversity (Shannon), log-odds posterior.
+- **Real calibration tracking**: per-bin reliability table updated streamingly on every resolution, plus log-loss alongside Brier.
+- **Reflection** (`lib/reflection.ts`): nightly self-review — critiques low-diversity hypotheses, flags stale beliefs, auto-resolves overdue predictions when the falsifier is met.
+
+Run the full brain test suite with `npm run test:brain`.
 
 ## License / safety
 
