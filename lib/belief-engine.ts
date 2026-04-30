@@ -119,6 +119,17 @@ export function doesEventSupportBelief(event: IntelEvent, belief: Belief): boole
 
 // ── Run against all beliefs after ingestion ─────────────────────────────
 
+/**
+ * Diminishing-returns weight for the k-th independent observation from
+ * the same source. We treat the first observation as full strength, the
+ * second as ~70%, and so on, asymptoting at zero. This prevents a noisy
+ * adapter from steamrolling a belief just because it produced 30 events.
+ */
+function sourceIndependenceWeight(k: number): number {
+  if (k <= 0) return 0;
+  return 1 / Math.sqrt(k);
+}
+
 export async function evaluateAllBeliefsAgainstNewEvents(
   newEvents: IntelEvent[],
 ): Promise<{ updated: number; conflictsFound: number }> {
@@ -146,25 +157,43 @@ export async function evaluateAllBeliefsAgainstNewEvents(
     const newEvidenceFor: Evidence[] = [...(belief.evidence_for || [])];
     const newEvidenceAgainst: Evidence[] = [...(belief.evidence_against || [])];
 
-    for (const event of relevantEvents) {
+    // Sort relevant events by severity so the strongest signals get the
+    // first (full-weight) update from each source rather than being
+    // dampened by noisy lower-severity duplicates.
+    const sortedEvents = [...relevantEvents].sort((a, b) => b.severity - a.severity);
+    const sourceCounts = new Map<string, number>();
+
+    for (const event of sortedEvents) {
+      const k = (sourceCounts.get(event.source) || 0) + 1;
+      sourceCounts.set(event.source, k);
+      const indWeight = sourceIndependenceWeight(k);
+      // Skip ultra-low-weight repeats — they only add noise.
+      if (indWeight < 0.2 && k > 1) continue;
+
       const supports = doesEventSupportBelief(event, belief);
+      // Synthesize a damped event by scaling its severity weight via
+      // independence factor before passing to the LR update.
+      const dampened: IntelEvent = {
+        ...event,
+        severity: Math.max(1, Math.round(event.severity * indWeight)),
+      };
       currentConfidence = updateBeliefConfidence(
         { ...belief, confidence: currentConfidence },
-        event,
+        dampened,
         supports,
       );
 
       newHistory.push({
         timestamp: new Date().toISOString(),
         confidence: currentConfidence,
-        reason: `${event.type} from ${event.source}: ${event.title.slice(0, 100)}`,
+        reason: `${event.type} from ${event.source} (×${k}, w=${indWeight.toFixed(2)}): ${event.title.slice(0, 100)}`,
         event_id: event.id,
       });
 
       const evidence: Evidence = {
         event_id: event.id || '',
         description: event.title.slice(0, 200),
-        weight: getSignalWeight(event),
+        weight: getSignalWeight(dampened),
         timestamp: new Date().toISOString(),
       };
 
