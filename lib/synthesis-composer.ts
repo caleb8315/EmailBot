@@ -78,13 +78,17 @@ interface BeliefRow {
 interface HypothesisRow {
   title: string;
   status: string;
-  evidence_score: number;
+  confidence?: number;
+  evidence_score?: number;
 }
 
 interface ArcRow {
   title: string;
-  current_act: string;
-  significance: number;
+  current_act: string | number;
+  total_acts?: number | null;
+  historical_accuracy?: number | null;
+  next_act_predicted?: string | null;
+  significance?: number;
 }
 
 function hoursAgo(iso: string): number {
