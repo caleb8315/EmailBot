@@ -12,6 +12,12 @@
     "bot": "ts-node src/chat_handler.ts --listen",
     "typecheck": "tsc --noEmit",
     "test:verification": "ts-node lib/__tests__/verification.test.ts",
+    "test:reasoning": "ts-node lib/__tests__/reasoning.test.ts",
+    "test:prediction-ledger": "ts-node lib/__tests__/prediction-ledger.test.ts",
+    "test:forecast-engine": "ts-node lib/__tests__/forecast-engine.test.ts",
+    "test:hypothesis-board": "ts-node lib/__tests__/hypothesis-board.test.ts",
+    "test:brain": "npm run test:verification && npm run test:reasoning && npm run test:prediction-ledger && npm run test:forecast-engine && npm run test:hypothesis-board",
+    "reflection": "ts-node lib/reflection.ts",
     "test:cluster-parity": "ts-node scripts/cluster_parity_harness.ts",
     "test:telegram": "node --env-file=.env ./node_modules/ts-node/dist/bin.js src/test_telegram.ts"
   },
