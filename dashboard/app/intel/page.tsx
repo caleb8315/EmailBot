@@ -1,13 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface EvidenceItem { weight?: number; event_id?: string; timestamp?: string; description?: string }
 interface Belief { id: string; statement: string; confidence: number; evidence_for: EvidenceItem[] | number; evidence_against: EvidenceItem[] | number; region?: string }
 interface Hypothesis { id: string; title: string; status: string; evidence_score: number; description?: string }
 interface Arc { id: string; title: string; current_act: string; total_acts?: number; significance: number; next_act_predicted?: string }
-interface Dream { id: string; title: string; scenario_type: string; probability: number; impact_level: string; narrative?: string }
-interface Prediction { id: string; statement: string; confidence: number; result?: string; created_at: string }
+interface Dream {
+  id: string;
+  title: string;
+  scenario_type: string;
+  probability: number;
+  impact_level: string;
+  narrative?: string;
+  signal_chain?: Array<string | { signal?: string; description?: string }>;
+  jeff_probability?: number;
+  market_implied_probability?: number;
+}
+interface Prediction {
+  id: string;
+  statement: string;
+  confidence_at_prediction: number;
+  made_at: string;
+  resolve_by?: string;
+  outcome?: string;
+  predictor?: string;
+  tags?: string[];
+}
 interface Article {
   url: string; title: string; source: string; summary: string | null;
   importance_score: number | null; credibility_score: number | null;
@@ -21,6 +41,7 @@ function evidenceCount(val: EvidenceItem[] | number | undefined): number {
 }
 
 function timeAgo(iso: string): string {
+  if (!iso) return "";
   const ms = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(ms / 60000);
   if (mins < 60) return `${mins}m ago`;
@@ -99,7 +120,7 @@ export default function IntelPage() {
     return list;
   }, [articles, search, sortBy, minScore, timeFilter]);
 
-  const toggleExpand = (url: string) => setExpanded(prev => { const n = new Set(prev); n.has(url) ? n.delete(url) : n.add(url); return n; });
+  const toggleExpand = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const sections: { id: Section; label: string; count: number }[] = [
     { id: "articles", label: "News Wire", count: articles.length },
@@ -237,7 +258,11 @@ export default function IntelPage() {
 
         {/* ─── Hypotheses ─── */}
         {section === "hypos" && hypotheses.map(h => (
-          <div key={h.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
+          <div
+            key={h.id}
+            className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4 cursor-pointer"
+            onClick={() => toggleExpand(h.id)}
+          >
             <div className="flex items-center gap-2 mb-2">
               <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full font-mono tracking-wider ${
                 h.status === "active" ? "bg-[#00C2FF]/15 text-[#00C2FF]" :
@@ -246,9 +271,17 @@ export default function IntelPage() {
               }`}>{h.status}</span>
               <div className="flex-1" />
               <span className="text-xs font-mono text-[#00C2FF]">{h.evidence_score}</span>
+              {h.description && (
+                <span className="text-[10px] text-gray-600 ml-1">{expanded.has(h.id) ? "▲" : "▼"}</span>
+              )}
             </div>
             <p className="text-sm text-gray-100 font-semibold">{h.title}</p>
-            {h.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{h.description}</p>}
+            {h.description && expanded.has(h.id) && (
+              <p className="text-xs text-gray-400 mt-2 leading-relaxed">{h.description}</p>
+            )}
+            {h.description && !expanded.has(h.id) && (
+              <p className="text-xs text-gray-500 mt-1 line-clamp-1">{h.description}</p>
+            )}
             <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-[#00C2FF]" style={{ width: `${Math.min(100, h.evidence_score)}%` }} />
             </div>
@@ -271,39 +304,137 @@ export default function IntelPage() {
         ))}
         {section === "arcs" && arcs.length === 0 && <Empty label="NO DEVELOPING STORIES DETECTED — MONITORING FOR PATTERNS" />}
 
-        {/* ─── Projections (Dreamtime) ─── */}
-        {section === "dream" && dreams.map(d => {
-          const typeColor = d.scenario_type === "wildcard" ? "text-yellow-400" : d.scenario_type === "underrated" ? "text-[#00C2FF]" : "text-gray-400";
-          return (
-            <div key={d.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`text-[10px] font-bold uppercase font-mono ${typeColor}`}>{d.scenario_type}</span>
-                {d.probability > 0 && <span className="text-[10px] text-gray-500 font-mono">{Math.round(d.probability * 100)}% PROBABILITY</span>}
-                {d.impact_level && <span className="text-[10px] text-gray-600 ml-auto uppercase font-mono">{d.impact_level} IMPACT</span>}
+        {/* ─── Projections (Dreamtime / What-If) ─── */}
+        {section === "dream" && (
+          <>
+            {dreams.length > 0 && (
+              <div className="flex justify-end">
+                <Link href="/dreamtime" className="text-[11px] font-mono text-[#00C2FF] hover:text-[#00FF41] transition-colors">
+                  VIEW ALL IN DREAMTIME ↗
+                </Link>
               </div>
-              <p className="text-sm text-gray-100 font-semibold">{d.title}</p>
-              {d.narrative && <p className="text-xs text-gray-400 mt-2 leading-relaxed line-clamp-3">{d.narrative}</p>}
-            </div>
-          );
-        })}
-        {section === "dream" && dreams.length === 0 && <Empty label="NO WHAT-IF SCENARIOS GENERATED — RUN DREAMTIME TO SIMULATE" />}
+            )}
+            {dreams.map(d => {
+              const typeColor = d.scenario_type === "wildcard" ? "text-yellow-400" : d.scenario_type === "underrated" ? "text-[#00C2FF]" : "text-gray-400";
+              const isOpen = expanded.has(d.id);
+              const pct = d.probability > 0 ? Math.round(d.probability * 100) : null;
+              const mktPct = d.market_implied_probability ? Math.round(d.market_implied_probability * 100) : null;
+              return (
+                <div
+                  key={d.id}
+                  className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4 cursor-pointer"
+                  onClick={() => toggleExpand(d.id)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-[10px] font-bold uppercase font-mono ${typeColor}`}>{d.scenario_type}</span>
+                    {pct !== null && <span className="text-[10px] text-gray-500 font-mono">{pct}% PROBABILITY</span>}
+                    {mktPct !== null && (
+                      <span className="text-[10px] text-gray-600 font-mono">
+                        CONSENSUS: {mktPct}%
+                      </span>
+                    )}
+                    {d.impact_level && <span className="text-[10px] text-gray-600 ml-auto uppercase font-mono">{d.impact_level} IMPACT</span>}
+                    <span className="text-[10px] text-gray-600 ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </div>
+                  <p className="text-sm text-gray-100 font-semibold">{d.title}</p>
+                  {isOpen ? (
+                    <>
+                      {d.narrative && (
+                        <p className="text-xs text-gray-400 mt-2 leading-relaxed whitespace-pre-line">{d.narrative}</p>
+                      )}
+                      {d.signal_chain && d.signal_chain.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/5">
+                          <p className="text-[10px] text-gray-500 font-mono mb-2">SIGNAL CHAIN</p>
+                          <div className="space-y-1">
+                            {d.signal_chain.map((signal, i) => (
+                              <p key={i} className="text-[10px] text-gray-500">
+                                {i + 1}. {typeof signal === "string" ? signal : signal.description || signal.signal || JSON.stringify(signal)}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    d.narrative && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{d.narrative}</p>
+                  )}
+                </div>
+              );
+            })}
+            {dreams.length === 0 && <Empty label="NO WHAT-IF SCENARIOS GENERATED — RUN DREAMTIME TO SIMULATE" />}
+          </>
+        )}
 
         {/* ─── Forecasts (Predictions) ─── */}
-        {section === "predictions" && predictions.map(p => (
-          <div key={p.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4">
-            <p className="text-sm text-gray-100">{p.statement}</p>
-            <div className="mt-2 flex items-center gap-3 text-[11px] font-mono">
-              <span className="text-[#00FF41]">{Math.round(p.confidence * 100)}% CONFIDENCE</span>
-              {p.result && (
-                <span className={`font-bold uppercase ${p.result === "correct" ? "text-green-400" : p.result === "wrong" ? "text-red-400" : "text-gray-500"}`}>
-                  {p.result === "correct" ? "VERIFIED" : p.result === "wrong" ? "DISPROVEN" : p.result.toUpperCase()}
-                </span>
-              )}
-              <span className="text-gray-600 ml-auto">{timeAgo(p.created_at)}</span>
-            </div>
-          </div>
-        ))}
-        {section === "predictions" && predictions.length === 0 && <Empty label="NO PREDICTIONS YET — NEEDS MORE DATA TO PROJECT OUTCOMES" />}
+        {section === "predictions" && (
+          <>
+            {predictions.length > 0 && (
+              <div className="flex justify-end">
+                <Link href="/predictions" className="text-[11px] font-mono text-[#00FF41] hover:text-[#00C2FF] transition-colors">
+                  MANAGE PREDICTIONS ↗
+                </Link>
+              </div>
+            )}
+            {predictions.map(p => {
+              const isOpen = expanded.has(p.id);
+              const confidence = p.confidence_at_prediction ?? (p as unknown as { confidence?: number }).confidence ?? 0;
+              const madeAt = p.made_at ?? (p as unknown as { created_at?: string }).created_at ?? "";
+              const outcome = p.outcome ?? (p as unknown as { result?: string }).result;
+              return (
+                <div
+                  key={p.id}
+                  className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4 cursor-pointer"
+                  onClick={() => toggleExpand(p.id)}
+                >
+                  <p className="text-sm text-gray-100">{p.statement}</p>
+                  <div className="mt-2 flex items-center gap-3 text-[11px] font-mono flex-wrap">
+                    <span className="text-[#00FF41]">{Math.round(confidence * 100)}% CONFIDENCE</span>
+                    {outcome && (
+                      <span className={`font-bold uppercase ${
+                        outcome === "correct" ? "text-green-400" :
+                        outcome === "incorrect" ? "text-red-400" :
+                        outcome === "partial" ? "text-yellow-400" :
+                        "text-gray-500"
+                      }`}>
+                        {outcome === "correct" ? "VERIFIED" : outcome === "incorrect" ? "DISPROVEN" : outcome.toUpperCase()}
+                      </span>
+                    )}
+                    {p.predictor && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-500 uppercase">{p.predictor}</span>
+                    )}
+                    <span className="text-gray-600 ml-auto">{timeAgo(madeAt)}</span>
+                    <span className="text-gray-600">{isOpen ? "▲" : "▼"}</span>
+                  </div>
+                  {isOpen && (
+                    <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5 text-[11px] font-mono text-gray-500">
+                      {p.resolve_by && (
+                        <p className={new Date(p.resolve_by) < new Date() ? "text-orange-400" : ""}>
+                          {new Date(p.resolve_by) < new Date() ? "⚠ OVERDUE — " : "RESOLVES BY "}
+                          {new Date(p.resolve_by).toLocaleDateString()}
+                        </p>
+                      )}
+                      {p.tags && p.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {p.tags.map(tag => (
+                            <span key={tag} className="px-1.5 py-0.5 rounded bg-white/5">{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      <Link
+                        href="/predictions"
+                        className="inline-block text-[#00FF41] hover:text-[#00C2FF] transition-colors"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        Resolve this prediction →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {predictions.length === 0 && <Empty label="NO PREDICTIONS YET — NEEDS MORE DATA TO PROJECT OUTCOMES" />}
+          </>
+        )}
       </div>
     </div>
   );
