@@ -220,10 +220,18 @@ export default function IntelPage() {
               <article key={article.url} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4" style={{ borderLeftWidth: "3px", borderLeftColor: importanceColor(article.importance_score ?? 0) }}>
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-[#00C2FF]/10 text-[#00C2FF]/80 border border-[#00C2FF]/20">{article.source}</span>
-                  {article.alerted && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-orange-500/12 text-orange-200 border border-orange-400/30">FLAGGED</span>}
-                  {article.emailed && <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-200 border border-emerald-400/30">DISPATCHED</span>}
-                  {article.importance_score != null && <span className="text-[11px] text-gray-500 font-mono">PRI {article.importance_score}/10</span>}
-                  {article.credibility_score != null && <span className="text-[11px] text-gray-500 font-mono">CRED {article.credibility_score}/10</span>}
+                  {article.alerted && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/12 text-orange-200 border border-orange-400/30">⚑ Flagged</span>}
+                  {article.emailed && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-200 border border-emerald-400/30">✉ Sent to you</span>}
+                  {article.importance_score != null && (
+                    <span className="text-[11px] text-gray-500" title="How important Jeff thinks this is (1-10)">
+                      Priority {article.importance_score}/10
+                    </span>
+                  )}
+                  {article.credibility_score != null && (
+                    <span className="text-[11px] text-gray-600" title="Source credibility score (1-10)">
+                      · {article.credibility_score}/10 credibility
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-sm font-semibold text-gray-100 leading-snug">{article.title}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
@@ -260,10 +268,10 @@ export default function IntelPage() {
                 </div>
                 <span className="text-xs font-mono font-bold" style={{ color: barColor }}>{pct}%</span>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-500 font-mono">
-                <span className="text-green-400/70">+{forCount} CORROBORATING</span>
-                <span className="text-red-400/70">-{againstCount} CONTRADICTING</span>
-                {b.region && <span className="ml-auto uppercase">{b.region}</span>}
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-gray-500">
+                <span className="text-green-400/80">{forCount} supporting</span>
+                <span className="text-red-400/80">{againstCount} against</span>
+                {b.region && <span className="ml-auto text-gray-600 uppercase text-[10px]">{b.region}</span>}
               </div>
             </div>
           );
@@ -278,11 +286,13 @@ export default function IntelPage() {
             onClick={() => toggleExpand(h.id)}
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full font-mono tracking-wider ${
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                 h.status === "active" ? "bg-[#00C2FF]/15 text-[#00C2FF]" :
                 h.status === "watching" ? "bg-yellow-500/15 text-yellow-400" :
                 "bg-gray-500/15 text-gray-400"
-              }`}>{h.status}</span>
+              }`}>
+                {h.status === "active" ? "Active" : h.status === "watching" ? "Watching" : h.status}
+              </span>
               <div className="flex-1" />
               <span className="text-xs font-mono text-[#00C2FF]">{Math.round((h.confidence ?? 0) * 100)}%</span>
               {h.description && (

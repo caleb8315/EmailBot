@@ -66,61 +66,89 @@ function ConfidenceBar({ value, size = "md" }: { value: number; size?: "sm" | "m
   );
 }
 
+function humanizePredictionStatement(statement: string): string {
+  const m = statement.match(/Within\s+(\d+)h,\s+follow-on events will corroborate pattern\s+"([^"]+)"\s+in\s+([^(]+)\(([^)]+)\)/i);
+  if (m) {
+    const hours = parseInt(m[1]);
+    const pattern = m[2].replace(/_/g, " ");
+    const region = m[3].trim();
+    const days = Math.round(hours / 24);
+    const timeframe = days >= 7 ? `${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? "s" : ""}` : `${days} day${days !== 1 ? "s" : ""}`;
+    const regionStr = region === "Global" ? "globally" : `in ${region}`;
+    return `Jeff predicts: the ${pattern} signal will be confirmed ${regionStr} within ${timeframe}.`;
+  }
+  return statement;
+}
+
+function stakeLabel(stake?: string): string {
+  if (stake === "HIGH") return "Jeff has high conviction on this";
+  if (stake === "MEDIUM") return "Jeff is moderately confident";
+  return "Jeff is tracking this tentatively";
+}
+
 function BeliefCard({ belief }: { belief: Belief }) {
   const [open, setOpen] = useState(false);
   const pct = Math.round(belief.confidence * 100);
   const stakeColor =
-    belief.jeff_stake === "HIGH" ? "text-red-400" : belief.jeff_stake === "MEDIUM" ? "text-yellow-400" : "text-gray-400";
+    belief.jeff_stake === "HIGH" ? "text-red-400" : belief.jeff_stake === "MEDIUM" ? "text-yellow-400" : "text-gray-500";
+  const barColor = pct >= 70 ? "#00FF41" : pct >= 40 ? "#EAB308" : "#EF4444";
 
   return (
     <div
-      className="border border-white/10 rounded-lg p-4 hover:border-[#00FF41]/30 transition-colors cursor-pointer"
+      className="bg-[#0c0c0c] border border-white/8 rounded-2xl p-4 cursor-pointer"
       onClick={() => setOpen(!open)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-200 leading-snug">{belief.statement}</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs font-mono text-[#00FF41]">{pct}%</span>
-            <div className="flex-1"><ConfidenceBar value={belief.confidence} size="sm" /></div>
-            {belief.user_agrees === false && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">
-                YOU DISAGREE
-              </span>
-            )}
-            <span className={`text-[10px] ${stakeColor} font-medium`}>{belief.jeff_stake}</span>
-          </div>
+      <p className="text-sm text-gray-200 leading-relaxed">{belief.statement}</p>
+
+      {/* Confidence bar */}
+      <div className="mt-3 flex items-center gap-3">
+        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
         </div>
+        <span className="text-sm font-bold font-mono shrink-0" style={{ color: barColor }}>{pct}%</span>
+      </div>
+
+      {/* Meta */}
+      <div className="mt-2 flex items-center gap-2 flex-wrap">
+        <span className={`text-xs ${stakeColor}`}>{stakeLabel(belief.jeff_stake)}</span>
+        {belief.user_agrees === false && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-semibold ml-auto">
+            You disagree
+          </span>
+        )}
       </div>
 
       {open && (
-        <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-          {belief.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {belief.tags.map(t => (
-                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400">{t}</span>
-              ))}
-            </div>
-          )}
+        <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+          {/* Evidence */}
           {belief.evidence_for?.length > 0 && (
             <div>
-              <p className="text-[10px] text-green-400 font-medium mb-1">SUPPORTING ({belief.evidence_for.length})</p>
-              {belief.evidence_for.slice(-3).map((e, i) => (
-                <p key={i} className="text-[10px] text-gray-500 leading-tight">+ {e.description}</p>
-              ))}
+              <p className="text-[11px] text-green-400 font-semibold mb-1.5">Supporting evidence</p>
+              <div className="space-y-1">
+                {belief.evidence_for.slice(-3).map((e, i) => (
+                  <p key={i} className="text-xs text-gray-400 leading-relaxed">✓ {e.description}</p>
+                ))}
+              </div>
             </div>
           )}
           {belief.evidence_against?.length > 0 && (
             <div>
-              <p className="text-[10px] text-red-400 font-medium mb-1">COUNTER ({belief.evidence_against.length})</p>
-              {belief.evidence_against.slice(-3).map((e, i) => (
-                <p key={i} className="text-[10px] text-gray-500 leading-tight">- {e.description}</p>
+              <p className="text-[11px] text-red-400 font-semibold mb-1.5">Evidence against</p>
+              <div className="space-y-1">
+                {belief.evidence_against.slice(-3).map((e, i) => (
+                  <p key={i} className="text-xs text-gray-400 leading-relaxed">✗ {e.description}</p>
+                ))}
+              </div>
+            </div>
+          )}
+          {belief.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {belief.tags.map(t => (
+                <span key={t} className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-gray-500 capitalize">{t.replace(/_/g, " ")}</span>
               ))}
             </div>
           )}
-          <p className="text-[10px] text-gray-600">
-            Updated {new Date(belief.last_updated).toLocaleDateString()}
-          </p>
+          <p className="text-[10px] text-gray-600">Updated {new Date(belief.last_updated).toLocaleDateString()}</p>
         </div>
       )}
     </div>
@@ -169,52 +197,54 @@ export default function MindPage() {
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            WHAT JEFF THINKS
-          </h1>
-          <p className="text-xs text-gray-500 mt-1 font-mono">
-            {beliefs.length} opinions about the world &middot; Updated every 15 min with real evidence
+        <header className="mb-6">
+          <h1 className="text-xl font-bold text-gray-100">What Jeff Thinks</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {beliefs.length} views on the world, each one scored by incoming evidence every 15 minutes.
           </p>
         </header>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+        {/* Summary filter cards */}
+        <div className="grid grid-cols-2 gap-2 mb-6">
           {[
-            { label: "Strong >70%", count: strong.length, key: "strong" as const, color: "text-green-400" },
-            { label: "Contested 40-70%", count: contested.length, key: "contested" as const, color: "text-yellow-400" },
-            { label: "Fading <40%", count: fading.length, key: "fading" as const, color: "text-red-400" },
-            { label: "You Disagree", count: disagreed.length, key: "disagreed" as const, color: "text-red-300" },
-            { label: "All Beliefs", count: beliefs.length, key: "all" as const, color: "text-[#00C2FF]" },
+            { label: "Confident (70%+)", count: strong.length, key: "strong" as const, color: "text-green-400", desc: "High confidence" },
+            { label: "Mixed (40–70%)", count: contested.length, key: "contested" as const, color: "text-yellow-400", desc: "Evidence is split" },
+            { label: "Fading (<40%)", count: fading.length, key: "fading" as const, color: "text-red-400", desc: "Evidence pushing back" },
+            { label: "You disagree", count: disagreed.length, key: "disagreed" as const, color: "text-orange-400", desc: "Flagged by you" },
           ].map(item => (
             <button
               key={item.key}
               onClick={() => setFilter(item.key)}
-              className={`p-3 rounded-lg border transition-colors text-left ${
+              className={`p-3 rounded-2xl border text-left transition-colors ${
                 filter === item.key
-                  ? "border-[#00FF41]/50 bg-[#00FF41]/5"
-                  : "border-white/10 hover:border-white/20"
+                  ? "border-white/20 bg-white/5"
+                  : "border-white/8 bg-[#0c0c0c] hover:border-white/15"
               }`}
             >
-              <p className={`text-xl font-bold font-mono ${item.color}`}>{item.count}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">{item.label}</p>
+              <p className={`text-2xl font-bold ${item.color}`}>{item.count}</p>
+              <p className="text-xs text-gray-400 mt-0.5 font-medium">{item.label}</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">{item.desc}</p>
             </button>
           ))}
         </div>
 
         {/* Predictions summary */}
         {activePreds.length > 0 && (
-          <div className="mb-8 border border-white/10 rounded-lg p-4">
-            <h2 className="text-sm font-bold text-[#00C2FF] font-mono mb-3">OPEN PREDICTIONS</h2>
-            <div className="space-y-2">
+          <div className="mb-6 bg-[#0c0c0c] border border-white/8 rounded-2xl p-4">
+            <h2 className="text-sm font-semibold text-[#00C2FF] mb-3">Open Predictions</h2>
+            <div className="space-y-3">
               {activePreds.slice(0, 5).map(p => (
-                <div key={p.id} className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-gray-300 flex-1 truncate">{p.statement}</p>
-                  <span className="text-xs font-mono text-[#00FF41]">{Math.round(p.confidence_at_prediction * 100)}%</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-500 uppercase">{p.predictor}</span>
-                  {p.resolve_by && (
-                    <span className="text-[10px] text-gray-600">{new Date(p.resolve_by).toLocaleDateString()}</span>
-                  )}
+                <div key={p.id} className="flex items-start gap-3">
+                  <span className="text-sm font-bold text-[#00FF41] shrink-0 mt-0.5">{Math.round(p.confidence_at_prediction * 100)}%</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-300 leading-relaxed">{humanizePredictionStatement(p.statement)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-gray-600 capitalize">{p.predictor === "jeff" ? "Jeff" : "You"}</span>
+                      {p.resolve_by && (
+                        <span className="text-[10px] text-gray-600">· Due {new Date(p.resolve_by).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -223,32 +253,41 @@ export default function MindPage() {
 
         {/* Recent resolutions */}
         {recentResolved.length > 0 && (
-          <div className="mb-8 border border-white/10 rounded-lg p-4">
-            <h2 className="text-sm font-bold text-gray-400 font-mono mb-3">RECENTLY RESOLVED</h2>
-            <div className="space-y-2">
+          <div className="mb-6 bg-[#0c0c0c] border border-white/8 rounded-2xl p-4">
+            <h2 className="text-sm font-semibold text-gray-400 mb-3">Recently resolved</h2>
+            <div className="space-y-3">
               {recentResolved.map(p => (
-                <div key={p.id} className="flex items-center gap-2">
-                  <span className={`text-xs ${p.outcome === "correct" ? "text-green-400" : "text-red-400"}`}>
-                    {p.outcome === "correct" ? "CORRECT" : p.outcome === "incorrect" ? "WRONG" : p.outcome?.toUpperCase()}
+                <div key={p.id} className="flex items-start gap-3">
+                  <span className={`text-xs font-bold shrink-0 mt-0.5 ${
+                    p.outcome === "correct" ? "text-green-400" :
+                    p.outcome === "incorrect" ? "text-red-400" :
+                    p.outcome === "partial" ? "text-yellow-400" : "text-gray-500"
+                  }`}>
+                    {p.outcome === "correct" ? "✓" : p.outcome === "incorrect" ? "✗" : "~"}
                   </span>
-                  <p className="text-xs text-gray-400 flex-1 truncate">{p.statement}</p>
-                  {p.brier_score !== undefined && p.brier_score !== null && (
-                    <span className="text-[10px] font-mono text-gray-600">Brier: {p.brier_score.toFixed(2)}</span>
-                  )}
+                  <p className="text-xs text-gray-400 leading-relaxed">{humanizePredictionStatement(p.statement)}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* Show all button */}
+        <button
+          onClick={() => setFilter("all")}
+          className={`w-full mb-4 py-2.5 rounded-2xl border text-sm font-medium transition-colors ${
+            filter === "all"
+              ? "border-white/20 bg-white/5 text-gray-200"
+              : "border-white/8 bg-[#0c0c0c] text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          Show all {beliefs.length} views
+        </button>
+
         {/* Belief list */}
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-gray-400 font-mono">
-            {filter === "all" ? "ALL BELIEFS" : filter.toUpperCase()}
-            <span className="text-gray-600 font-normal ml-2">({filtered.length})</span>
-          </h2>
           {filtered.length === 0 ? (
-            <p className="text-sm text-gray-600 py-8 text-center">No beliefs yet. Jeff is still learning.</p>
+            <p className="text-sm text-gray-600 py-8 text-center">No beliefs in this category yet.</p>
           ) : (
             filtered.map(b => <BeliefCard key={b.id} belief={b} />)
           )}

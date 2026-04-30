@@ -17,22 +17,35 @@ interface DreamtimeScenario {
   user_reaction?: string;
 }
 
-const TYPE_CONFIG: Record<string, { label: string; color: string; description: string }> = {
+const TYPE_CONFIG: Record<string, { label: string; color: string; bgColor: string; headline: string; explanation: string }> = {
   wildcard: {
-    label: "WILDCARD",
+    label: "Wildcard",
     color: "text-red-400",
-    description: "Low probability, extreme impact. Nobody is discussing this.",
+    bgColor: "bg-red-500/10 border-red-500/20",
+    headline: "Low odds, massive impact",
+    explanation: "Nobody is seriously talking about this — but Jeff thinks it deserves attention. If it happens, it changes everything. Think of it as the scenario most analysts are sleeping on.",
   },
   underrated: {
-    label: "UNDERRATED",
+    label: "Underrated",
     color: "text-yellow-400",
-    description: "Higher probability than consensus believes. Everyone is wrong about this.",
+    bgColor: "bg-yellow-500/10 border-yellow-500/20",
+    headline: "More likely than people think",
+    explanation: "The mainstream view underestimates this. Jeff's signals suggest a higher probability than what markets or analysts are pricing in. This is where the consensus is most likely wrong.",
   },
   fading_consensus: {
-    label: "FADING CONSENSUS",
+    label: "Fading Consensus",
     color: "text-[#00C2FF]",
-    description: "The expected outcome won't happen. Here's why.",
+    bgColor: "bg-[#00C2FF]/10 border-[#00C2FF]/20",
+    headline: "The expected thing won't happen",
+    explanation: "Everyone thinks they know how this plays out — but Jeff sees signals that the conventional wisdom is breaking down. The 'obvious' outcome is less certain than it looks.",
   },
+};
+
+const IMPACT_CONFIG: Record<string, { label: string; color: string }> = {
+  extreme: { label: "Extreme impact", color: "text-red-400" },
+  high: { label: "High impact", color: "text-orange-400" },
+  medium: { label: "Medium impact", color: "text-yellow-400" },
+  low: { label: "Low impact", color: "text-gray-400" },
 };
 
 export default function DreamtimePage() {
@@ -50,7 +63,7 @@ export default function DreamtimePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#050505]">
-        <div className="text-[#00FF41] font-mono animate-pulse">LOADING DREAMTIME SCENARIOS...</div>
+        <div className="text-[#00FF41] font-mono animate-pulse text-sm">Loading overnight analysis...</div>
       </div>
     );
   }
@@ -64,107 +77,116 @@ export default function DreamtimePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-gray-200">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-[#00FF41] font-mono tracking-tight">
-            WHAT YOU MISSED OVERNIGHT
-          </h1>
-          <p className="text-xs text-gray-500 mt-1 font-mono">
-            Every night at 3am, Jeff looks at all the data and asks: what is everyone missing?
-          </p>
-        </header>
+    <div className="min-h-screen bg-[#050505] text-gray-200 pb-24">
+      <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
+        <h1 className="text-xl font-bold text-gray-100">What You Missed Overnight</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Every night Jeff reviews all the data and asks: what is everyone missing? These are the scenarios worth thinking about.
+        </p>
+      </div>
 
-        {scenarios.length === 0 ? (
-          <p className="text-sm text-gray-600 py-12 text-center">
-            No Dreamtime scenarios yet. They generate overnight at 3am.
-          </p>
-        ) : (
-          <div className="space-y-10">
-            {[...byDate.entries()].map(([date, dayScenarios]) => (
-              <div key={date}>
-                <h2 className="text-sm font-bold text-gray-400 font-mono mb-4">
+      {scenarios.length === 0 ? (
+        <div className="text-center py-16 px-4">
+          <p className="text-gray-500 text-sm">No overnight scenarios yet.</p>
+          <p className="text-gray-600 text-xs mt-2">They generate nightly. Check back in the morning.</p>
+        </div>
+      ) : (
+        <div className="space-y-10 pb-4">
+          {[...byDate.entries()].map(([date, dayScenarios]) => (
+            <div key={date}>
+              <div className="max-w-2xl mx-auto px-4 mb-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
+                    weekday: "long", month: "long", day: "numeric",
                   })}
-                </h2>
-                <div className="space-y-4">
-                  {dayScenarios.map(scenario => {
-                    const config = TYPE_CONFIG[scenario.scenario_type] || TYPE_CONFIG.wildcard;
-                    const pct = scenario.probability ? Math.round(scenario.probability * 100) : null;
-                    const mktPct = scenario.market_implied_probability
-                      ? Math.round(scenario.market_implied_probability * 100)
-                      : null;
+                </p>
+              </div>
 
-                    return (
-                      <div key={scenario.id} className="border border-white/10 rounded-lg p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className={`text-[10px] font-bold font-mono ${config.color}`}>
-                            {config.label}
-                          </span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                            scenario.impact_level === "extreme"
-                              ? "bg-red-500/10 text-red-400"
-                              : scenario.impact_level === "high"
-                              ? "bg-yellow-500/10 text-yellow-400"
-                              : "bg-white/5 text-gray-500"
-                          }`}>
-                            {scenario.impact_level?.toUpperCase()} IMPACT
-                          </span>
-                          {!scenario.user_read && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#00FF41]/10 text-[#00FF41]">NEW</span>
-                          )}
-                        </div>
+              <div className="max-w-2xl mx-auto px-4 space-y-4">
+                {dayScenarios.map(scenario => {
+                  const config = TYPE_CONFIG[scenario.scenario_type] || TYPE_CONFIG.wildcard;
+                  const impact = IMPACT_CONFIG[scenario.impact_level?.toLowerCase()] || { label: scenario.impact_level, color: "text-gray-400" };
+                  const pct = scenario.probability ? Math.round(scenario.probability * 100) : null;
+                  const mktPct = scenario.market_implied_probability
+                    ? Math.round(scenario.market_implied_probability * 100)
+                    : null;
+                  const gap = pct !== null && mktPct !== null ? pct - mktPct : null;
 
-                        <h3 className="text-base font-bold text-gray-200 mb-2">{scenario.title}</h3>
-
-                        {pct !== null && (
-                          <div className="flex items-center gap-4 mb-3 text-xs">
-                            <span className="font-mono">
-                              Jeff: <span className="text-[#00FF41]">{pct}%</span>
-                            </span>
-                            {mktPct !== null && (
-                              <span className="font-mono">
-                                Consensus: <span className="text-gray-500">{mktPct}%</span>
-                              </span>
-                            )}
-                            {pct !== null && mktPct !== null && (
-                              <span className={`font-mono text-[10px] ${
-                                pct > mktPct ? "text-yellow-400" : "text-gray-600"
-                              }`}>
-                                {pct > mktPct ? `+${pct - mktPct}% vs consensus` : `${pct - mktPct}% vs consensus`}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-line mb-3">
-                          {scenario.narrative}
-                        </p>
-
-                        {scenario.signal_chain && scenario.signal_chain.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-white/5">
-                            <p className="text-[10px] text-gray-500 font-mono mb-2">SIGNAL CHAIN</p>
-                            <div className="space-y-1">
-                              {(scenario.signal_chain as Array<string | { signal?: string; description?: string }>).map((signal, i) => (
-                                <p key={i} className="text-[10px] text-gray-500">
-                                  {i + 1}. {typeof signal === 'string' ? signal : signal.description || signal.signal || JSON.stringify(signal)}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
+                  return (
+                    <div key={scenario.id} className="bg-[#0c0c0c] border border-white/8 rounded-2xl p-4">
+                      {/* Type badge + new indicator */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${config.bgColor} ${config.color}`}>
+                          {config.label}
+                        </span>
+                        <span className={`text-[11px] font-medium ${impact.color}`}>{impact.label}</span>
+                        {!scenario.user_read && (
+                          <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#00FF41]/10 text-[#00FF41] font-bold">NEW</span>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* What kind of scenario this is */}
+                      <p className="text-[11px] text-gray-500 leading-snug mb-2">{config.explanation}</p>
+
+                      {/* Title */}
+                      <h3 className="text-base font-bold text-gray-100 mb-3 leading-snug">{scenario.title}</h3>
+
+                      {/* Probability comparison */}
+                      {pct !== null && (
+                        <div className="bg-[#050505] border border-white/5 rounded-xl p-3 mb-3">
+                          <div className="flex items-center gap-4 text-sm">
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Jeff thinks</p>
+                              <p className="text-lg font-bold text-[#00FF41]">{pct}%</p>
+                            </div>
+                            {mktPct !== null && (
+                              <>
+                                <div className="text-gray-700 text-lg">vs</div>
+                                <div>
+                                  <p className="text-[10px] text-gray-500 mb-0.5">Consensus says</p>
+                                  <p className="text-lg font-bold text-gray-400">{mktPct}%</p>
+                                </div>
+                                {gap !== null && (
+                                  <div className="ml-auto text-right">
+                                    <p className="text-[10px] text-gray-500 mb-0.5">Jeff&apos;s edge</p>
+                                    <p className={`text-sm font-bold ${gap > 0 ? "text-yellow-400" : "text-gray-600"}`}>
+                                      {gap > 0 ? `+${gap}%` : `${gap}%`}
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Narrative */}
+                      <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-line">{scenario.narrative}</p>
+
+                      {/* Signal chain */}
+                      {scenario.signal_chain && scenario.signal_chain.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold mb-2">What signals led here</p>
+                          <div className="space-y-2">
+                            {(scenario.signal_chain as Array<string | { signal?: string; description?: string }>).map((signal, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <span className="text-[10px] text-gray-600 font-mono mt-0.5 shrink-0">{i + 1}.</span>
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                  {typeof signal === "string" ? signal : signal.description || signal.signal || JSON.stringify(signal)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
