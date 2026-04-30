@@ -101,6 +101,7 @@ async function runPipeline(): Promise<void> {
 
   if (rawArticles.length === 0) {
     logger.warn("No articles fetched — pipeline ending early");
+    await finishEngineRun(engineRunId, { status: 'success', records_in: 0, records_out: 0 });
     return;
   }
 
@@ -119,6 +120,7 @@ async function runPipeline(): Promise<void> {
 
   if (freshArticles.length === 0) {
     logger.info("No new articles after dedup — pipeline complete");
+    await finishEngineRun(engineRunId, { status: 'success', records_in: rawArticles.length, records_out: 0 });
     return;
   }
 

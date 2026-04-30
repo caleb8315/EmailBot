@@ -36,6 +36,7 @@ export async function POST(
     return NextResponse.json({ ok: true, id, outcome });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = msg.includes("not found") ? 404 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

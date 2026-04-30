@@ -70,14 +70,16 @@ interface Hypothesis {
   id: string;
   title: string;
   status: string;
-  evidence_score: number;
+  confidence: number;
 }
 
 interface NarrativeArc {
   id: string;
   title: string;
-  current_act: string;
-  significance: number;
+  current_act: number;
+  total_acts?: number;
+  historical_accuracy?: number;
+  next_act_predicted?: string;
 }
 
 interface DreamScenario {
@@ -934,9 +936,9 @@ function OpsCenter() {
                 <p className="text-[11px] text-gray-200 leading-snug">{h.title}</p>
                 <div className="mt-0.5 flex items-center gap-2">
                   <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-[#00C2FF]" style={{ width: `${Math.min(100, h.evidence_score)}%` }} />
+                    <div className="h-full rounded-full bg-[#00C2FF]" style={{ width: `${Math.round((h.confidence ?? 0) * 100)}%` }} />
                   </div>
-                  <span className="text-[9px] text-gray-500 font-mono">{h.evidence_score}</span>
+                  <span className="text-[9px] text-gray-500 font-mono">{Math.round((h.confidence ?? 0) * 100)}%</span>
                 </div>
               </div>
             ))}
@@ -949,7 +951,10 @@ function OpsCenter() {
             {arcs.slice(0, 5).map(a => (
               <div key={a.id} className="mb-1.5 text-[11px]">
                 <p className="text-gray-200 leading-snug">{a.title}</p>
-                <span className="text-[9px] text-gray-500">Act {a.current_act} · Significance: {a.significance}</span>
+                <span className="text-[9px] text-gray-500">
+                  Act {a.current_act}{a.total_acts ? `/${a.total_acts}` : ""}
+                  {a.historical_accuracy != null ? ` · ${Math.round(a.historical_accuracy * 100)}% accuracy` : ""}
+                </span>
               </div>
             ))}
             {arcs.length === 0 && <p className="text-[10px] text-gray-600 font-mono">NO ACTIVE ARCS</p>}

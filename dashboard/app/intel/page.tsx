@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface EvidenceItem { weight?: number; event_id?: string; timestamp?: string; description?: string }
 interface Belief { id: string; statement: string; confidence: number; evidence_for: EvidenceItem[] | number; evidence_against: EvidenceItem[] | number; region?: string }
-interface Hypothesis { id: string; title: string; status: string; evidence_score: number; description?: string }
-interface Arc { id: string; title: string; current_act: string; total_acts?: number; significance: number; next_act_predicted?: string }
+interface Hypothesis { id: string; title: string; status: string; confidence: number; description?: string }
+interface Arc { id: string; title: string; current_act: number; total_acts?: number; historical_accuracy?: number; next_act_predicted?: string }
 interface Dream {
   id: string;
   title: string;
@@ -270,7 +270,7 @@ export default function IntelPage() {
                 "bg-gray-500/15 text-gray-400"
               }`}>{h.status}</span>
               <div className="flex-1" />
-              <span className="text-xs font-mono text-[#00C2FF]">{h.evidence_score}</span>
+              <span className="text-xs font-mono text-[#00C2FF]">{Math.round((h.confidence ?? 0) * 100)}%</span>
               {h.description && (
                 <span className="text-[10px] text-gray-600 ml-1">{expanded.has(h.id) ? "▲" : "▼"}</span>
               )}
@@ -283,7 +283,7 @@ export default function IntelPage() {
               <p className="text-xs text-gray-500 mt-1 line-clamp-1">{h.description}</p>
             )}
             <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-[#00C2FF]" style={{ width: `${Math.min(100, h.evidence_score)}%` }} />
+              <div className="h-full rounded-full bg-[#00C2FF]" style={{ width: `${Math.round((h.confidence ?? 0) * 100)}%` }} />
             </div>
           </div>
         ))}
@@ -295,7 +295,9 @@ export default function IntelPage() {
             <p className="text-sm text-gray-100 font-semibold">{a.title}</p>
             <div className="mt-2 flex items-center gap-3 text-[11px]">
               <span className="text-purple-400 font-mono font-bold">ACT {a.current_act}{a.total_acts ? `/${a.total_acts}` : ""}</span>
-              <span className="text-gray-500 font-mono">SIGNIFICANCE: {a.significance}</span>
+              {a.historical_accuracy != null && (
+                <span className="text-gray-500 font-mono">{Math.round(a.historical_accuracy * 100)}% ACCURACY</span>
+              )}
             </div>
             {a.next_act_predicted && (
               <p className="text-[11px] text-gray-500 mt-1 font-mono">NEXT: {a.next_act_predicted}</p>

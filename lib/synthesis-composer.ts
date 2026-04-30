@@ -299,12 +299,12 @@ export async function composeSynthesis(): Promise<FusedSignal[]> {
       .order('confidence', { ascending: false })
       .limit(20),
     sb.from('hypotheses')
-      .select('title,status,evidence_score')
+      .select('title,status,confidence')
       .in('status', ['active', 'watching'])
       .limit(10),
     sb.from('narrative_arcs')
-      .select('title,current_act,significance')
-      .order('significance', { ascending: false })
+      .select('title,current_act,total_acts,historical_accuracy,next_act_predicted')
+      .order('last_updated', { ascending: false })
       .limit(10),
   ]);
 

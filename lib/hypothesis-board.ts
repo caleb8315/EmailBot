@@ -21,8 +21,8 @@ function bayesUpdate(prior: number, supports: boolean, strength: number): number
 }
 
 function assessEventRelevance(event: IntelEvent, hypothesis: Hypothesis): number {
-  const hText = `${hypothesis.title} ${hypothesis.tags.join(' ')} ${hypothesis.region || ''}`.toLowerCase();
-  const eText = `${event.title} ${event.summary} ${event.tags.join(' ')}`.toLowerCase();
+  const hText = `${hypothesis.title} ${(hypothesis.tags ?? []).join(' ')} ${hypothesis.region || ''}`.toLowerCase();
+  const eText = `${event.title} ${event.summary} ${(event.tags ?? []).join(' ')}`.toLowerCase();
 
   const hTokens = hText.split(/\s+/).filter(t => t.length > 3);
   let matchScore = 0;

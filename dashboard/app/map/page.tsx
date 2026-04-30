@@ -132,7 +132,7 @@ function MapInner() {
           version: 8 as const,
           sources: {
             carto: { type: "raster", tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"], tileSize: 256, maxzoom: 19 },
-            nasa_gibs: { type: "raster", tiles: ["https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-04-13/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg"], tileSize: 256, maxzoom: 9 },
+            nasa_gibs: { type: "raster", tiles: [`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${new Date(Date.now() - 86400000).toISOString().slice(0, 10)}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`], tileSize: 256, maxzoom: 9 },
           },
           layers: [{ id: "carto", type: "raster", source: "carto" }],
           glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",

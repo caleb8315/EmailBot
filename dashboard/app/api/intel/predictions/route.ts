@@ -15,11 +15,15 @@ export async function GET(req: Request) {
     const sb = supabaseAdmin();
 
     if (wantCalibration) {
-      const { data: profile } = await sb.from("user_profile").select("*").limit(1).single();
-      const { data: resolved } = await sb
+      const { data: profile, error: profileError } = await sb.from("user_profile").select("*").limit(1).single();
+      if (profileError && profileError.code !== "PGRST116") {
+        return NextResponse.json({ error: profileError.message }, { status: 500 });
+      }
+      const { data: resolved, error: resolvedError } = await sb
         .from("predictions")
         .select("predictor, brier_score")
         .not("brier_score", "is", null);
+      if (resolvedError) return NextResponse.json({ error: resolvedError.message }, { status: 500 });
 
       let jeffAvg = 0, userAvg = 0, jeffCount = 0, userCount = 0;
       for (const p of resolved || []) {

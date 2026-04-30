@@ -37,11 +37,19 @@ export async function POST(req: Request) {
     if (msg && text) {
       const userId = String(msg.from?.id ?? msg.chat.id);
       const reply = await handleMessage(userId, msg.chat.id, text);
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: msg.chat.id, text: reply }),
-      });
+      try {
+        const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: msg.chat.id, text: reply }),
+        });
+        if (!tgRes.ok) {
+          const errBody = await tgRes.text().catch(() => "");
+          console.error(`[telegram] sendMessage failed ${tgRes.status}: ${errBody}`);
+        }
+      } catch (sendErr) {
+        console.error("[telegram] sendMessage threw:", sendErr instanceof Error ? sendErr.message : String(sendErr));
+      }
     }
 
     return NextResponse.json({ ok: true });

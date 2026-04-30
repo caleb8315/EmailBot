@@ -62,6 +62,7 @@ export async function GET(req: Request) {
     ]);
 
     if (geoRes.error) return NextResponse.json({ error: geoRes.error.message }, { status: 500 });
+    if (textRes.error) return NextResponse.json({ error: textRes.error.message }, { status: 500 });
 
     const geoEvents = (geoRes.data ?? []).map(decodeEvent);
     const textEvents = (textRes.data ?? []).map(decodeEvent);

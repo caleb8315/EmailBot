@@ -62,20 +62,22 @@ export async function resolvePrediction(
 ): Promise<void> {
   const sb = getSupabase();
 
-  const { data: pred } = await sb
+  const { data: pred, error: fetchError } = await sb
     .from('predictions')
     .select('*')
     .eq('id', id)
     .single();
 
-  if (!pred) return;
+  if (fetchError || !pred) {
+    throw new Error(`Prediction not found: ${id}`);
+  }
 
   const isCorrect = outcome === 'correct';
   const brierScore = outcome === 'unresolvable'
     ? null
     : calculateBrierScore(pred.confidence_at_prediction, isCorrect);
 
-  await sb
+  const { error: updateError } = await sb
     .from('predictions')
     .update({
       resolved_at: new Date().toISOString(),
@@ -84,6 +86,10 @@ export async function resolvePrediction(
       brier_score: brierScore,
     })
     .eq('id', id);
+
+  if (updateError) {
+    throw new Error(`Failed to update prediction: ${updateError.message}`);
+  }
 
   // Update user profile calibration
   if (brierScore !== null) {
