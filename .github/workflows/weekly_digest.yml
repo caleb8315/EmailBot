@@ -5,10 +5,16 @@ on:
     - cron: "0 14 * * 0"
   workflow_dispatch:
 
+concurrency:
+  group: bot-state
+  cancel-in-progress: false
+
 jobs:
   send-weekly-recap:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -46,9 +52,6 @@ jobs:
           OPENAI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
           GEMINI_NATIVE_BASE_URL: "https://generativelanguage.googleapis.com/v1beta"
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
@@ -67,6 +70,27 @@ jobs:
           MAX_DAILY_PIPELINE_AI_CALLS: "30"
           MAX_DAILY_DIGEST_AI_CALLS: "6"
         run: npx ts-node src/send_email.ts --weekly
+
+      - name: Persist local state
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain data/state)" ]; then
+            echo "No state changes to persist."
+            exit 0
+          fi
+          git add data/state
+          git commit -m "chore(state): persist bot state [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "State persisted."
+              exit 0
+            fi
+            echo "Push conflict — retry $i"; sleep $((RANDOM % 5 + 2))
+          done
+          echo "::warning::Could not persist bot state after retries"
 
       - name: Notify on failure
         if: failure()

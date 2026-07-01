@@ -1,5 +1,10 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createLogger } from "./logger";
+import {
+  readJson,
+  writeJson,
+  localId,
+  capArray,
+} from "./local_store";
 import type {
   UserPreferences,
   ArticleHistory,
@@ -9,18 +14,28 @@ import type {
 
 const logger = createLogger("memory");
 
-let _client: SupabaseClient | null = null;
+/**
+ * Local-file memory for the basic bot (Supabase-free).
+ *
+ * Every function keeps the exact signature the rest of the pipeline expects, so
+ * this is a drop-in replacement for the old Supabase-backed module. State lives
+ * as JSON under `data/state/` (see `local_store.ts`).
+ */
 
-function getClient(): SupabaseClient {
-  if (_client) return _client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
-  }
-  _client = createClient(url, key);
-  return _client;
-}
+const PREFS_FILE = "preferences.json";
+const ARTICLES_FILE = "articles.json";
+const EVENTS_FILE = "system_events.json";
+const DIGESTS_FILE = "digests.json";
+
+// 8 days by default: the weekly recap looks back 7 days, so keep a little more.
+// Lower it to shrink the committed data/state/articles.json (repo size), raise
+// it if you want a longer history.
+const ARTICLE_RETENTION_DAYS = Number.parseInt(
+  process.env.ARTICLE_RETENTION_DAYS || "8",
+  10
+);
+const MAX_EVENTS = 500;
+const MAX_DIGESTS = 90;
 
 // ── User Preferences ──
 
@@ -34,41 +49,40 @@ const DEFAULT_PREFERENCES: Omit<UserPreferences, "id" | "updated_at"> = {
   briefing_overlay: {},
 };
 
+type PrefsMap = Record<string, UserPreferences>;
+
+function readPrefs(): PrefsMap {
+  return readJson<PrefsMap>(PREFS_FILE, {});
+}
+
+function normalizeUserPreferences(row: UserPreferences): UserPreferences {
+  return {
+    ...row,
+    briefing_overlay:
+      row.briefing_overlay && typeof row.briefing_overlay === "object"
+        ? row.briefing_overlay
+        : {},
+  };
+}
+
 export async function getPreferences(
   userId: string
 ): Promise<UserPreferences> {
   try {
-    const sb = getClient();
-    const { data, error } = await sb
-      .from("user_preferences")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const all = readPrefs();
+    const existing = all[userId];
+    if (existing) return normalizeUserPreferences(existing);
 
-    if (error) {
-      logger.error("Failed to fetch preferences", { error: error.message });
-      throw error;
-    }
-
-    if (data) {
-      return normalizeUserPreferences(data as UserPreferences);
-    }
-
-    const { data: inserted, error: insertErr } = await sb
-      .from("user_preferences")
-      .insert({ ...DEFAULT_PREFERENCES, user_id: userId })
-      .select("*")
-      .single();
-
-    if (insertErr) {
-      logger.error("Failed to create default preferences", {
-        error: insertErr.message,
-      });
-      throw insertErr;
-    }
-
+    const created: UserPreferences = {
+      ...DEFAULT_PREFERENCES,
+      id: localId(),
+      user_id: userId,
+      updated_at: new Date().toISOString(),
+    };
+    all[userId] = created;
+    writeJson(PREFS_FILE, all);
     logger.info("Created default preferences", { userId });
-    return normalizeUserPreferences(inserted as UserPreferences);
+    return normalizeUserPreferences(created);
   } catch (err) {
     logger.error("getPreferences failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -80,16 +94,6 @@ export async function getPreferences(
       updated_at: new Date().toISOString(),
     };
   }
-}
-
-function normalizeUserPreferences(row: UserPreferences): UserPreferences {
-  return {
-    ...row,
-    briefing_overlay:
-      row.briefing_overlay && typeof row.briefing_overlay === "object"
-        ? row.briefing_overlay
-        : {},
-  };
 }
 
 export async function updatePreferences(
@@ -107,17 +111,20 @@ export async function updatePreferences(
   >
 ): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb
-      .from("user_preferences")
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
-
-    if (error) {
-      logger.error("Failed to update preferences", { error: error.message });
-      throw error;
-    }
-
+    const all = readPrefs();
+    const current =
+      all[userId] ?? {
+        ...DEFAULT_PREFERENCES,
+        id: localId(),
+        user_id: userId,
+        updated_at: new Date().toISOString(),
+      };
+    all[userId] = {
+      ...current,
+      ...patch,
+      updated_at: new Date().toISOString(),
+    };
+    writeJson(PREFS_FILE, all);
     logger.info("Preferences updated", { userId, fields: Object.keys(patch) });
   } catch (err) {
     logger.error("updatePreferences failed", {
@@ -140,20 +147,34 @@ export async function patchBriefingOverlay(
 
 // ── Article History ──
 
+function readArticles(): ArticleHistory[] {
+  return readJson<ArticleHistory[]>(ARTICLES_FILE, []);
+}
+
+function pruneArticles(articles: ArticleHistory[]): ArticleHistory[] {
+  const cutoff = Date.now() - ARTICLE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return articles.filter((a) => {
+    const t = new Date(a.fetched_at).getTime();
+    return Number.isFinite(t) ? t >= cutoff : true;
+  });
+}
+
+function writeArticles(articles: ArticleHistory[]): void {
+  writeJson(ARTICLES_FILE, pruneArticles(articles));
+}
+
 export async function saveArticle(
   article: Omit<ArticleHistory, "id">
 ): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb.from("article_history").upsert(article, {
-      onConflict: "url",
-    });
-
-    if (error) {
-      logger.error("Failed to save article", { error: error.message });
-      throw error;
+    const articles = readArticles();
+    const idx = articles.findIndex((a) => a.url === article.url);
+    if (idx >= 0) {
+      articles[idx] = { ...articles[idx], ...article };
+    } else {
+      articles.push({ id: localId(), ...article });
     }
-
+    writeArticles(articles);
     logger.debug("Article saved", { url: article.url });
   } catch (err) {
     logger.error("saveArticle failed", {
@@ -167,19 +188,7 @@ export async function getArticleByUrl(
   url: string
 ): Promise<ArticleHistory | null> {
   try {
-    const sb = getClient();
-    const { data, error } = await sb
-      .from("article_history")
-      .select("*")
-      .eq("url", url)
-      .maybeSingle();
-
-    if (error) {
-      logger.error("Failed to fetch article", { error: error.message });
-      return null;
-    }
-
-    return (data as ArticleHistory) ?? null;
+    return readArticles().find((a) => a.url === url) ?? null;
   } catch (err) {
     logger.error("getArticleByUrl failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -192,23 +201,16 @@ export async function getRecentArticles(
   hours: number
 ): Promise<ArticleHistory[]> {
   try {
-    const sb = getClient();
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-
-    const { data, error } = await sb
-      .from("article_history")
-      .select("*")
-      .gte("fetched_at", since)
-      .order("fetched_at", { ascending: false });
-
-    if (error) {
-      logger.error("Failed to fetch recent articles", {
-        error: error.message,
-      });
-      return [];
-    }
-
-    return (data ?? []) as ArticleHistory[];
+    const since = Date.now() - hours * 60 * 60 * 1000;
+    return readArticles()
+      .filter((a) => {
+        const t = new Date(a.fetched_at).getTime();
+        return Number.isFinite(t) && t >= since;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime()
+      );
   } catch (err) {
     logger.error("getRecentArticles failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -222,17 +224,12 @@ export async function updateFeedback(
   feedback: string
 ): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb
-      .from("article_history")
-      .update({ user_feedback: feedback })
-      .eq("url", url);
-
-    if (error) {
-      logger.error("Failed to update feedback", { error: error.message });
-    } else {
-      logger.info("Feedback recorded", { url, feedback });
-    }
+    const articles = readArticles();
+    const idx = articles.findIndex((a) => a.url === url);
+    if (idx < 0) return;
+    articles[idx].user_feedback = feedback;
+    writeArticles(articles);
+    logger.info("Feedback recorded", { url, feedback });
   } catch (err) {
     logger.error("updateFeedback failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -241,31 +238,16 @@ export async function updateFeedback(
 }
 
 // ── Source Registry ──
+// Not used in basic mode (sources come from config/sources.json). Kept for
+// signature compatibility with callers.
 
 export async function getSources(): Promise<SourceRegistry[]> {
-  try {
-    const sb = getClient();
-    const { data, error } = await sb
-      .from("source_registry")
-      .select("*")
-      .eq("active", true)
-      .order("trust_score", { ascending: false });
-
-    if (error) {
-      logger.error("Failed to fetch sources", { error: error.message });
-      return [];
-    }
-
-    return (data ?? []) as SourceRegistry[];
-  } catch (err) {
-    logger.error("getSources failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return [];
-  }
+  return [];
 }
 
 // ── Intel Events (for chat context) ──
+// Intel events are produced by the "reasoning brain", which is disabled in basic
+// mode. Return an empty list so chat context degrades gracefully.
 
 export interface IntelEventContext {
   ref: string;
@@ -280,111 +262,24 @@ export interface IntelEventContext {
   source_url: string | null;
 }
 
-function extractSourceUrl(raw: Record<string, unknown> | null): string | null {
-  if (!raw) return null;
-  for (const key of ["source_url", "url", "link"]) {
-    const v = raw[key];
-    if (typeof v === "string" && v.startsWith("http")) return v;
-  }
-  return null;
-}
-
-function textRelevanceScore(query: string, event: { title: string; summary: string | null; tags: string[] }): number {
-  const q = query.toLowerCase();
-  const tokens = q.split(/\s+/).filter(t => t.length > 2);
-  if (tokens.length === 0) return 0;
-  const haystack = [event.title, event.summary ?? "", ...(event.tags ?? [])].join(" ").toLowerCase();
-  let hits = 0;
-  for (const token of tokens) {
-    if (haystack.includes(token)) hits++;
-  }
-  return hits / tokens.length;
-}
-
 export async function getRecentIntelEvents(
-  query: string,
-  opts: { hours?: number; limit?: number; severityMin?: number } = {}
+  _query: string,
+  _opts: { hours?: number; limit?: number; severityMin?: number } = {}
 ): Promise<IntelEventContext[]> {
-  const hours = opts.hours ?? 72;
-  const limit = opts.limit ?? 20;
-  const severityMin = opts.severityMin ?? 10;
-
-  try {
-    const sb = getClient();
-    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-
-    const { data, error } = await sb
-      .from("intel_events")
-      .select("id, source, type, severity, title, summary, timestamp, country_code, tags, raw_data")
-      .gte("timestamp", cutoff)
-      .gte("severity", severityMin)
-      .order("timestamp", { ascending: false })
-      .limit(200);
-
-    if (error) {
-      logger.error("Failed to fetch intel events for chat", { error: error.message });
-      return [];
-    }
-
-    const rows = (data ?? []) as Array<{
-      id: string;
-      source: string;
-      type: string;
-      severity: number;
-      title: string;
-      summary: string | null;
-      timestamp: string;
-      country_code: string;
-      tags: string[];
-      raw_data: Record<string, unknown> | null;
-    }>;
-
-    const scored = rows.map(r => {
-      const relevance = textRelevanceScore(query, r);
-      const recencyHours = (Date.now() - new Date(r.timestamp).getTime()) / 3_600_000;
-      const recencyScore = Math.max(0, 1 - recencyHours / hours);
-      const severityNorm = Math.min(r.severity / 100, 1);
-      const composite = relevance * 0.5 + recencyScore * 0.25 + severityNorm * 0.25;
-      return { row: r, composite };
-    });
-
-    scored.sort((a, b) => b.composite - a.composite);
-
-    return scored.slice(0, limit).map((s, i) => ({
-      ref: `[E${i + 1}]`,
-      source: s.row.source,
-      type: s.row.type,
-      severity: s.row.severity,
-      title: s.row.title,
-      summary: s.row.summary ?? "",
-      timestamp: s.row.timestamp,
-      country_code: s.row.country_code,
-      tags: s.row.tags ?? [],
-      source_url: extractSourceUrl(s.row.raw_data),
-    }));
-  } catch (err) {
-    logger.error("getRecentIntelEvents failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return [];
-  }
+  return [];
 }
 
-// ── Alert Cooldown ──
+// ── Alert Cooldown / status flags ──
 
 export async function getLastAlertTime(): Promise<Date | null> {
   try {
-    const sb = getClient();
-    const { data, error } = await sb
-      .from("article_history")
-      .select("processed_at")
-      .eq("alerted", true)
-      .order("processed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data?.processed_at) return null;
-    return new Date(data.processed_at);
+    const alerted = readArticles().filter((a) => a.alerted && a.processed_at);
+    if (alerted.length === 0) return null;
+    const latest = alerted.reduce((max, a) => {
+      const t = new Date(a.processed_at as string).getTime();
+      return t > max ? t : max;
+    }, 0);
+    return latest > 0 ? new Date(latest) : null;
   } catch (err) {
     logger.error("getLastAlertTime failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -393,19 +288,38 @@ export async function getLastAlertTime(): Promise<Date | null> {
   }
 }
 
+function stampAlert(article: ArticleHistory): void {
+  article.alerted = true;
+  if (!article.processed_at) article.processed_at = new Date().toISOString();
+}
+
 export async function markAlerted(url: string): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb
-      .from("article_history")
-      .update({ alerted: true })
-      .eq("url", url);
-
-    if (error) {
-      logger.error("Failed to mark article as alerted", {
-        error: error.message,
+    const articles = readArticles();
+    const idx = articles.findIndex((a) => a.url === url);
+    if (idx >= 0) {
+      stampAlert(articles[idx]);
+    } else {
+      // The pipeline may alert before the article row is persisted; create a
+      // minimal row so cooldown + dedup still work.
+      articles.push({
+        id: localId(),
+        url,
+        title: "",
+        source: "",
+        summary: null,
+        importance_score: null,
+        credibility_score: null,
+        relevance_score: null,
+        ai_processed: false,
+        user_feedback: null,
+        alerted: true,
+        emailed: false,
+        fetched_at: new Date().toISOString(),
+        processed_at: new Date().toISOString(),
       });
     }
+    writeArticles(articles);
   } catch (err) {
     logger.error("markAlerted failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -416,17 +330,16 @@ export async function markAlerted(url: string): Promise<void> {
 export async function markEmailed(urls: string[]): Promise<void> {
   try {
     if (urls.length === 0) return;
-    const sb = getClient();
-    const { error } = await sb
-      .from("article_history")
-      .update({ emailed: true })
-      .in("url", urls);
-
-    if (error) {
-      logger.error("Failed to mark articles as emailed", {
-        error: error.message,
-      });
+    const set = new Set(urls);
+    const articles = readArticles();
+    let changed = false;
+    for (const a of articles) {
+      if (set.has(a.url) && !a.emailed) {
+        a.emailed = true;
+        changed = true;
+      }
     }
+    if (changed) writeArticles(articles);
   } catch (err) {
     logger.error("markEmailed failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -436,17 +349,14 @@ export async function markEmailed(urls: string[]): Promise<void> {
 
 export async function getLastAlertedArticle(): Promise<ArticleHistory | null> {
   try {
-    const sb = getClient();
-    const { data, error } = await sb
-      .from("article_history")
-      .select("*")
-      .eq("alerted", true)
-      .order("processed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) return null;
-    return (data as ArticleHistory) ?? null;
+    const alerted = readArticles().filter((a) => a.alerted);
+    if (alerted.length === 0) return null;
+    alerted.sort((a, b) => {
+      const ta = new Date(a.processed_at ?? a.fetched_at).getTime();
+      const tb = new Date(b.processed_at ?? b.fetched_at).getTime();
+      return tb - ta;
+    });
+    return alerted[0] ?? null;
   } catch (err) {
     logger.error("getLastAlertedArticle failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -455,7 +365,7 @@ export async function getLastAlertedArticle(): Promise<ArticleHistory | null> {
   }
 }
 
-// ── Dashboard: digest archive + system events ─────────────────────
+// ── Dashboard-style archive + system events (local rolling logs) ─────
 
 export interface DigestArchiveRow {
   id: string;
@@ -477,8 +387,10 @@ export async function saveDigestArchive(row: {
   meta?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb.from("digest_archive").insert({
+    const rows = readJson<DigestArchiveRow[]>(DIGESTS_FILE, []);
+    rows.push({
+      id: localId(),
+      created_at: new Date().toISOString(),
       channels: row.channels,
       subject: row.subject,
       html_body: row.html_body,
@@ -486,14 +398,21 @@ export async function saveDigestArchive(row: {
       article_urls: row.article_urls,
       meta: row.meta ?? {},
     });
-    if (error) {
-      logger.error("saveDigestArchive failed", { error: error.message });
-    }
+    writeJson(DIGESTS_FILE, capArray(rows, MAX_DIGESTS));
   } catch (err) {
     logger.error("saveDigestArchive failed", {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+interface SystemEventRow {
+  id: string;
+  created_at: string;
+  level: "info" | "warn" | "error";
+  source: string;
+  message: string;
+  meta: Record<string, unknown>;
 }
 
 export async function logSystemEvent(entry: {
@@ -503,16 +422,16 @@ export async function logSystemEvent(entry: {
   meta?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    const sb = getClient();
-    const { error } = await sb.from("system_events").insert({
+    const rows = readJson<SystemEventRow[]>(EVENTS_FILE, []);
+    rows.push({
+      id: localId(),
+      created_at: new Date().toISOString(),
       level: entry.level,
       source: entry.source,
       message: entry.message.slice(0, 8000),
       meta: entry.meta ?? {},
     });
-    if (error) {
-      logger.error("logSystemEvent failed", { error: error.message });
-    }
+    writeJson(EVENTS_FILE, capArray(rows, MAX_EVENTS));
   } catch (err) {
     logger.error("logSystemEvent failed", {
       error: err instanceof Error ? err.message : String(err),

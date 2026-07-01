@@ -1,4 +1,9 @@
-import { trySharedSupabase } from "./supabase";
+import {
+  readJson,
+  writeJson,
+  localId,
+  capArray,
+} from "../../src/local_store";
 
 export type EngineId = "news_pipeline" | "world_ingest" | "dreamtime" | "digest" | "weekly_digest" | "deep_intel";
 export type RunStatus = "running" | "success" | "partial" | "error";
@@ -16,19 +21,41 @@ export interface EngineRun {
   meta: Record<string, unknown>;
 }
 
-export async function startEngineRun(engine: EngineId, meta?: Record<string, unknown>): Promise<string | null> {
-  const sb = trySharedSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from("engine_runs")
-    .insert({ engine, meta: meta ?? {} })
-    .select("id")
-    .single();
-  if (error) {
-    console.error(`[engine-run] Failed to start ${engine} run:`, error.message);
+const RUNS_FILE = "engine_runs.json";
+const MAX_RUNS = 200;
+
+function readRuns(): EngineRun[] {
+  return readJson<EngineRun[]>(RUNS_FILE, []);
+}
+
+function writeRuns(runs: EngineRun[]): void {
+  writeJson(RUNS_FILE, capArray(runs, MAX_RUNS));
+}
+
+export async function startEngineRun(
+  engine: EngineId,
+  meta?: Record<string, unknown>
+): Promise<string | null> {
+  try {
+    const runs = readRuns();
+    const run: EngineRun = {
+      id: localId(),
+      engine,
+      started_at: new Date().toISOString(),
+      status: "running",
+      records_in: 0,
+      records_out: 0,
+      ai_calls_used: 0,
+      errors: [],
+      meta: meta ?? {},
+    };
+    runs.push(run);
+    writeRuns(runs);
+    return run.id;
+  } catch (err) {
+    console.error(`[engine-run] Failed to start ${engine} run:`, err);
     return null;
   }
-  return data.id;
 }
 
 export async function finishEngineRun(
@@ -43,12 +70,12 @@ export async function finishEngineRun(
   }
 ): Promise<void> {
   if (!runId) return;
-  const sb = trySharedSupabase();
-  if (!sb) return;
-
-  const { error } = await sb
-    .from("engine_runs")
-    .update({
+  try {
+    const runs = readRuns();
+    const idx = runs.findIndex((r) => r.id === runId);
+    if (idx < 0) return;
+    runs[idx] = {
+      ...runs[idx],
       finished_at: new Date().toISOString(),
       status: update.status,
       records_in: update.records_in ?? 0,
@@ -56,8 +83,9 @@ export async function finishEngineRun(
       ai_calls_used: update.ai_calls_used ?? 0,
       errors: update.errors ?? [],
       meta: update.meta ?? {},
-    })
-    .eq("id", runId);
-
-  if (error) console.error(`[engine-run] Failed to finish run ${runId}:`, error.message);
+    };
+    writeRuns(runs);
+  } catch (err) {
+    console.error(`[engine-run] Failed to finish run ${runId}:`, err);
+  }
 }
