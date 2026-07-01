@@ -1,8 +1,12 @@
 name: Dreamtime Engine
 
+# BASIC MODE: the daily schedule is disabled to keep Supabase within the free
+# tier. Dreamtime is part of the "reasoning brain" and writes scenario/reasoning
+# rows on every run. It can still be run on demand from the Actions tab, and the
+# schedule can be restored by un-commenting the cron line below.
 on:
-  schedule:
-    - cron: '0 9 * * *'  # 3am MDT (9 UTC)
+  # schedule:
+  #   - cron: '0 9 * * *'  # 3am MDT (9 UTC)
   workflow_dispatch:
 
 jobs:

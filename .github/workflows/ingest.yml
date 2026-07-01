@@ -1,8 +1,12 @@
 name: Intelligence Ingestion
 
+# BASIC MODE: the every-15-minutes schedule is disabled to keep Supabase within
+# the free tier. This ingestion cycle (the "reasoning brain") is the main driver
+# of database growth. It can still be run on demand from the Actions tab, and the
+# schedule can be restored by un-commenting the cron line below.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # schedule:
+  #   - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
