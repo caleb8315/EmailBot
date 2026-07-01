@@ -27,7 +27,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python verifier deps
-        run: pip install rapidfuzz
+        run: pip install -r requirements.txt
 
       - name: Install root dependencies
         run: npm ci

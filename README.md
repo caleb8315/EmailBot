@@ -19,6 +19,44 @@ There is **no separate assistant runtime** — only this repo, Supabase, Gemini/
 
 RSS and public feeds can go surprisingly wide (wires, blogs, Reddit, Google News), but **no honest bot can read “all social media” or the whole web** without official APIs (X, TikTok, Instagram, etc.), contracts, and rate limits. This stack casts a **broad net within RSS and open feeds** and ranks what matters to you.
 
+## Basic mode (run it lean, stay in the free tier)
+
+If you just want a **personal news/intel bot** and your Supabase free tier is
+maxed out, run in **basic mode**. The heavy part of this repo is the *reasoning
+brain* (the `Intelligence Ingestion` and `Dreamtime Engine` workflows). Those run
+often and write a large number of rows — that growth is what fills up a free
+Supabase project. The basic bot only needs a few small tables.
+
+What basic mode keeps running:
+
+- **Intelligence Pipeline** (hourly) → high-importance Telegram alerts.
+- **Morning Intelligence Digest** (07:00 UTC) → your daily briefing.
+- **Weekly Intelligence Recap** (Sun 14:00 UTC).
+- **`npm run bot`** → the Telegram chat bot for tuning preferences.
+
+What basic mode turns off (to save the database):
+
+- **Intelligence Ingestion** (`ingest.yml`, was every 15 min).
+- **Dreamtime Engine** (`dreamtime.yml`, was daily).
+
+These two workflows now have their `schedule:` triggers commented out but keep
+`workflow_dispatch:`, so you can still run them by hand from the Actions tab, and
+re-enable the schedules any time by un-commenting the `cron` lines.
+
+To get back under the free tier immediately, reclaim the space the brain used:
+
+1. Open Supabase → **SQL Editor**.
+2. Run [`supabase/maintenance/reclaim_basic_mode.sql`](supabase/maintenance/reclaim_basic_mode.sql).
+   It empties only the brain/intel tables (keeping your preferences, article
+   history, digests, and events) and vacuums the database.
+
+Note: a free Supabase project also **auto-pauses after ~1 week of inactivity**.
+If yours is paused rather than full, un-pause it from the Supabase dashboard —
+the hourly pipeline will keep it active from then on.
+
+When you're ready to bring the full brain back, re-enable the two schedules and
+(optionally) rerun the brain migrations in `supabase/migrations/`.
+
 ## Your setup checklist
 
 1. **Supabase**  
