@@ -38,6 +38,9 @@ jobs:
       - name: Verification tests
         run: npm run test:verification
 
+      - name: Local store smoke test
+        run: npm run test:local-store
+
       - name: Cluster parity harness
         run: npm run test:cluster-parity
 

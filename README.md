@@ -19,43 +19,70 @@ There is **no separate assistant runtime** — only this repo, Supabase, Gemini/
 
 RSS and public feeds can go surprisingly wide (wires, blogs, Reddit, Google News), but **no honest bot can read “all social media” or the whole web** without official APIs (X, TikTok, Instagram, etc.), contracts, and rate limits. This stack casts a **broad net within RSS and open feeds** and ranks what matters to you.
 
-## Basic mode (run it lean, stay in the free tier)
+## Basic mode (no database — runs free forever)
 
-If you just want a **personal news/intel bot** and your Supabase free tier is
-maxed out, run in **basic mode**. The heavy part of this repo is the *reasoning
-brain* (the `Intelligence Ingestion` and `Dreamtime Engine` workflows). Those run
-often and write a large number of rows — that growth is what fills up a free
-Supabase project. The basic bot only needs a few small tables.
+If you just want a **personal news/intel bot** and don't want to babysit a
+database, run in **basic mode**. The bot's operational data (seen-article
+history for dedup, daily AI budget counters, last-alert cooldown, and rolling
+logs of runs/events/digests) is stored as small **JSON files under
+[`data/state/`](data/state)** and committed back to the repo by the GitHub
+Actions workflows. **No Supabase is required for the bot** — nothing to max out,
+nothing to get locked out of, nothing to auto-pause.
 
-What basic mode keeps running:
+Supabase is still used for one thing only: the **dashboard's login/auth**. The
+bot and dashboard are decoupled — see the note at the end.
+
+What basic mode runs (all on free GitHub Actions):
 
 - **Intelligence Pipeline** (hourly) → high-importance Telegram alerts.
 - **Morning Intelligence Digest** (07:00 UTC) → your daily briefing.
 - **Weekly Intelligence Recap** (Sun 14:00 UTC).
 - **`npm run bot`** → the Telegram chat bot for tuning preferences.
 
-What basic mode turns off (to save the database):
+What basic mode turns off (the heavy *reasoning brain*, which is what used to
+grow the database without bound):
 
 - **Intelligence Ingestion** (`ingest.yml`, was every 15 min).
 - **Dreamtime Engine** (`dreamtime.yml`, was daily).
 
-These two workflows now have their `schedule:` triggers commented out but keep
-`workflow_dispatch:`, so you can still run them by hand from the Actions tab, and
-re-enable the schedules any time by un-commenting the `cron` lines.
+Those two keep `workflow_dispatch:` so you can still run them by hand from the
+Actions tab; re-enable their schedules any time by un-commenting the `cron`
+lines. They still write to Supabase, so only run them if a Supabase project is
+configured.
 
-To get back under the free tier immediately, reclaim the space the brain used:
+### How the local store works
 
-1. Open Supabase → **SQL Editor**.
-2. Run [`supabase/maintenance/reclaim_basic_mode.sql`](supabase/maintenance/reclaim_basic_mode.sql).
-   It empties only the brain/intel tables (keeping your preferences, article
-   history, digests, and events) and vacuums the database.
+- The three scheduled workflows have `contents: write` permission and a
+  **"Persist local state"** step that commits any changes under `data/state/`
+  back to the branch (with rebase + retry to avoid races). A `bot-state`
+  concurrency group serializes them.
+- State files auto-prune: article history keeps `ARTICLE_RETENTION_DAYS` (default
+  8) days; usage keeps 14 days; runs/events/digests keep a rolling cap. The
+  hourly pipeline rewrites `data/state/articles.json`, so keeping retention low
+  keeps the committed file (and repo size) smaller.
+- Running the Telegram bot (`npm run bot`) on your own machine? Set
+  `LOCAL_STORE_GIT_SYNC=true` (in a git checkout with push access) so preference
+  edits you make over Telegram are committed and picked up by the Actions runs.
+- Tuning env vars: `LOCAL_STORE_DIR` (default `data/state`),
+  `ARTICLE_RETENTION_DAYS`, `LOCAL_STORE_GIT_SYNC`.
 
-Note: a free Supabase project also **auto-pauses after ~1 week of inactivity**.
-If yours is paused rather than full, un-pause it from the Supabase dashboard —
-the hourly pipeline will keep it active from then on.
+Smoke-test the store locally with `npm run test:local-store`.
 
-When you're ready to bring the full brain back, re-enable the two schedules and
-(optionally) rerun the brain migrations in `supabase/migrations/`.
+### If you had a maxed-out Supabase project
+
+You no longer need it for the bot. If you still want the dashboard login working,
+either un-pause / clean up the old project or point the dashboard at a fresh free
+project. To reclaim space on an old project you *can* still log into, run
+[`supabase/maintenance/reclaim_basic_mode.sql`](supabase/maintenance/reclaim_basic_mode.sql)
+in the SQL editor.
+
+### Bot ↔ dashboard decoupling (trade-off)
+
+Because the bot now stores data locally instead of in Supabase, the dashboard's
+data pages (past digests, article list, intel/events) will not populate from the
+bot anymore — the dashboard still works for **login and the "Run workflow"
+buttons**. Bringing the full brain back (re-enable the two schedules + a Supabase
+project) restores those pages.
 
 ## Your setup checklist
 

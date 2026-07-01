@@ -5,10 +5,18 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
 
+# Serialize state-writing runs so the commit-back step does not race with itself.
+concurrency:
+  group: bot-state
+  cancel-in-progress: false
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Needed so the "Persist local state" step can push data/state back.
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -31,9 +39,6 @@ jobs:
           OPENAI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
           GEMINI_NATIVE_BASE_URL: "https://generativelanguage.googleapis.com/v1beta"
           PIPELINE_MODEL: "gemini-2.5-flash-lite"
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MAX_DAILY_AI_CALLS: "30"
@@ -54,6 +59,27 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: npx ts-node src/index.ts
+
+      - name: Persist local state
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain data/state)" ]; then
+            echo "No state changes to persist."
+            exit 0
+          fi
+          git add data/state
+          git commit -m "chore(state): persist bot state [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "State persisted."
+              exit 0
+            fi
+            echo "Push conflict — retry $i"; sleep $((RANDOM % 5 + 2))
+          done
+          echo "::warning::Could not persist bot state after retries"
 
       - name: Notify on failure
         if: failure()
