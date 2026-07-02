@@ -11,6 +11,7 @@
     "chat": "ts-node src/chat_handler.ts --listen",
     "bot": "ts-node src/chat_handler.ts --listen",
     "typecheck": "tsc --noEmit",
+    "test:local-store": "ts-node scripts/local_store_smoke.ts",
     "test:verification": "ts-node lib/__tests__/verification.test.ts",
     "test:reasoning": "ts-node lib/__tests__/reasoning.test.ts",
     "test:prediction-ledger": "ts-node lib/__tests__/prediction-ledger.test.ts",
