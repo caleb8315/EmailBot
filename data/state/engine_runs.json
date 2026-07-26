@@ -88,5 +88,35 @@
     ],
     "meta": {},
     "finished_at": "2026-07-19T14:44:51.160Z"
+  },
+  {
+    "id": "19f9eec04da-812253a4",
+    "engine": "weekly_digest",
+    "started_at": "2026-07-26T14:54:55.706Z",
+    "status": "error",
+    "records_in": 0,
+    "records_out": 0,
+    "ai_calls_used": 0,
+    "errors": [
+      "Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials af79cd13be357-932de676a41sm392083185a.46 - gsmtp"
+    ],
+    "meta": {
+      "mode": "weekly"
+    },
+    "finished_at": "2026-07-26T14:54:56.985Z"
+  },
+  {
+    "id": "19f9eec0952-0776f502",
+    "engine": "digest",
+    "started_at": "2026-07-26T14:54:56.850Z",
+    "status": "error",
+    "records_in": 0,
+    "records_out": 0,
+    "ai_calls_used": 0,
+    "errors": [
+      "No Supabase connection"
+    ],
+    "meta": {},
+    "finished_at": "2026-07-26T14:54:56.851Z"
   }
 ]
