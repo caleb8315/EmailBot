@@ -118,5 +118,13 @@
     "source": "digest",
     "message": "weekly digest failed: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-3537c841648sm29090136eec.3 - gsmtp",
     "meta": {}
+  },
+  {
+    "id": "1a14ff3bd54-90bb9f17",
+    "created_at": "2026-10-18T16:58:56.212Z",
+    "level": "error",
+    "source": "digest",
+    "message": "weekly digest failed: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 46e09a7af769-848e7d444e3sm1206666a34.25 - gsmtp",
+    "meta": {}
   }
 ]
